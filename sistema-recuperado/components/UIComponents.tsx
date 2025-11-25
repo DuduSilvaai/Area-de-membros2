@@ -1,4 +1,4 @@
-import React, { InputHTMLAttributes, SelectHTMLAttributes, ReactNode } from 'react';
+import React, { InputHTMLAttributes, SelectHTMLAttributes } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Upload } from 'lucide-react';
@@ -16,11 +16,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button = ({ className, variant = 'primary', isLoading, children, ...props }: ButtonProps) => {
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700',
-    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
+    primary: 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700',
+    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
     danger: 'bg-red-500 text-white hover:bg-red-600',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-600',
-    outline: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50',
+    ghost: 'bg-transparent hover:bg-gray-100 text-gray-600 dark:text-gray-400 dark:hover:bg-gray-800',
+    outline: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700',
   };
 
   return (
@@ -48,12 +48,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, className, ...props }, ref) => {
     return (
       <div className="w-full mb-4">
-        {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+        {label && <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>}
         <input
           ref={ref}
           className={cn(
-            'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black',
-            error ? 'border-red-500' : 'border-gray-300',
+            'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white dark:bg-gray-800 dark:border-gray-600',
+            error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600',
             className
           )}
           {...props}
@@ -76,12 +76,12 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, options, error, className, ...props }, ref) => {
     return (
       <div className="w-full mb-4">
-        {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
+        {label && <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>}
         <select
           ref={ref}
           className={cn(
-            'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white',
-            error ? 'border-red-500' : 'border-gray-300',
+            'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600',
+            error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600',
             className
           )}
           {...props}
@@ -108,13 +108,13 @@ interface SwitchProps {
 
 export const Switch = ({ label, checked, onChange }: SwitchProps) => {
   return (
-    <div className="flex items-center justify-between mb-4 p-2 border rounded-md bg-gray-50">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
+    <div className="flex items-center justify-between mb-4 p-2 border rounded-md bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
+      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
       <button
         type="button"
         onClick={() => onChange(!checked)}
         className={cn(
-          'w-11 h-6 bg-gray-200 rounded-full relative transition-colors focus:outline-none',
+          'w-11 h-6 bg-gray-200 rounded-full relative transition-colors focus:outline-none dark:bg-gray-700',
           checked ? 'bg-green-500' : 'bg-gray-300'
         )}
       >
@@ -140,24 +140,24 @@ interface FileUploadProps {
 export const FileUpload = ({ label, onFileSelect, previewUrl, error }: FileUploadProps) => {
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
+      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition">
         {previewUrl ? (
           <div className="mb-2 relative">
-             {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={previewUrl} alt="Preview" className="h-20 object-contain" />
-            <button 
-                type="button"
-                onClick={() => onFileSelect(null)} 
-                className="text-xs text-red-500 underline mt-1"
+            <button
+              type="button"
+              onClick={() => onFileSelect(null)}
+              className="text-xs text-red-500 underline mt-1"
             >
-                Remover
+              Remover
             </button>
           </div>
         ) : (
           <Upload className="w-8 h-8 text-gray-400 mb-2" />
         )}
-        
+
         <input
           type="file"
           className="hidden"

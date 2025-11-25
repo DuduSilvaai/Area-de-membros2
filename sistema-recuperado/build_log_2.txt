@@ -1,0 +1,55 @@
+
+> sistema-recuperado@0.1.0 build
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\edugu\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\package-lock.json
+   * C:\Users\edugu\Downloads\Area-de-membros2\package-lock.json
+
+   ▲ Next.js 16.0.3 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 2 errors:
+./Downloads/Area-de-membros2/sistema-recuperado/app/(admin)/admin/admin.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    at turbopack:///[turbopack-node]/transforms/postcss.ts:56:14 [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__f59d5e95._.js:140:20]
+    [at <anonymous>]
+    at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33) [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__f59d5e95._.js:130:35]
+    at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20) [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__6a1fe4e5._.js:429:26]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+
+Import trace:
+  Client Component Browser:
+    ./Downloads/Area-de-membros2/sistema-recuperado/app/(admin)/admin/admin.css [Client Component Browser]
+    ./Downloads/Area-de-membros2/sistema-recuperado/app/(admin)/admin/layout.tsx [Server Component]
+
+
+./Downloads/Area-de-membros2/sistema-recuperado/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    at turbopack:///[turbopack-node]/transforms/postcss.ts:56:14 [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__f59d5e95._.js:140:20]
+    [at <anonymous>]
+    at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33) [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__f59d5e95._.js:130:35]
+    at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20) [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__6a1fe4e5._.js:429:26]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+
+Import trace:
+  Client Component Browser:
+    ./Downloads/Area-de-membros2/sistema-recuperado/app/globals.css [Client Component Browser]
+    ./Downloads/Area-de-membros2/sistema-recuperado/app/(admin)/layout.tsx [Server Component]
+
+
+    at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33) [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__f59d5e95._.js:130:35])
+    at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20) [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__6a1fe4e5._.js:429:26])
+    at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33) [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__f59d5e95._.js:130:35])
+    at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20) [C:\Users\edugu\Downloads\Area-de-membros2\sistema-recuperado\.next\build\chunks\[root-of-the-server]__6a1fe4e5._.js:429:26])
