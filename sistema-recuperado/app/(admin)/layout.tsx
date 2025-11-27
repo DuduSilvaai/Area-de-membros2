@@ -17,20 +17,8 @@ export default function AdminLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className={inter.className}>
-        <AuthProvider>
-          <div className="flex min-h-screen bg-gray-50">
-            {/* Menu Lateral Fixo */}
-            <Sidebar />
-
-            {/* Área de Conteúdo (empurrada para a direita) */}
-            <div className="flex-1 ml-64 p-8">
-              {children}
-            </div>
-          </div>
-        </AuthProvider>
-      </body>
-    </html>
+    <>
+      {children}
+    </>
   );
 }

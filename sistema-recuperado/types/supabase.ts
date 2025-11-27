@@ -18,6 +18,9 @@ export interface Database {
           description: string | null
           order_index: number
           image_url: string | null
+          portal_id: string | null
+          parent_module_id: string | null
+          is_active: boolean
         }
         Insert: {
           id?: string
@@ -27,6 +30,9 @@ export interface Database {
           description?: string | null
           order_index?: number
           image_url?: string | null
+          portal_id?: string | null
+          parent_module_id?: string | null
+          is_active?: boolean
         }
         Update: {
           id?: string
@@ -36,8 +42,24 @@ export interface Database {
           description?: string | null
           order_index?: number
           image_url?: string | null
+          portal_id?: string | null
+          parent_module_id?: string | null
+          is_active?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "modules_portal_id_fkey"
+            columns: ["portal_id"]
+            referencedRelation: "portals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modules_parent_module_id_fkey"
+            columns: ["parent_module_id"]
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       contents: {
         Row: {
@@ -48,6 +70,9 @@ export interface Database {
           video_url: string | null
           module_id: string
           duration_seconds: number | null
+          order_index: number
+          content_type: string
+          is_active: boolean
         }
         Insert: {
           id?: string
@@ -57,6 +82,9 @@ export interface Database {
           video_url?: string | null
           module_id: string
           duration_seconds?: number | null
+          order_index?: number
+          content_type?: string
+          is_active?: boolean
         }
         Update: {
           id?: string
@@ -66,12 +94,91 @@ export interface Database {
           video_url?: string | null
           module_id?: string
           duration_seconds?: number | null
+          order_index?: number
+          content_type?: string
+          is_active?: boolean
         }
         Relationships: [
           {
             foreignKeyName: "contents_module_id_fkey"
             columns: ["module_id"]
             referencedRelation: "modules"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      portals: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          image_url: string | null
+          created_at: string
+          updated_at: string | null
+          created_by: string | null
+          is_active: boolean
+          settings: Json | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          image_url?: string | null
+          created_at?: string
+          updated_at?: string | null
+          created_by?: string | null
+          is_active?: boolean
+          settings?: Json | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          image_url?: string | null
+          created_at?: string
+          updated_at?: string | null
+          created_by?: string | null
+          is_active?: boolean
+          settings?: Json | null
+        }
+        Relationships: []
+      }
+      enrollments: {
+        Row: {
+          id: string
+          user_id: string
+          portal_id: string
+          permissions: Json
+          enrolled_at: string
+          enrolled_by: string | null
+          expires_at: string | null
+          is_active: boolean
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          portal_id: string
+          permissions?: Json
+          enrolled_at?: string
+          enrolled_by?: string | null
+          expires_at?: string | null
+          is_active?: boolean
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          portal_id?: string
+          permissions?: Json
+          enrolled_at?: string
+          enrolled_by?: string | null
+          expires_at?: string | null
+          is_active?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_portal_id_fkey"
+            columns: ["portal_id"]
+            referencedRelation: "portals"
             referencedColumns: ["id"]
           }
         ]
