@@ -30,19 +30,18 @@ export default function ContentsPage() {
   useEffect(() => {
     const fetchPortals = async () => {
       try {
-        // Use the correct table name from your database
-        // If 'portals' doesn't work, try 'modules' or check your Supabase table name
+        // Fetch from 'portals' table
         const { data, error } = await supabase
-          .from('modules')  // Changed from 'portals' to 'modules'
+          .from('portals')
           .select('*')
           .order('created_at', { ascending: true });
 
         if (error) throw error;
-        
+
         // Map the data to match our Portal type
         const portalData: Portal[] = (data || []).map((item: any) => ({
           id: item.id,
-          name: item.name || item.title || 'Untitled', // Fallback to title if name doesn't exist
+          name: item.name || item.title || 'Untitled',
           created_at: item.created_at,
           updated_at: item.updated_at,
           title: item.title,

@@ -27,7 +27,12 @@ import {
   deleteModule,
   updateModuleTitle,
   reorderModules,
+  reorderContents,
+  deleteContent,
+  updateContentTitle,
+  createContent
 } from '@/app/(admin)/contents/actions';
+import { ContentListItem } from './ContentListItem';
 
 interface CourseBuilderProps {
   portalId: string;
@@ -37,14 +42,28 @@ interface CourseBuilderProps {
 export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
   const [modules, setModules] = useState<ModuleWithChildren[]>([]);
   const [selectedModuleId, setSelectedModuleId] = useState<string | undefined>();
+  const [contents, setContents] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingContents, setIsLoadingContents] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingContent, setIsCreatingContent] = useState(false);
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
+  const [editingContentId, setEditingContentId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+
+  // Module Form
   const [newModuleForm, setNewModuleForm] = useState({
     title: '',
     description: '',
     parentId: null as string | null,
+  });
+
+  // Content Form
+  const [showContentForm, setShowContentForm] = useState(false);
+  const [newContentForm, setNewContentForm] = useState({
+    title: '',
+    type: 'video' as 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external',
+    url: '',
   });
 
   const supabase = createClient();
@@ -118,11 +137,41 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
     }
   };
 
+  const fetchContents = async (moduleId: string) => {
+    try {
+      setIsLoadingContents(true);
+      const { data, error } = await supabase
+        .from('contents')
+        .select('*')
+        .eq('module_id', moduleId)
+        .eq('is_active', true)
+        .order('order_index', { ascending: true });
+
+      if (error) throw error;
+
+      setContents((data as Content[]) || []);
+    } catch (error) {
+      console.error('Error fetching contents:', error);
+      toast.error('Falha ao carregar conteúdos');
+    } finally {
+      setIsLoadingContents(false);
+    }
+  };
+
   useEffect(() => {
     if (portalId) {
       fetchModules();
     }
   }, [portalId]);
+
+  useEffect(() => {
+    if (selectedModuleId) {
+      fetchContents(selectedModuleId);
+      setShowContentForm(false); // Reset form when changing modules
+    } else {
+      setContents([]);
+    }
+  }, [selectedModuleId]);
 
   // Flatten tree for drag-and-drop
   const flattenModules = (tree: ModuleWithChildren[]): ModuleWithChildren[] => {
@@ -151,27 +200,48 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
     const activeIndex = flatModules.findIndex(m => m.id === active.id);
     const overIndex = flatModules.findIndex(m => m.id === over.id);
 
-    if (activeIndex === -1 || overIndex === -1) return;
+    if (activeIndex !== -1 && overIndex !== -1) {
+      // Module Reordering
+      const reordered = arrayMove(flatModules, activeIndex, overIndex);
 
-    // Reorder locally
-    const reordered = arrayMove(flatModules, activeIndex, overIndex);
+      // Optimistic update
+      setModules(buildModuleTree(reordered));
 
-    // Update order_index for all affected modules
-    const updates = reordered.map((mod, idx) => ({
-      id: mod.id,
-      order_index: idx,
-    }));
+      const updates = reordered.map((mod, idx) => ({
+        id: mod.id,
+        order_index: idx,
+      }));
 
-    // Optimistic update
-    setModules(buildModuleTree(reordered));
+      const result = await reorderModules(updates);
+      if (result.error) {
+        toast.error(result.error);
+        await fetchModules();
+      } else {
+        toast.success('Ordem dos módulos atualizada!');
+      }
+      return;
+    }
 
-    // Persist to database
-    const result = await reorderModules(updates);
-    if (result.error) {
-      toast.error(result.error);
-      await fetchModules(); // Revert on error
-    } else {
-      toast.success('Ordem atualizada!');
+    // Content Reordering
+    const activeContentIndex = contents.findIndex(c => c.id === active.id);
+    const overContentIndex = contents.findIndex(c => c.id === over.id);
+
+    if (activeContentIndex !== -1 && overContentIndex !== -1) {
+      const reordered = arrayMove(contents, activeContentIndex, overContentIndex);
+      setContents(reordered); // Optimistic
+
+      const updates = reordered.map((c, idx) => ({
+        id: c.id,
+        order_index: idx
+      }));
+
+      const result = await reorderContents(updates);
+      if (result.error) {
+        toast.error(result.error);
+        if (selectedModuleId) await fetchContents(selectedModuleId);
+      } else {
+        toast.success('Ordem dos conteúdos atualizada!');
+      }
     }
   };
 
@@ -208,6 +278,42 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
     }
   };
 
+  const handleCreateContent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedModuleId) return;
+    if (!newContentForm.title.trim()) {
+      toast.error('O título da aula é obrigatório');
+      return;
+    }
+
+    try {
+      setIsCreatingContent(true);
+      const result = await createContent({
+        title: newContentForm.title,
+        module_id: selectedModuleId,
+        content_type: newContentForm.type,
+        order_index: contents.length,
+        video_url: newContentForm.type === 'video' ? newContentForm.url : undefined,
+        content_url: newContentForm.type !== 'video' ? newContentForm.url : undefined,
+      });
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      setNewContentForm({ title: '', type: 'video', url: '' });
+      setShowContentForm(false);
+      await fetchContents(selectedModuleId);
+      toast.success('Aula criada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao criar aula:', error);
+      toast.error('Erro ao criar a aula');
+    } finally {
+      setIsCreatingContent(false);
+    }
+  };
+
   const handleEditModule = async (moduleId: string, newTitle: string) => {
     if (!newTitle.trim()) {
       toast.error('O título não pode estar vazio');
@@ -238,6 +344,36 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
       if (selectedModuleId === moduleId) {
         setSelectedModuleId(undefined);
       }
+    }
+  };
+
+  const handleEditContent = async (contentId: string, newTitle: string) => {
+    if (!newTitle.trim()) {
+      toast.error('O título não pode estar vazio');
+      return;
+    }
+
+    const result = await updateContentTitle(contentId, newTitle);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success('Título da aula atualizado!');
+      if (selectedModuleId) await fetchContents(selectedModuleId);
+      setEditingContentId(null);
+    }
+  };
+
+  const handleDeleteContent = async (contentId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta aula?')) {
+      return;
+    }
+
+    const result = await deleteContent(contentId);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success('Aula excluída!');
+      if (selectedModuleId) await fetchContents(selectedModuleId);
     }
   };
 
@@ -275,7 +411,7 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
             <h3 className="text-sm font-medium text-blue-900">Drag-and-Drop Ativado</h3>
             <div className="mt-1 text-sm text-blue-700">
               <p>• Arraste módulos para reordenar</p>
-              <p>• Passe o mouse para ver ações rápidas</p>
+              <p>• Selecione um módulo para gerenciar suas aulas</p>
               <p>• Crie sub-módulos com o botão "+"</p>
             </div>
           </div>
@@ -328,9 +464,10 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
           </div>
         </div>
 
-        {/* Main Content: Create Form */}
+        {/* Main Content */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-md p-6">
+          {/* Create Module Form */}
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4 text-gray-900">
               {newModuleForm.parentId ? '➕ Novo Submódulo' : '➕ Novo Módulo'}
             </h2>
@@ -371,7 +508,7 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
                 </label>
                 <textarea
                   id="description"
-                  rows={3}
+                  rows={2}
                   value={newModuleForm.description}
                   onChange={(e) => setNewModuleForm({ ...newModuleForm, description: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -400,27 +537,129 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
                 </button>
               </div>
             </form>
-
-            {/* Selected Module Content (placeholder for future) */}
-            {selectedModuleId && (
-              <div className="mt-8 pt-8 border-t border-gray-200">
-                <h3 className="text-md font-semibold text-gray-900 mb-4">
-                  📚 Conteúdos do Módulo
-                </h3>
-                <div className="text-center py-8 text-gray-500">
-                  <p className="text-sm">Gerenciamento de conteúdos em breve...</p>
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Selected Module Content */}
+          {selectedModuleId ? (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  📚 Aulas do Módulo
+                </h2>
+                <button
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                  onClick={() => setShowContentForm(!showContentForm)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Nova Aula
+                </button>
+              </div>
+
+              {/* Create Content Form */}
+              {showContentForm && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Adicionar Nova Aula</h3>
+                  <form onSubmit={handleCreateContent} className="space-y-3">
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Título da Aula"
+                        value={newContentForm.title}
+                        onChange={(e) => setNewContentForm({ ...newContentForm, title: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <select
+                        value={newContentForm.type}
+                        onChange={(e) => setNewContentForm({ ...newContentForm, type: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="video">Vídeo</option>
+                        <option value="text">Texto</option>
+                        <option value="pdf">PDF</option>
+                        <option value="quiz">Quiz</option>
+                        <option value="external">Link Externo</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder={newContentForm.type === 'video' ? 'URL do Vídeo (Vimeo/YouTube)' : 'URL do Conteúdo'}
+                        value={newContentForm.url}
+                        onChange={(e) => setNewContentForm({ ...newContentForm, url: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowContentForm(false)}
+                        className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isCreatingContent || !newContentForm.title.trim()}
+                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isCreatingContent ? 'Salvando...' : 'Salvar Aula'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {isLoadingContents ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : contents.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                  <p className="text-sm">Nenhuma aula neste módulo.</p>
+                  <p className="text-xs mt-1">Adicione conteúdos para seus alunos.</p>
+                </div>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={contents.map(c => c.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {contents.map((content) => (
+                        <ContentListItem
+                          key={content.id}
+                          content={content}
+                          onEdit={(id, title) => {
+                            setEditingContentId(id);
+                            setEditTitle(title);
+                          }}
+                          onDelete={handleDeleteContent}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-8 text-center text-gray-500">
+              <p>Selecione um módulo à esquerda para gerenciar suas aulas.</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Edit Modal (Simple Inline) */}
-      {editingModuleId && (
+      {/* Edit Modal (Reusable for Module and Content) */}
+      {(editingModuleId || editingContentId) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Editar Título</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              {editingModuleId ? 'Editar Título do Módulo' : 'Editar Título da Aula'}
+            </h3>
             <input
               type="text"
               value={editTitle}
@@ -431,13 +670,19 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
             />
             <div className="flex justify-end space-x-3">
               <button
-                onClick={() => setEditingModuleId(null)}
+                onClick={() => {
+                  setEditingModuleId(null);
+                  setEditingContentId(null);
+                }}
                 className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md"
               >
                 Cancelar
               </button>
               <button
-                onClick={() => handleEditModule(editingModuleId, editTitle)}
+                onClick={() => {
+                  if (editingModuleId) handleEditModule(editingModuleId, editTitle);
+                  if (editingContentId) handleEditContent(editingContentId, editTitle);
+                }}
                 className="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md"
               >
                 Salvar

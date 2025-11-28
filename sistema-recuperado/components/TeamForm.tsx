@@ -6,6 +6,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Save, Settings, Users, Shield, MessageSquare } from 'lucide-react';
 import { Button, Input, Select, Switch, FileUpload } from './UIComponents';
+import { createPortal } from '@/app/(admin)/admin/actions';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 // --- SCHEMA DE VALIDAÇÃO (Baseado no código recuperado) ---
 const schema = yup.object().shape({
@@ -33,6 +36,7 @@ const schema = yup.object().shape({
 export default function TeamForm() {
     const [activeTab, setActiveTab] = useState('data');
     const [isSaving, setIsSaving] = useState(false);
+    const router = useRouter();
 
     // Hook do Formulário
     const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
@@ -57,16 +61,26 @@ export default function TeamForm() {
         }
     });
 
-    // Função Fake de Salvar (Substitua pela sua API depois)
     const onSubmit = async (data: any) => {
         setIsSaving(true);
-        console.log("DADOS PARA ENVIAR:", data);
 
-        // Simula delay da API
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            const result = await createPortal(data);
 
-        alert("Time salvo com sucesso! Veja os dados no Console (F12).");
-        setIsSaving(false);
+            if (result.error) {
+                toast.error(result.error);
+                console.error(result.error);
+            } else {
+                toast.success('Portal criado com sucesso!');
+                router.push('/');
+                router.refresh();
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            toast.error('Erro inesperado ao criar portal');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     // Observa valores para preview
@@ -97,8 +111,8 @@ export default function TeamForm() {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 pb-3 px-2 border-b-2 transition-colors ${activeTab === tab.id
-                                ? 'border-blue-600 text-blue-600 font-semibold'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                            ? 'border-blue-600 text-blue-600 font-semibold'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                             }`}
                     >
                         <tab.icon className="w-4 h-4" /> {tab.label}

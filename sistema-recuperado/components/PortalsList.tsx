@@ -1,105 +1,59 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  Plus, 
-  Settings, 
+import {
+  Search,
+  Plus,
   Users,
-  FileText,
-  BarChart2,
-  Globe
+  Globe,
+  Loader2
 } from 'lucide-react';
 import { Input } from '@/components/UIComponents';
 import { Button } from '@/components/UIComponents';
-
-// Tipos para os portais
-type PortalTheme = 'standard' | 'premium' | 'enterprise';
+import { createClient } from '@/lib/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface Portal {
   id: string;
   name: string;
-  url: string;
-  theme: PortalTheme;
-  members: number;
-  description: string;
-  lastUpdated: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string | null;
 }
 
-// Dados falsos para os portais
-const MOCK_PORTALS: Portal[] = [
-  {
-    id: '1',
-    name: 'Portal de Vendas',
-    url: 'vendas.meudominio.com',
-    theme: 'premium',
-    members: 12,
-    description: 'Portal dedicado à equipe de vendas',
-    lastUpdated: 'há 2 horas'
-  },
-  {
-    id: '2',
-    name: 'Portal de Suporte',
-    url: 'suporte.meudominio.com',
-    theme: 'standard',
-    members: 8,
-    description: 'Central de atendimento ao cliente',
-    lastUpdated: 'ontem'
-  },
-  {
-    id: '3',
-    name: 'Portal de Marketing',
-    url: 'marketing.meudominio.com',
-    theme: 'enterprise',
-    members: 15,
-    description: 'Estratégias e campanhas de marketing',
-    lastUpdated: 'há 3 dias'
-  },
-  {
-    id: '4',
-    name: 'Portal Financeiro',
-    url: 'financeiro.meudominio.com',
-    theme: 'premium',
-    members: 5,
-    description: 'Gestão financeira e relatórios',
-    lastUpdated: 'há 1 semana'
-  }
-];
-
-// Componente de Card de Portal
 const PortalCard = ({ portal }: { portal: Portal }) => {
-  const themeColors = {
-    standard: { bg: 'bg-gray-100', text: 'text-gray-700' },
-    premium: { bg: 'bg-blue-50', text: 'text-blue-700' },
-    enterprise: { bg: 'bg-purple-50', text: 'text-purple-700' }
-  };
-
-  const { bg, text } = themeColors[portal.theme] || themeColors.standard;
+  const lastUpdated = portal.updated_at || portal.created_at;
+  const timeAgo = lastUpdated
+    ? formatDistanceToNow(new Date(lastUpdated), { addSuffix: true, locale: ptBR })
+    : 'Recentemente';
 
   return (
-    <Link 
-      href={`/portals/${portal.id}`}
+    <Link
+      href={`/admin/contents?portalId=${portal.id}`}
       className="block group"
     >
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
-        <div className={`h-2 ${bg}`}></div>
+        <div className="h-2 bg-blue-500"></div>
         <div className="p-5 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
               {portal.name}
             </h3>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${bg} ${text}`}>
-              {portal.theme.charAt(0).toUpperCase() + portal.theme.slice(1)}
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+              Ativo
             </span>
           </div>
-          <p className="text-sm text-gray-500 mb-4 flex-1">{portal.description}</p>
+          <p className="text-sm text-gray-500 mb-4 flex-1 line-clamp-2">
+            {portal.description || 'Sem descrição'}
+          </p>
           <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-3 mt-auto">
             <div className="flex items-center">
               <Users className="w-4 h-4 mr-1" />
-              <span>{portal.members} membros</span>
+              <span>0 membros</span>
             </div>
-            <span className="text-xs">{portal.lastUpdated}</span>
+            <span className="text-xs">{timeAgo}</span>
           </div>
         </div>
       </div>
@@ -107,13 +61,36 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
   );
 };
 
-// Componente principal
 export default function PortalsList() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [portals, setPortals] = useState<Portal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const supabase = createClient();
 
-  const filteredPortals = MOCK_PORTALS.filter(portal =>
+  useEffect(() => {
+    fetchPortals();
+  }, []);
+
+  const fetchPortals = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('portals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPortals(data || []);
+    } catch (error) {
+      console.error('Error fetching portals:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredPortals = portals.filter(portal =>
     portal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    portal.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (portal.description && portal.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -147,7 +124,11 @@ export default function PortalsList() {
       </div>
 
       {/* Lista de Portais */}
-      {filteredPortals.length > 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      ) : filteredPortals.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPortals.map((portal) => (
             <PortalCard key={portal.id} portal={portal} />

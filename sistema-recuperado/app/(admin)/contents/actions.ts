@@ -233,3 +233,44 @@ export async function updateContentTitle(contentId: string, title: string) {
         return { error: 'Erro ao atualizar título do conteúdo' };
     }
 }
+
+/**
+ * Create a new content item
+ */
+export async function createContent(data: {
+    title: string;
+    module_id: string;
+    content_type: 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external';
+    order_index?: number;
+    video_url?: string;
+    content_url?: string;
+}) {
+    const adminSupabase = await createAdminClient();
+
+    try {
+        const { data: newContent, error } = await adminSupabase
+            .from('contents')
+            .insert([{
+                title: data.title.trim(),
+                module_id: data.module_id,
+                content_type: data.content_type,
+                order_index: data.order_index ?? 0,
+                video_url: data.video_url || null,
+                content_url: data.content_url || null,
+                is_active: true
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating content:', error);
+            return { error: error.message };
+        }
+
+        revalidatePath('/admin/contents');
+        return { data: newContent, success: true };
+    } catch (error) {
+        console.error('Error in createContent:', error);
+        return { error: 'Erro ao criar conteúdo' };
+    }
+}

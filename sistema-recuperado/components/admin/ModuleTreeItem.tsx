@@ -61,8 +61,8 @@ export function ModuleTreeItem({
             {/* Module Row */}
             <div
                 className={`group relative flex items-center py-2 px-3 rounded-md transition-colors ${isSelected
-                        ? 'bg-blue-50 border-l-4 border-blue-600'
-                        : 'hover:bg-gray-50 border-l-4 border-transparent'
+                    ? 'bg-blue-50 border-l-4 border-blue-600'
+                    : 'hover:bg-gray-50 border-l-4 border-transparent'
                     } ${isDragging ? 'shadow-lg ring-2 ring-blue-400' : ''}`}
                 style={{ marginLeft: `${indentPx}px` }}
             >
@@ -88,7 +88,7 @@ export function ModuleTreeItem({
                         )}
                     </button>
                 ) : (
-                    <div className="w-6" /> {/* Spacer */}
+                    <div className="w-6" />
                 )}
 
                 {/* Module Icon */}

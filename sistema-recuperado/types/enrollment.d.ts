@@ -56,7 +56,7 @@ export interface Content {
     title: string;
     module_id: string;
     order_index: number;
-    content_type: 'video' | 'text' | 'quiz' | 'file';
+    content_type: 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external';
     content_url?: string | null;
     duration_minutes?: number | null;
     is_active: boolean;
