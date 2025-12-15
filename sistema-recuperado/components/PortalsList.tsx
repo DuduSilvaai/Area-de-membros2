@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { createPortal } from '@/app/(admin)/admin/actions';
 
 // --- Types & Schema ---
 
@@ -161,13 +162,33 @@ export default function PortalsList() {
 
     try {
       setUploadingImage(true);
-      const fileExt = file.name.split('.').pop();
-      const filePath = `portals/${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      
+      // 1. Get signed URL from server action
+      // We import it dynamically or assume it's imported at top
+      const { getPresignedUrl } = await import('@/app/(admin)/admin/actions');
+      const result = await getPresignedUrl(file.name, file.type);
+      
+      if (result.error || !result.signedUrl) {
+          throw new Error(result.error || 'Erro ao gerar URL de upload');
+      }
 
-      const { error: uploadError } = await supabase.storage.from('course-content').upload(filePath, file);
-      if (uploadError) throw uploadError;
+      // 2. Upload directly to Supabase Storage using the signed URL
+      const uploadResponse = await fetch(result.signedUrl, {
+          method: 'PUT',
+          body: file,
+          headers: {
+              'Content-Type': file.type,
+          },
+      });
 
-      const { data: { publicUrl } } = supabase.storage.from('course-content').getPublicUrl(filePath);
+      if (!uploadResponse.ok) {
+          throw new Error(`Erro no upload: ${uploadResponse.statusText}`);
+      }
+
+      // 3. Get Public URL (Construct it manually or retrieve)
+      // Since we know the path and bucket, we can construct the public URL
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const publicUrl = `${supabaseUrl}/storage/v1/object/public/course-content/${result.path}`;
 
       setValue('image_url', publicUrl);
       setImagePreview(publicUrl);
@@ -183,19 +204,16 @@ export default function PortalsList() {
   const onSubmit = async (data: PortalFormValues) => {
     console.log('🚀 Iniciando criação do portal...', data);
     try {
-      // 1. Insert into Supabase
-      const { data: newPortal, error } = await supabase
-        .from('portals')
-        .insert({
-          name: data.name.trim(),
-          description: data.description?.trim() || null,
-          image_url: data.image_url || null,
-          is_active: true
-        })
-        .select()
-        .single();
+      // 1. Insert into Supabase via Server Action
+      const result = await createPortal({
+        name: data.name.trim(),
+        description: data.description?.trim() || '',
+        image_url: data.image_url || null,
+        // Optional fields will be handled by defaults in the action
+      });
 
-      if (error) throw error;
+      if (result.error) throw new Error(result.error);
+      const newPortal = result.portal;
 
       // 2. Success Feedback
       console.log('✅ Portal criado:', newPortal);

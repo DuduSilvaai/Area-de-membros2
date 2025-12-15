@@ -1,50 +1,128 @@
 'use server';
 
-import { createAdminClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import * as fs from 'fs';
+import * as path from 'path';
+
+function logDebug(message: string, data?: any) {
+    const logPath = path.join(process.cwd(), 'debug_portal_error.txt');
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ${message} ${data ? JSON.stringify(data, null, 2) : ''}\n`;
+    fs.appendFileSync(logPath, logMessage);
+}
 
 export async function createPortal(data: {
+    // ... args
     name: string;
     description: string;
-    support_email: string;
+    support_email?: string;
     support_external_url?: string | null;
-    theme: string;
-    is_external_domain: number;
-    theme_settings: any;
-    comments_settings: any;
+    theme?: string;
+    is_external_domain?: number;
+    theme_settings?: any;
+    comments_settings?: any;
+    image_url?: string | null;
 }) {
-    const adminSupabase = await createAdminClient();
+    logDebug('Starting createPortal (Function Entry)', { data_received_name: data.name });
+
+    let adminSupabase;
+    let user;
 
     try {
-        // Prepare settings JSON
-        const settings = {
-            support_email: data.support_email,
-            support_external_url: data.support_external_url,
-            theme: data.theme,
+        adminSupabase = await createAdminClient();
+        const supabase = await createClient();
+        const { data: authData } = await supabase.auth.getUser();
+        user = authData.user;
+    } catch (err: any) {
+         logDebug('CRITICAL: Failed to init clients', err.message);
+         return { error: 'Erro interno de inicialização' };
+    }
+    
+    if (!user) {
+        logDebug('CRITICAL: User not authenticated');
+        return { error: 'Usuário não autenticado' };
+    }
+
+    try {
+        // Defaults
+        const defaultSettings = {
+            support_email: data.support_email || 'suporte@exemplo.com',
+            support_external_url: data.support_external_url || '',
+            theme: data.theme || 'modern',
             is_external_domain: data.is_external_domain === 1,
-            theme_settings: data.theme_settings,
-            comments_settings: data.comments_settings
+            theme_settings: data.theme_settings || { default_color: '#000000' },
+            comments_settings: data.comments_settings || { day_limit: 0, character_limit: 500, automatically_publish: true }
         };
 
-        const { data: newPortal, error } = await adminSupabase
+        const settings = defaultSettings;
+
+        logDebug('Settings prepared', settings);
+
+        // 1. Create Portal
+        const { data: newPortal, error: portalError } = await adminSupabase
             .from('portals')
             .insert([{
                 name: data.name,
-                description: data.description
+                description: data.description,
+                image_url: data.image_url,
+                settings: settings,
+                is_active: true,
+                created_by: user.id
             }])
             .select()
             .single();
 
-        if (error) {
-            console.error('Error creating portal:', error);
-            return { error: error.message };
+        if (portalError) {
+            logDebug('Supabase INSERT Error', portalError);
+            console.error('Error creating portal:', portalError);
+            return { error: `Erro banco de dados: ${portalError.message}` };
+        }
+
+        logDebug('Portal created successfully', newPortal);
+
+        // 2. Create Admin Enrollment for Creator
+        const { error: enrollmentError } = await adminSupabase
+            .from('enrollments')
+            .insert([{
+                user_id: user.id,
+                portal_id: newPortal.id,
+                permissions: { access_all: true, allowed_modules: [] },
+                is_active: true,
+                enrolled_by: user.id
+            }]);
+
+        if (enrollmentError) {
+            logDebug('Error creating initial enrollment', enrollmentError);
+            // We don't fail the whole request but we log it. User might see empty list but portal exists.
+        } else {
+             logDebug('Enrollment created successfully');
         }
 
         revalidatePath('/admin');
         return { success: true, portal: newPortal };
-    } catch (error) {
+    } catch (error: any) {
+        logDebug('Catch Error in createPortal', error.message);
         console.error('Error in createPortal:', error);
-        return { error: 'Erro ao criar portal' };
+        return { error: 'Erro ao criar portal (Exception)' };
     }
+}
+
+export async function getPresignedUrl(fileName: string, fileType: string) {
+    const adminSupabase = await createAdminClient();
+    
+    // Ensure unique path
+    const filePath = `portals/${Math.random().toString(36).substring(2)}_${Date.now()}_${fileName}`;
+
+    const { data, error } = await adminSupabase.storage
+        .from('course-content')
+        .createSignedUploadUrl(filePath);
+
+    if (error) {
+        console.error('Error creating signed url:', error);
+        return { error: error.message };
+    }
+
+    return { signedUrl: data.signedUrl, path: filePath, token: data.token };
 }
