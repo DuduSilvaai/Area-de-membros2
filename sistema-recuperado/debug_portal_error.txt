@@ -1,0 +1,88 @@
+[2025-12-15T02:26:17.887Z] Starting createPortal (Function Entry) {
+  "data_received_name": "paulaoTestes"
+}
+[2025-12-15T02:26:17.893Z] Settings prepared {
+  "support_email": "suporte@exemplo.com",
+  "support_external_url": "",
+  "theme": "modern",
+  "is_external_domain": false,
+  "theme_settings": {
+    "default_color": "#000000"
+  },
+  "comments_settings": {
+    "day_limit": 0,
+    "character_limit": 500,
+    "automatically_publish": true
+  }
+}
+[2025-12-15T02:26:18.991Z] Portal created successfully {
+  "id": "97309151-bef4-46ea-9e5b-836e18fd3ed3",
+  "name": "paulaoTestes",
+  "description": "asdfasdfa",
+  "image_url": null,
+  "created_at": "2025-12-15T02:26:18.636311+00:00",
+  "settings": {
+    "theme": "modern",
+    "support_email": "suporte@exemplo.com",
+    "theme_settings": {
+      "default_color": "#000000"
+    },
+    "comments_settings": {
+      "day_limit": 0,
+      "character_limit": 500,
+      "automatically_publish": true
+    },
+    "is_external_domain": false,
+    "support_external_url": ""
+  },
+  "is_active": true,
+  "updated_at": "2025-12-15T02:26:18.636311+00:00"
+}
+[2025-12-15T02:28:58.365Z] Starting createPortal (Function Entry) {
+  "data_received_name": "Paulo"
+}
+[2025-12-15T02:28:58.366Z] Settings prepared {
+  "support_email": "suporte@exemplo.com",
+  "support_external_url": "",
+  "theme": "modern",
+  "is_external_domain": false,
+  "theme_settings": {
+    "default_color": "#000000"
+  },
+  "comments_settings": {
+    "day_limit": 0,
+    "character_limit": 500,
+    "automatically_publish": true
+  }
+}
+[2025-12-15T02:28:58.498Z] Portal created successfully {
+  "id": "15dcb19d-2ca0-41e1-bdb3-36c3782373dc",
+  "name": "Paulo",
+  "description": "Agora foi!",
+  "image_url": "https://uoyhemfwkddlulmkvfci.supabase.co/storage/v1/object/public/course-content/portals/42lk05xeew8_1765765735713_banner-brunch (1).png",
+  "created_at": "2025-12-15T02:28:58.233302+00:00",
+  "settings": {
+    "theme": "modern",
+    "support_email": "suporte@exemplo.com",
+    "theme_settings": {
+      "default_color": "#000000"
+    },
+    "comments_settings": {
+      "day_limit": 0,
+      "character_limit": 500,
+      "automatically_publish": true
+    },
+    "is_external_domain": false,
+    "support_external_url": ""
+  },
+  "is_active": true,
+  "updated_at": "2025-12-15T02:28:58.233302+00:00"
+}
+[2025-12-15T02:31:52.646Z] Starting createPortal (Function Entry) {
+  "data_received_name": "paulaoTestes123"
+}
+[2025-12-15T02:31:52.648Z] CRITICAL: User not authenticated 
+[2025-12-15T02:33:38.048Z] Starting createPortal (Function Entry) {
+  "data_received_name": "Meeeeeeeu Deus"
+}
+[2025-12-15T02:33:38.050Z] CRITICAL: User not authenticated 
