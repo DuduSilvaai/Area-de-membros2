@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient, createAdminClient } from '../../../lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { EnrollmentPermissions } from '@/types/enrollment';
 import { revalidatePath } from 'next/cache';
 

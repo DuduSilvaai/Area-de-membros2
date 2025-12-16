@@ -22,7 +22,7 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
       } else if (profile?.role !== 'admin') {
         // Se logado mas não é admin, redireciona ou mostra erro
         // Vamos apenas redirecionar para o dashboard comum por enquanto
-        router.push('/dashboard');
+        router.push('/');
       }
     }
   }, [user, profile, isLoading, router]);
@@ -34,7 +34,7 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
       <div className="flex h-screen flex-col items-center justify-center text-red-600 bg-gray-50">
         <h1 className="text-4xl font-bold mb-2">403</h1>
         <p>Acesso Negado. Área restrita a administradores.</p>
-        <button onClick={() => router.push('/dashboard')} className="mt-4 text-blue-600 underline">Voltar</button>
+        <button onClick={() => router.push('/')} className="mt-4 text-blue-600 underline">Voltar</button>
       </div>
     );
   }
