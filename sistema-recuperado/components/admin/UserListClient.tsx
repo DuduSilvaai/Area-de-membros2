@@ -11,12 +11,17 @@ import {
     GraduationCap,
     Mail,
     Calendar,
-    Shield
+    Shield,
+    X,
+    Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { Input, Button } from '@/components/UIComponents';
 import { UserWithEnrollments, EnrollmentPermissions } from '@/types/enrollment';
+import { createUser } from '@/app/(admin)/admin/users/actions'; // Server Action
+import { toast } from 'sonner';
 
+// ... (interfaces restored) ...
 interface FilterState {
     searchTerm: string;
     portalFilter: string;
@@ -36,6 +41,11 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
         statusFilter: 'all'
     });
 
+    // New User Modal State
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'student' });
+
     // Combine users with their enrollments
     const users: UserWithEnrollments[] = useMemo(() => {
         return (authUsers || []).map(user => ({
@@ -52,17 +62,15 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
 
     // Apply filters
     const filteredUsers = users.filter(user => {
-        // Search filter
+       // ... (filtering logic same) ...
         const matchesSearch =
             user.email.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
             (user.raw_user_meta_data?.name || '').toLowerCase().includes(filters.searchTerm.toLowerCase());
 
-        // Portal filter
         const matchesPortal =
             filters.portalFilter === 'all' ||
             user.enrollments.some(e => e.portal_id === filters.portalFilter);
 
-        // Status filter
         const matchesStatus =
             filters.statusFilter === 'all' ||
             (filters.statusFilter === 'enrolled' && user.enrollments.length > 0) ||
@@ -77,6 +85,24 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
         noEnrollment: users.filter(u => u.enrollments.length === 0).length
     };
 
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsCreating(true);
+        try {
+            const result = await createUser(newUser);
+            if (result.error) {
+                toast.error(`Erro: ${result.error}`);
+            } else {
+                toast.success('Usuário criado com sucesso!');
+                setIsCreateModalOpen(false);
+                setNewUser({ name: '', email: '', password: '', role: 'student' });
+            }
+        } catch (error) {
+            toast.error('Erro inesperado ao criar usuário');
+        } finally {
+            setIsCreating(false);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -89,13 +115,94 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                     </p>
                 </div>
                 <Button
-                    onClick={() => alert('Funcionalidade em breve')}
-                    className="w-full sm:w-auto"
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
                 >
                     <UserPlus className="w-4 h-4 mr-2" />
-                    Convidar Aluno
+                    Cadastrar Franqueado
                 </Button>
             </div>
+
+            {/* Modal */}
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-semibold text-gray-900">Novo Usuário</h2>
+                            <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCreateUser} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                                <Input
+                                    required
+                                    value={newUser.name}
+                                    onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+                                    placeholder="Ex: João Silva"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <Input
+                                    required
+                                    type="email"
+                                    value={newUser.email}
+                                    onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                                    placeholder="joao@exemplo.com"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Senha Inicial</label>
+                                <Input
+                                    required
+                                    type="text" // Visible by default for admin convenience
+                                    minLength={6}
+                                    value={newUser.password}
+                                    onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                                    placeholder="Mínimo 6 caracteres"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Você deve enviar esta senha para o usuário.</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Acesso</label>
+                                <select
+                                    className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    value={newUser.role}
+                                    onChange={e => setNewUser({ ...newUser, role: e.target.value })}
+                                >
+                                    <option value="student">Aluno (Padrão)</option>
+                                    <option value="admin">Administrador</option>
+                                    <option value="franchisee">Franqueado</option>
+                                </select>
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    disabled={isCreating}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    className="bg-blue-600 text-white hover:bg-blue-700"
+                                    disabled={isCreating}
+                                >
+                                    {isCreating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Criando...</> : 'Criar Usuário'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Filters */}
             <div className="bg-white rounded-lg border border-gray-200 p-4">

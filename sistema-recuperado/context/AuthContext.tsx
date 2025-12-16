@@ -41,53 +41,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Função auxiliar para buscar perfil
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Erro ao buscar perfil no Supabase:', error.message);
-        return null;
-      }
-      return data;
-    } catch (error) {
-      console.error('Erro fetchProfile:', error);
-      return null;
-    }
-  };
-
+  // No longer fetching from 'profiles' table as it doesn't exist
+  // We use direct user_metadata from the session
+  
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
       
-      // 1. Verifica sessão atual
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
         setUser(session.user);
-        // 2. ESPERA (await) o perfil chegar antes de liberar o loading
-        const userProfile = await fetchProfile(session.user.id);
-        setProfile(userProfile);
+        
+        // Extract role from metadata
+        const role = session.user.user_metadata?.role as 'admin' | 'member';
+        setProfile({ id: session.user.id, role: role || 'member' });
+        
+      } else {
+          setUser(null);
+          setProfile(null);
       }
 
-      // 3. Só agora diz que terminou de carregar
       setIsLoading(false);
     };
 
     initializeAuth();
 
-    // Ouve mudanças (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user);
-        // Se logou agora, busca o perfil e espera
-        const userProfile = await fetchProfile(session.user.id);
-        setProfile(userProfile);
+        
+        // Extract role from metadata
+        const role = session.user.user_metadata?.role as 'admin' | 'member';
+        setProfile({ id: session.user.id, role: role || 'member' });
         
         if (event === 'SIGNED_IN') {
             await logAction('login', { email: session.user.email });

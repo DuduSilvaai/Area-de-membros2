@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useReducer } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
     ChevronDown,
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Portal, ModuleWithChildren, EnrollmentPermissions } from '@/types/enrollment';
-import { upsertEnrollment, deleteEnrollment } from '@/app/(admin)/users/actions';
+import { upsertEnrollment, deleteEnrollment } from '@/app/(admin)/admin/users/actions';
 
 interface PermissionState {
     [portalId: string]: {
@@ -106,10 +107,14 @@ function permissionReducer(state: PermissionState, action: PermissionAction): Pe
 interface Props {
     userId: string;
     userEmail: string;
+    initialPortals: Portal[];
+    initialModules: any[];
+    initialEnrollments: any[];
 }
 
-export function PermissionManager({ userId, userEmail }: Props) {
-    const [portals, setPortals] = useState<Portal[]>([]);
+export function PermissionManager({ userId, userEmail, initialPortals, initialModules, initialEnrollments }: Props) {
+    const router = useRouter();
+    const [portals, setPortals] = useState<Portal[]>(initialPortals);
     const [modulesByPortal, setModulesByPortal] = useState<Map<string, ModuleWithChildren[]>>(new Map());
     const [expandedPortals, setExpandedPortals] = useState<Set<string>>(new Set());
     const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
@@ -117,46 +122,16 @@ export function PermissionManager({ userId, userEmail }: Props) {
     const [isSaving, setIsSaving] = useState(false);
     const [permissions, dispatch] = useReducer(permissionReducer, {});
 
-    const supabase = createClient();
-
     useEffect(() => {
-        loadData();
-    }, [userId]);
+        initializeData();
+    }, [initialPortals, initialModules, initialEnrollments]);
 
-    const loadData = async () => {
+    const initializeData = () => {
+        setIsLoading(true);
         try {
-            setIsLoading(true);
-
-            // Fetch portals
-            const { data: portalsData, error: portalsError } = await supabase
-                .from('portals')
-                .select('*')
-                .eq('is_active', true)
-                .order('name');
-
-            if (portalsError) throw portalsError;
-
-            // Fetch all modules
-            const { data: modulesData, error: modulesError } = await supabase
-                .from('modules')
-                .select('*')
-                .eq('is_active', true)
-                .order('order_index');
-
-            if (modulesError) throw modulesError;
-
-            // Fetch existing enrollments for this user
-            const { data: enrollmentsData, error: enrollmentsError } = await supabase
-                .from('enrollments')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('is_active', true);
-
-            if (enrollmentsError) throw enrollmentsError;
-
             // Organize modules by portal
             const moduleMap = new Map<string, ModuleWithChildren[]>();
-            (modulesData || []).forEach(module => {
+            (initialModules || []).forEach(module => {
                 if (!module.portal_id) return;
 
                 if (!moduleMap.has(module.portal_id)) {
@@ -174,13 +149,13 @@ export function PermissionManager({ userId, userEmail }: Props) {
                 hierarchicalMap.set(portalId, buildModuleTree(modules));
             });
 
-            setPortals(portalsData || []);
+            setPortals(initialPortals || []);
             setModulesByPortal(hierarchicalMap);
 
             // Initialize permission state from existing enrollments
             const initialState: PermissionState = {};
-            (portalsData || []).forEach(portal => {
-                const enrollment = (enrollmentsData || []).find(e => e.portal_id === portal.id);
+            (initialPortals || []).forEach(portal => {
+                const enrollment = (initialEnrollments || []).find(e => e.portal_id === portal.id);
 
                 if (enrollment) {
                     const perms = enrollment.permissions as unknown as EnrollmentPermissions;
@@ -200,8 +175,8 @@ export function PermissionManager({ userId, userEmail }: Props) {
 
             dispatch({ type: 'INIT_STATE', state: initialState });
         } catch (error) {
-            console.error('Error loading data:', error);
-            toast.error('Erro ao carregar dados');
+            console.error('Error initializing data:', error);
+            toast.error('Erro ao processar dados');
         } finally {
             setIsLoading(false);
         }
@@ -286,7 +261,7 @@ export function PermissionManager({ userId, userEmail }: Props) {
                 toast.error('Erro ao salvar algumas permissões');
             } else {
                 toast.success('Permissões salvas com sucesso!');
-                await loadData(); // Reload to reflect changes
+                router.refresh(); // Reload data from server
             }
         } catch (error) {
             console.error('Error saving permissions:', error);
