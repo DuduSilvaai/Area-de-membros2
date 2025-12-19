@@ -3,14 +3,15 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import * as fs from 'fs';
-import * as path from 'path';
+// import * as fs from 'fs';
+// import * as path from 'path';
 
 function logDebug(message: string, data?: any) {
-    const logPath = path.join(process.cwd(), 'debug_portal_error.txt');
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] ${message} ${data ? JSON.stringify(data, null, 2) : ''}\n`;
-    fs.appendFileSync(logPath, logMessage);
+    // const logPath = path.join(process.cwd(), 'debug_portal_error.txt');
+    // const timestamp = new Date().toISOString();
+    // const logMessage = `[${timestamp}] ${message} ${data ? JSON.stringify(data, null, 2) : ''}\n`;
+    // fs.appendFileSync(logPath, logMessage);
+    console.log(`[DEBUG] ${message}`, data || '');
 }
 
 export async function createPortal(data: {
@@ -36,10 +37,10 @@ export async function createPortal(data: {
         const { data: authData } = await supabase.auth.getUser();
         user = authData.user;
     } catch (err: any) {
-         logDebug('CRITICAL: Failed to init clients', err.message);
-         return { error: 'Erro interno de inicialização' };
+        logDebug('CRITICAL: Failed to init clients', err.message);
+        return { error: 'Erro interno de inicialização' };
     }
-    
+
     if (!user) {
         logDebug('CRITICAL: User not authenticated');
         return { error: 'Usuário não autenticado' };
@@ -97,7 +98,7 @@ export async function createPortal(data: {
             logDebug('Error creating initial enrollment', enrollmentError);
             // We don't fail the whole request but we log it. User might see empty list but portal exists.
         } else {
-             logDebug('Enrollment created successfully');
+            logDebug('Enrollment created successfully');
         }
 
         revalidatePath('/admin');
@@ -111,7 +112,7 @@ export async function createPortal(data: {
 
 export async function getPresignedUrl(fileName: string, fileType: string) {
     const adminSupabase = await createAdminClient();
-    
+
     // Ensure unique path
     const filePath = `portals/${Math.random().toString(36).substring(2)}_${Date.now()}_${fileName}`;
 
