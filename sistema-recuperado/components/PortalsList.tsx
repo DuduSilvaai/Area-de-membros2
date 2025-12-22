@@ -41,17 +41,46 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
   const timeAgo = lastUpdated ? formatDistanceToNow(new Date(lastUpdated), { addSuffix: true, locale: ptBR }) : 'Recentemente';
   return (
     <Link href={`/portals/${portal.id}`} className="block group">
-      <div className="bg-background-surface dark:bg-background-surface rounded-xl border border-border dark:border-border overflow-hidden shadow-card hover:shadow-medium transition-shadow duration-200 h-full flex flex-col">
-        {portal.image_url ? <img src={portal.image_url} alt={portal.name} className="w-full h-40 object-cover" /> : <div className="h-2 bg-primary-main"></div>}
-        <div className="p-5 flex-1 flex flex-col">
-          <div className="flex justify-between items-start mb-2">
-            <h3 className="text-lg font-semibold text-text-primary dark:text-text-primary group-hover:text-primary-main dark:group-hover:text-primary-main transition-colors">{portal.name}</h3>
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary-subtle dark:bg-primary-subtle text-primary-main dark:text-primary-main">Ativo</span>
+      <div 
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '28px',
+          border: '1px solid #E9ECEF',
+          overflow: 'hidden',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.03)',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.08)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.03)';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
+      >
+        {portal.image_url ? (
+          <img src={portal.image_url} alt={portal.name} style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ height: '4px', backgroundColor: '#FF2D78' }}></div>
+        )}
+        <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1A1A' }}>{portal.name}</h3>
+            <span style={{ padding: '4px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: '500', backgroundColor: '#FFF0F5', color: '#FF2D78' }}>Ativo</span>
           </div>
-          <p className="text-sm text-text-secondary dark:text-text-secondary mb-4 flex-1 line-clamp-2">{portal.description || 'Sem descrição'}</p>
-          <div className="flex items-center justify-between text-sm text-text-secondary dark:text-text-secondary border-t border-border dark:border-border pt-3 mt-auto">
-            <div className="flex items-center"><Users className="w-4 h-4 mr-1" /><span>0 membros</span></div>
-            <span className="text-xs">{timeAgo}</span>
+          <p style={{ fontSize: '14px', color: '#636E72', marginBottom: '16px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+            {portal.description || 'Sem descrição'}
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: '#636E72', borderTop: '1px solid #E9ECEF', paddingTop: '12px', marginTop: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Users style={{ width: '16px', height: '16px', marginRight: '4px' }} />
+              <span>0 membros</span>
+            </div>
+            <span style={{ fontSize: '12px' }}>{timeAgo}</span>
           </div>
         </div>
       </div>
@@ -163,8 +192,6 @@ export default function PortalsList() {
     try {
       setUploadingImage(true);
       
-      // 1. Get signed URL from server action
-      // We import it dynamically or assume it's imported at top
       const { getPresignedUrl } = await import('@/app/(admin)/admin/actions');
       const result = await getPresignedUrl(file.name, file.type);
       
@@ -172,7 +199,6 @@ export default function PortalsList() {
           throw new Error(result.error || 'Erro ao gerar URL de upload');
       }
 
-      // 2. Upload directly to Supabase Storage using the signed URL
       const uploadResponse = await fetch(result.signedUrl, {
           method: 'PUT',
           body: file,
@@ -185,8 +211,6 @@ export default function PortalsList() {
           throw new Error(`Erro no upload: ${uploadResponse.statusText}`);
       }
 
-      // 3. Get Public URL (Construct it manually or retrieve)
-      // Since we know the path and bucket, we can construct the public URL
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const publicUrl = `${supabaseUrl}/storage/v1/object/public/course-content/${result.path}`;
 
@@ -204,29 +228,24 @@ export default function PortalsList() {
   const onSubmit = async (data: PortalFormValues) => {
     console.log('🚀 Iniciando criação do portal...', data);
     try {
-      // 1. Insert into Supabase via Server Action
       const result = await createPortal({
         name: data.name.trim(),
         description: data.description?.trim() || '',
         image_url: data.image_url || null,
-        // Optional fields will be handled by defaults in the action
       });
 
       if (result.error) throw new Error(result.error);
       const newPortal = result.portal;
 
-      // 2. Success Feedback
       console.log('✅ Portal criado:', newPortal);
       toast.success('Portal criado com sucesso!');
 
-      // 3. Cleanup & Refresh
       reset();
       setImagePreview(null);
       setShowCreateModal(false);
 
-      // 4. Revalidate
-      await fetchPortals(); // Update local list
-      router.refresh();     // Update server components/cache
+      await fetchPortals();
+      router.refresh();
 
     } catch (error: any) {
       console.error('❌ Erro ao criar portal:', error);
@@ -239,96 +258,146 @@ export default function PortalsList() {
   const filteredPortals = portals.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase())));
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary">Meus Portais</h1>
-          <p className="text-text-secondary dark:text-text-secondary">Gerencie seus portais e acessos</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#1A1A1A' }}>Meus Portais</h1>
+            <p style={{ fontSize: '14px', color: '#636E72', marginTop: '4px' }}>Gerencie seus portais e acessos</p>
+          </div>
+          <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+            <Plus style={{ width: '18px', height: '18px', marginRight: '8px' }} />Criar Novo Portal
+          </Button>
         </div>
-        <Button variant="primary" className="w-full sm:w-auto" onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />Criar Novo Portal
-        </Button>
-      </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-5 w-5 text-text-secondary" /></div>
-        <Input type="text" placeholder="Buscar portais..." className="pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        {/* Search */}
+        <div style={{ maxWidth: '400px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+            <Search style={{ width: '20px', height: '20px', color: '#B2BEC3', position: 'absolute', left: '12px' }} />
+            <Input 
+              type="text" 
+              placeholder="Buscar portais..." 
+              className="pl-10 w-full" 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              style={{ paddingLeft: '36px' }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* List */}
       {isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary-main" /></div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+          <Loader2 style={{ width: '32px', height: '32px', animation: 'spin 1s linear infinite', color: '#FF2D78' }} />
+        </div>
       ) : filteredPortals.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
           {filteredPortals.map(portal => <PortalCard key={portal.id} portal={portal} />)}
         </div>
       ) : (
-        <div className="text-center py-12 bg-background-surface dark:bg-background-surface rounded-xl border border-border dark:border-border shadow-card">
-          <Globe className="mx-auto h-12 w-12 text-text-secondary" />
-          <h3 className="mt-2 text-lg font-medium text-text-primary dark:text-text-primary">Nenhum portal encontrado</h3>
-          <p className="mt-1 text-text-secondary dark:text-text-secondary">{searchTerm ? 'Nenhum portal corresponde à sua busca.' : 'Você ainda não possui portais criados.'}</p>
-          <div className="mt-6"><Button variant="primary" onClick={() => setShowCreateModal(true)}><Plus className="w-4 h-4 mr-2" />Criar Novo Portal</Button></div>
+        <div style={{ textAlign: 'center', padding: '48px 24px', backgroundColor: '#FFFFFF', borderRadius: '28px', border: '2px dashed #E9ECEF', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.03)' }}>
+          <Globe style={{ margin: '0 auto', width: '48px', height: '48px', color: '#B2BEC3', marginBottom: '12px' }} />
+          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1A1A', marginBottom: '4px' }}>Nenhum portal encontrado</h3>
+          <p style={{ fontSize: '14px', color: '#636E72', marginBottom: '24px' }}>
+            {searchTerm ? 'Nenhum portal corresponde à sua busca.' : 'Você ainda não possui portais criados.'}
+          </p>
+          <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+            <Plus style={{ width: '18px', height: '18px', marginRight: '8px' }} />Criar Novo Portal
+          </Button>
         </div>
       )}
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-background-surface dark:bg-background-surface rounded-xl shadow-floating max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col">
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', backdropFilter: 'blur(4px)' }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '28px', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)', maxWidth: '512px', width: '100%', maxHeight: '90vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border dark:border-border sticky top-0 bg-background-surface dark:bg-background-surface z-10">
-              <h2 className="text-xl font-semibold text-text-primary dark:text-text-primary">Criar Novo Portal</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #E9ECEF', position: 'sticky', top: 0, backgroundColor: '#FFFFFF', zIndex: 10 }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1A1A' }}>Criar Novo Portal</h2>
               <button
                 onClick={() => { setShowCreateModal(false); reset(); setImagePreview(null); }}
-                className="p-2 hover:bg-background-canvas dark:hover:bg-background-canvas rounded-full transition-colors"
+                style={{ padding: '8px', backgroundColor: 'transparent', borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s' }}
                 disabled={isSubmitting}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8F9FB'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
-                <X className="w-5 h-5" />
+                <X style={{ width: '20px', height: '20px' }} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
               {/* Name Field */}
               <div>
-                <label className="block text-sm font-medium text-text-primary dark:text-text-primary mb-1">Nome *</label>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' }}>Nome *</label>
                 <input
                   {...register('name')}
                   type="text"
-                  className={`w-full px-4 py-2 border rounded-md bg-background-canvas dark:bg-background-canvas text-text-primary dark:text-text-primary transition-colors ${errors.name ? 'border-status-error' : 'border-border dark:border-border'}`}
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    border: `1px solid ${errors.name ? '#D63031' : '#E9ECEF'}`,
+                    borderRadius: '12px',
+                    backgroundColor: '#F8F9FB',
+                    color: '#1A1A1A',
+                    fontSize: '14px',
+                  }}
                   disabled={isSubmitting}
                 />
-                {errors.name && <p className="text-status-error text-xs mt-1">{errors.name.message}</p>}
+                {errors.name && <p style={{ color: '#D63031', fontSize: '12px', marginTop: '4px' }}>{errors.name.message}</p>}
               </div>
 
               {/* Description Field */}
               <div>
-                <label className="block text-sm font-medium text-text-primary dark:text-text-primary mb-1">Descrição</label>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' }}>Descrição</label>
                 <textarea
                   {...register('description')}
                   rows={3}
-                  className="w-full px-4 py-2 border border-border dark:border-border rounded-md bg-background-canvas dark:bg-background-canvas text-text-primary dark:text-text-primary transition-colors"
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px',
+                    border: '1px solid #E9ECEF',
+                    borderRadius: '12px',
+                    backgroundColor: '#F8F9FB',
+                    color: '#1A1A1A',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                  }}
                   disabled={isSubmitting}
                 />
               </div>
 
               {/* Image Upload Field */}
               <div>
-                <label className="block text-sm font-medium text-text-primary dark:text-text-primary mb-2">Imagem</label>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' }}>Imagem</label>
                 {imagePreview ? (
-                  <div className="relative group">
-                    <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-lg border-2 border-border dark:border-border" />
+                  <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+                    <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '192px', objectFit: 'cover', borderRadius: '12px', border: '2px solid #E9ECEF' }} />
                     <button
                       type="button"
                       onClick={() => { setImagePreview(null); setValue('image_url', ''); }}
-                      className="absolute top-2 right-2 p-2 bg-status-error hover:bg-status-error/80 text-text-on-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        padding: '8px',
+                        backgroundColor: '#D63031',
+                        color: 'white',
+                        borderRadius: '9999px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
                       disabled={isSubmitting}
                     >
-                      <X className="w-4 h-4" />
+                      <X style={{ width: '16px', height: '16px' }} />
                     </button>
                   </div>
                 ) : (
@@ -338,17 +407,45 @@ export default function PortalsList() {
                       id="upload"
                       accept="image/*"
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
-                      className="hidden"
+                      style={{ display: 'none' }}
                       disabled={uploadingImage || isSubmitting}
                     />
                     <label
                       htmlFor="upload"
-                      className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-background-canvas dark:bg-background-canvas border-border dark:border-border hover:bg-primary-subtle dark:hover:bg-primary-subtle transition-colors duration-200 ease-in-out group ${uploadingImage || isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '192px',
+                        border: '2px dashed #E9ECEF',
+                        borderRadius: '12px',
+                        cursor: uploadingImage || isSubmitting ? 'not-allowed' : 'pointer',
+                        backgroundColor: '#F8F9FB',
+                        transition: 'background-color 0.2s',
+                        opacity: uploadingImage || isSubmitting ? 0.5 : 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!uploadingImage && !isSubmitting) {
+                          e.currentTarget.style.backgroundColor = '#FFF0F5';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#F8F9FB';
+                      }}
                     >
                       {uploadingImage ? (
-                        <><Loader2 className="w-12 h-12 text-primary-main animate-spin mb-3" /><p className="text-sm text-text-secondary dark:text-text-secondary">Enviando...</p></>
+                        <>
+                          <Loader2 style={{ width: '48px', height: '48px', color: '#FF2D78', animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
+                          <p style={{ fontSize: '14px', color: '#636E72' }}>Enviando...</p>
+                        </>
                       ) : (
-                        <><Cloud className="w-12 h-12 text-text-secondary group-hover:text-primary-main transition-colors duration-200 mb-3" /><p className="text-sm text-text-secondary dark:text-text-secondary font-semibold group-hover:text-primary-main transition-colors">Clique para fazer upload</p><p className="text-xs text-text-disabled">PNG, JPG até 5MB</p></>
+                        <>
+                          <Cloud style={{ width: '48px', height: '48px', color: '#B2BEC3', marginBottom: '12px', transition: 'color 0.2s' }} />
+                          <p style={{ fontSize: '14px', color: '#636E72', fontWeight: '600' }}>Clique para fazer upload</p>
+                          <p style={{ fontSize: '12px', color: '#B2BEC3' }}>PNG, JPG até 5MB</p>
+                        </>
                       )}
                     </label>
                   </div>
@@ -356,7 +453,7 @@ export default function PortalsList() {
               </div>
 
               {/* Footer Actions */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-border dark:border-border mt-6">
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid #E9ECEF', marginTop: '16px' }}>
                 <Button
                   type="button"
                   variant="outline"
@@ -370,7 +467,7 @@ export default function PortalsList() {
                   variant="primary"
                   disabled={isSubmitting || uploadingImage}
                 >
-                  {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Criando...</> : <><Plus className="w-4 h-4 mr-2" />Criar</>}
+                  {isSubmitting ? <><Loader2 style={{ width: '16px', height: '16px', marginRight: '8px', animation: 'spin 1s linear infinite' }} />Criando...</> : <><Plus style={{ width: '16px', height: '16px', marginRight: '8px' }} />Criar</>}
                 </Button>
               </div>
             </form>

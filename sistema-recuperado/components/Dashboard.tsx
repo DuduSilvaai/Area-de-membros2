@@ -23,18 +23,26 @@ const StatCard = ({
   change: string;
   icon: React.ElementType;
 }) => (
-  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+  <div 
+    style={{
+      backgroundColor: '#FFFFFF',
+      padding: '32px',
+      borderRadius: '28px',
+      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.03)',
+      border: '1px solid #E9ECEF',
+    }}
+  >
     <div className="flex justify-between items-start">
       <div>
-        <p className="text-sm font-medium text-gray-500">{title}</p>
-        <p className="text-2xl font-bold mt-1">{value}</p>
-        <div className={`flex items-center mt-2 ${parseFloat(change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-          <ArrowUpRight className={`w-4 h-4 mr-1 ${parseFloat(change) < 0 ? 'transform rotate-180' : ''}`} />
-          <span className="text-sm font-medium">{change} vs mês passado</span>
+        <p style={{ fontSize: '14px', fontWeight: '500', color: '#636E72' }}>{title}</p>
+        <p style={{ fontSize: '28px', fontWeight: '700', marginTop: '8px', color: '#1A1A1A' }}>{value}</p>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: '12px', color: parseFloat(change) >= 0 ? '#00B894' : '#D63031' }}>
+          <ArrowUpRight style={{ width: '16px', height: '16px', marginRight: '4px', transform: parseFloat(change) < 0 ? 'scaleY(-1)' : 'none' }} />
+          <span style={{ fontSize: '14px', fontWeight: '500' }}>{change} vs mês passado</span>
         </div>
       </div>
-      <div className="p-3 bg-blue-50 rounded-lg">
-        <Icon className="w-6 h-6 text-blue-600" />
+      <div style={{ padding: '12px', backgroundColor: '#FFF0F5', borderRadius: '12px' }}>
+        <Icon style={{ width: '24px', height: '24px', color: '#FF2D78' }} />
       </div>
     </div>
   </div>
@@ -42,9 +50,32 @@ const StatCard = ({
 
 // Componente de Gráfico (placeholder)
 const ChartPlaceholder = ({ title }: { title: string }) => (
-  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full">
-    <h3 className="font-medium text-gray-700 mb-4">{title}</h3>
-    <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
+  <div 
+    style={{
+      backgroundColor: '#FFFFFF',
+      padding: '32px',
+      borderRadius: '28px',
+      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.03)',
+      border: '1px solid #E9ECEF',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}
+  >
+    <h3 style={{ fontWeight: '500', color: '#1A1A1A', marginBottom: '16px', fontSize: '16px' }}>{title}</h3>
+    <div 
+      style={{
+        height: '256px',
+        backgroundColor: '#F8F9FB',
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#B2BEC3',
+        fontSize: '14px',
+        flex: 1,
+      }}
+    >
       Gráfico de {title}
     </div>
   </div>
@@ -60,20 +91,37 @@ const RecentActivity = () => {
   ];
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-      <h3 className="font-medium text-gray-700 mb-4">Atividades Recentes</h3>
-      <div className="space-y-4">
+    <div 
+      style={{
+        backgroundColor: '#FFFFFF',
+        padding: '32px',
+        borderRadius: '28px',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.03)',
+        border: '1px solid #E9ECEF',
+      }}
+    >
+      <h3 style={{ fontWeight: '500', color: '#1A1A1A', marginBottom: '16px', fontSize: '16px' }}>Atividades Recentes</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {activities.map((activity) => (
-          <div key={activity.id} className="flex items-start pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-            <div className="bg-blue-100 p-2 rounded-lg mr-3">
-              <Users className="w-4 h-4 text-blue-600" />
+          <div 
+            key={activity.id} 
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              paddingBottom: '12px',
+              borderBottom: '1px solid #E9ECEF',
+            }}
+            className="last:border-0 last:pb-0"
+          >
+            <div style={{ backgroundColor: '#FFF0F5', padding: '8px', borderRadius: '8px', marginRight: '12px', flexShrink: 0 }}>
+              <Users style={{ width: '16px', height: '16px', color: '#FF2D78' }} />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800">{activity.user}</p>
-              <p className="text-sm text-gray-500">{activity.action}</p>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>{activity.user}</p>
+              <p style={{ fontSize: '14px', color: '#636E72' }}>{activity.action}</p>
             </div>
-            <div className="flex items-center text-xs text-gray-400">
-              <Clock className="w-3 h-3 mr-1" />
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: '#B2BEC3' }}>
+              <Clock style={{ width: '12px', height: '12px', marginRight: '4px' }} />
               {activity.time}
             </div>
           </div>
@@ -85,15 +133,15 @@ const RecentActivity = () => {
 
 export default function Dashboard() {
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Cabeçalho */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Visão Geral</h1>
-        <p className="text-gray-500 mt-1">Bem-vindo de volta! Aqui está o que está acontecendo hoje.</p>
+        <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#1A1A1A' }}>Visão Geral</h1>
+        <p style={{ color: '#636E72', marginTop: '8px', fontSize: '14px' }}>Bem-vindo de volta! Aqui está o que está acontecendo hoje.</p>
       </div>
 
       {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
         <StatCard 
           title="Total de Usuários" 
           value="1,248" 
@@ -121,8 +169,8 @@ export default function Dashboard() {
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+        <div style={{ gridColumn: 'span 2' }}>
           <ChartPlaceholder title="Desempenho de Vendas" />
         </div>
         <div>
@@ -131,30 +179,39 @@ export default function Dashboard() {
       </div>
 
       {/* Atividades Recentes e Outras Seções */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+        <div style={{ gridColumn: 'span 2' }}>
           <RecentActivity />
         </div>
         <div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
-            <h3 className="font-medium text-gray-700 mb-4">Próximos Eventos</h3>
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <div className="bg-purple-100 text-purple-800 p-2 rounded-lg mr-3">
-                  <Calendar className="w-4 h-4" />
+          <div 
+            style={{
+              backgroundColor: '#FFFFFF',
+              padding: '32px',
+              borderRadius: '28px',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.03)',
+              border: '1px solid #E9ECEF',
+              marginBottom: '24px',
+            }}
+          >
+            <h3 style={{ fontWeight: '500', color: '#1A1A1A', marginBottom: '16px', fontSize: '16px' }}>Próximos Eventos</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                <div style={{ backgroundColor: '#F0EBFF', color: '#7C3AED', padding: '8px', borderRadius: '8px', marginRight: '12px' }}>
+                  <Calendar style={{ width: '16px', height: '16px' }} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Reunião de Equipe</p>
-                  <p className="text-xs text-gray-500">Amanhã, 10:00 AM</p>
+                  <p style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>Reunião de Equipe</p>
+                  <p style={{ fontSize: '12px', color: '#B2BEC3' }}>Amanhã, 10:00 AM</p>
                 </div>
               </div>
-              <div className="flex items-start">
-                <div className="bg-green-100 text-green-800 p-2 rounded-lg mr-3">
-                  <Calendar className="w-4 h-4" />
+              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                <div style={{ backgroundColor: '#F0FDF4', color: '#16A34A', padding: '8px', borderRadius: '8px', marginRight: '12px' }}>
+                  <Calendar style={{ width: '16px', height: '16px' }} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Apresentação de Resultados</p>
-                  <p className="text-xs text-gray-500">Sexta, 2:00 PM</p>
+                  <p style={{ fontSize: '14px', fontWeight: '500', color: '#1A1A1A' }}>Apresentação de Resultados</p>
+                  <p style={{ fontSize: '12px', color: '#B2BEC3' }}>Sexta, 2:00 PM</p>
                 </div>
               </div>
             </div>

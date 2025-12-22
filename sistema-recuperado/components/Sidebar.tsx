@@ -61,13 +61,14 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors"
+              className="flex items-center gap-3 transition-colors"
               style={{
                 backgroundColor: isActive ? '#FF2D78' : 'transparent',
                 color: isActive ? '#FFFFFF' : '#636E72',
                 gap: '12px',
                 padding: '10px 12px',
                 marginBottom: '4px',
+                borderRadius: '28px',
               }}
             >
               <item.icon 
@@ -90,12 +91,13 @@ export default function Sidebar() {
         style={{ borderColor: '#E9ECEF' }}
       >
         <button 
-          className="flex items-center gap-3 px-3 py-2 w-full text-sm font-medium rounded-md transition-colors"
+          className="flex items-center gap-3 px-3 py-2 w-full text-sm font-medium rounded-full transition-colors"
           style={{
             color: '#D63031',
             padding: '10px 12px',
             backgroundColor: 'transparent',
             gap: '12px',
+            borderRadius: '28px',
           }}
         >
           <LogOut style={{ width: '20px', height: '20px', flexShrink: 0 }} />
