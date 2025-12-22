@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
+/* Light Mode (Default) */
 :root {
-  /* Light Mode Colors - Default */
+  /* Light Mode Colors */
   --primary-main: #FF2D78;
   --primary-hover: #E61E6A;
   --primary-subtle: #FFF0F5;
   
   --bg-default: #FFFFFF;
-  --bg-canvas: #F8F9FB;
+  --bg-canvas: #F5F5F7;
   --bg-surface: #FFFFFF;
   --bg-sidebar: #F1F3F5;
   
@@ -22,6 +23,7 @@
   --status-info: #0984E3;
   
   --border-color: #E9ECEF;
+  --border-subtle: rgba(0, 0, 0, 0.04);
   
   /* Spacing */
   --spacing-xs: 4px;
@@ -41,11 +43,43 @@
   /* Shadows (Light Mode) */
   --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
   --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.08);
-  --shadow-card: 0 2px 20px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 10px 32px rgba(0, 0, 0, 0.04);
   --shadow-floating: 0 20px 40px rgba(0, 0, 0, 0.12);
   
   /* Font Family */
   --font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Dark Mode */
+html.dark {
+  /* Dark Mode Colors */
+  --primary-main: #FF4D94;
+  --primary-hover: #FF70AB;
+  --primary-subtle: rgba(255, 77, 148, 0.15);
+  
+  --bg-default: #0F0F12;
+  --bg-canvas: #0A0A0D;
+  --bg-surface: #121216;
+  --bg-sidebar: #121216;
+  
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0AB;
+  --text-disabled: #4D4D54;
+  --text-on-primary: #FFFFFF;
+  
+  --status-success: #2ECC71;
+  --status-warning: #F1C40F;
+  --status-error: #E74C3C;
+  --status-info: #3498DB;
+  
+  --border-color: #2D2D35;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  
+  /* Shadows (Dark Mode) */
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 10px 32px rgba(0, 0, 0, 0.4);
+  --shadow-floating: 0 20px 40px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -55,17 +89,19 @@
 }
 
 html {
-  background-color: #FFFFFF;
-  color: #1A1A1A;
+  background-color: var(--bg-default);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body {
-  background-color: #FFFFFF;
-  color: #1A1A1A;
+  background-color: var(--bg-default);
+  color: var(--text-primary);
   font-family: var(--font-family);
   line-height: 1.5;
   margin: 0;
   padding: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Typography */
@@ -73,25 +109,25 @@ h1 {
   font-size: 32px;
   line-height: 1.2;
   font-weight: 700;
-  color: #1A1A1A;
+  color: var(--text-primary);
 }
 
 h2 {
   font-size: 24px;
   line-height: 1.3;
   font-weight: 600;
-  color: #1A1A1A;
+  color: var(--text-primary);
 }
 
 h3 {
   font-size: 18px;
   line-height: 1.4;
   font-weight: 600;
-  color: #1A1A1A;
+  color: var(--text-primary);
 }
 
 p {
-  color: #1A1A1A;
+  color: var(--text-primary);
 }
 
 .text-body-large {
@@ -117,4 +153,11 @@ p {
   line-height: 1.2;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+/* Smooth transitions for theme changes */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
 }

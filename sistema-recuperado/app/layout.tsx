@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,20 +19,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={inter.className} style={{ backgroundColor: "#F5F5F7", color: "#1A1A1A" }}>
-        <AuthProvider>
-          <div className="flex min-h-screen w-full">
-            {/* Menu Lateral Flutuante */}
-            <Sidebar />
+      <body className={inter.className}>
+        <ThemeProvider>
+          <AuthProvider>
+            <div className="flex min-h-screen w-full">
+              {/* Menu Lateral Flutuante */}
+              <Sidebar />
 
-            {/* Área de Conteúdo */}
-            <div className="flex-1" style={{ marginLeft: "284px" }}>
-              <main className="min-h-screen" style={{ backgroundColor: "#F5F5F7", padding: "32px 32px 32px 20px" }}>
-                {children}
-              </main>
+              {/* Área de Conteúdo */}
+              <div className="flex-1" style={{ marginLeft: "284px" }}>
+                <main className="min-h-screen" style={{ padding: "32px 32px 32px 20px" }}>
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
-        </AuthProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -9,7 +9,9 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Globe
+  Globe,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -25,20 +27,32 @@ const MENU_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
 
+  const handleThemeToggle = () => {
+    const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', newTheme);
+  };
+
   return (
     <div 
-      className="fixed left-0 top-0 h-screen flex flex-col"
       style={{
+        position: 'fixed',
+        left: '12px',
+        top: '12px',
+        height: 'calc(100vh - 24px)',
         width: '260px',
+        display: 'flex',
+        flexDirection: 'column',
         backgroundColor: 'rgba(255, 255, 255, 0.7)',
         backdropFilter: 'blur(12px)',
         borderRight: '1px solid rgba(255, 255, 255, 0.8)',
-        margin: '12px',
         borderRadius: '24px',
-        height: 'calc(100vh - 24px)',
-        top: '12px',
-        left: '12px',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.3s ease',
       }}
     >
       {/* Logo */}
@@ -101,14 +115,16 @@ export default function Sidebar() {
                 background: isActive 
                   ? 'linear-gradient(135deg, #FF2D78 0%, #E61E6A 100%)'
                   : 'transparent',
-                color: isActive ? '#FFFFFF' : '#636E72',
-                boxShadow: isActive ? '0 8px 24px rgba(255, 45, 120, 0.25)' : 'none',
+                color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                boxShadow: isActive 
+                  ? '0 8px 24px rgba(255, 45, 120, 0.25)'
+                  : 'none',
                 border: isActive ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
                 textDecoration: 'none',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
                 }
               }}
               onMouseLeave={(e) => {
@@ -121,7 +137,7 @@ export default function Sidebar() {
                 style={{
                   width: '20px',
                   height: '20px',
-                  color: isActive ? '#FFFFFF' : '#636E72',
+                  color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
                   flexShrink: 0,
                 }}
               />
@@ -131,11 +147,48 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Rodapé do Menu */}
+      {/* Theme Toggle */}
       <div 
         style={{
           padding: '12px',
           borderTop: '1px solid rgba(255, 255, 255, 0.5)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.5)',
+        }}
+      >
+        <button 
+          onClick={handleThemeToggle}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '10px 14px',
+            width: '100%',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: 'var(--text-secondary)',
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderRadius: '16px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+          title="Alternar tema"
+        >
+          <Sun style={{ width: '20px', height: '20px', flexShrink: 0 }} />
+          <span>Tema</span>
+        </button>
+      </div>
+
+      {/* Rodapé do Menu */}
+      <div 
+        style={{
+          padding: '12px',
           flexShrink: 0,
         }}
       >
