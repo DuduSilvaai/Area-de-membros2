@@ -27,24 +27,43 @@ export default function Sidebar() {
 
   return (
     <div 
-      className="fixed left-0 top-0 h-screen flex flex-col border-r"
+      className="fixed left-0 top-0 h-screen flex flex-col"
       style={{
         width: '260px',
-        backgroundColor: '#F1F3F5',
-        borderColor: '#E9ECEF',
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        backdropFilter: 'blur(12px)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.8)',
+        margin: '12px',
+        borderRadius: '24px',
+        height: 'calc(100vh - 24px)',
+        top: '12px',
+        left: '12px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
       }}
     >
       {/* Logo */}
       <div 
-        className="flex items-center px-6 border-b flex-shrink-0"
         style={{
           height: '64px',
-          borderColor: '#E9ECEF',
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: '24px',
+          paddingRight: '24px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.5)',
         }}
       >
         <h1 
-          className="text-xl font-bold tracking-tight"
-          style={{ color: '#FF2D78' }}
+          style={{
+            fontSize: '22px',
+            fontWeight: '800',
+            background: 'linear-gradient(135deg, #FF2D78 0%, #E61E6A 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            letterSpacing: '-0.02em',
+            textTransform: 'uppercase',
+            margin: 0,
+          }}
         >
           MOZART
         </h1>
@@ -52,8 +71,17 @@ export default function Sidebar() {
 
       {/* Menu */}
       <nav 
-        className="flex-1 overflow-y-auto py-6 px-3"
-        style={{ gap: '12px', display: 'flex', flexDirection: 'column' }}
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          paddingTop: '20px',
+          paddingBottom: '20px',
+          paddingLeft: '12px',
+          paddingRight: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}
       >
         {MENU_ITEMS.map((item) => {
           const isActive = pathname === item.href;
@@ -61,14 +89,32 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 transition-colors"
               style={{
-                backgroundColor: isActive ? '#FF2D78' : 'transparent',
-                color: isActive ? '#FFFFFF' : '#636E72',
+                display: 'flex',
+                alignItems: 'center',
                 gap: '12px',
-                padding: '10px 12px',
-                marginBottom: '4px',
-                borderRadius: '28px',
+                padding: '10px 14px',
+                borderRadius: '16px',
+                fontSize: '14px',
+                fontWeight: isActive ? '600' : '500',
+                transition: 'all 0.2s ease',
+                background: isActive 
+                  ? 'linear-gradient(135deg, #FF2D78 0%, #E61E6A 100%)'
+                  : 'transparent',
+                color: isActive ? '#FFFFFF' : '#636E72',
+                boxShadow: isActive ? '0 8px 24px rgba(255, 45, 120, 0.25)' : 'none',
+                border: isActive ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
+                textDecoration: 'none',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
               }}
             >
               <item.icon 
@@ -87,17 +133,33 @@ export default function Sidebar() {
 
       {/* Rodapé do Menu */}
       <div 
-        className="p-4 border-t flex-shrink-0"
-        style={{ borderColor: '#E9ECEF' }}
+        style={{
+          padding: '12px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.5)',
+          flexShrink: 0,
+        }}
       >
         <button 
-          className="flex items-center gap-3 px-3 py-2 w-full text-sm font-medium rounded-full transition-colors"
           style={{
-            color: '#D63031',
-            padding: '10px 12px',
-            backgroundColor: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
             gap: '12px',
-            borderRadius: '28px',
+            padding: '10px 14px',
+            width: '100%',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#D63031',
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderRadius: '16px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(214, 48, 49, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
           <LogOut style={{ width: '20px', height: '20px', flexShrink: 0 }} />

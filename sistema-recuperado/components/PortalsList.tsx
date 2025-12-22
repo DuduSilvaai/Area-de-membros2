@@ -15,8 +15,6 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { createPortal } from '@/app/(admin)/admin/actions';
 
-// --- Types & Schema ---
-
 interface Portal {
   id: string;
   name: string;
@@ -34,8 +32,6 @@ const portalSchema = z.object({
 
 type PortalFormValues = z.infer<typeof portalSchema>;
 
-// --- Components ---
-
 const PortalCard = ({ portal }: { portal: Portal }) => {
   const lastUpdated = portal.updated_at || portal.created_at;
   const timeAgo = lastUpdated ? formatDistanceToNow(new Date(lastUpdated), { addSuffix: true, locale: ptBR }) : 'Recentemente';
@@ -44,38 +40,39 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
       <div 
         style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: '28px',
-          border: '1px solid #E9ECEF',
+          backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)',
+          borderRadius: '20px',
+          border: '1px solid rgba(255, 255, 255, 0.8)',
           overflow: 'hidden',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.03)',
+          boxShadow: '0 10px 32px rgba(0, 0, 0, 0.04)',
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          transition: 'transform 0.2s, box-shadow 0.2s',
+          transition: 'all 0.3s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.08)';
-          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.08)';
+          e.currentTarget.style.transform = 'translateY(-6px)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.03)';
+          e.currentTarget.style.boxShadow = '0 10px 32px rgba(0, 0, 0, 0.04)';
           e.currentTarget.style.transform = 'translateY(0)';
         }}
       >
         {portal.image_url ? (
           <img src={portal.image_url} alt={portal.name} style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
         ) : (
-          <div style={{ height: '4px', backgroundColor: '#FF2D78' }}></div>
+          <div style={{ height: '4px', background: 'linear-gradient(90deg, #FF2D78 0%, #E61E6A 100%)' }}></div>
         )}
         <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1A1A' }}>{portal.name}</h3>
-            <span style={{ padding: '4px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: '500', backgroundColor: '#FFF0F5', color: '#FF2D78' }}>Ativo</span>
+            <span style={{ padding: '6px 14px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', backgroundColor: '#FFF0F5', color: '#FF2D78', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Ativo</span>
           </div>
-          <p style={{ fontSize: '14px', color: '#636E72', marginBottom: '16px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+          <p style={{ fontSize: '14px', color: '#888888', marginBottom: '16px', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
             {portal.description || 'Sem descrição'}
           </p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: '#636E72', borderTop: '1px solid #E9ECEF', paddingTop: '12px', marginTop: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#888888', borderTop: '1px solid rgba(0, 0, 0, 0.04)', paddingTop: '12px', marginTop: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <Users style={{ width: '16px', height: '16px', marginRight: '4px' }} />
               <span>0 membros</span>
@@ -92,7 +89,6 @@ export default function PortalsList() {
   const router = useRouter();
   const supabase = createClient();
 
-  // State
   const [searchTerm, setSearchTerm] = useState('');
   const [portals, setPortals] = useState<Portal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -100,7 +96,6 @@ export default function PortalsList() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Form
   const {
     register,
     handleSubmit,
@@ -116,18 +111,10 @@ export default function PortalsList() {
     }
   });
 
-  // Fetch Data with Timeout & Debug
   const fetchPortals = async () => {
     console.log('🔍 fetchPortals iniciado');
-
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    console.log('🛠️ Configuração Supabase:', {
-      urlPresent: !!supabaseUrl,
-      keyPresent: !!supabaseKey,
-      url: supabaseUrl ? supabaseUrl.substring(0, 15) + '...' : 'MISSING',
-    });
 
     if (!supabaseUrl || !supabaseKey) {
       toast.error('Erro de configuração: Variáveis de ambiente ausentes');
@@ -135,21 +122,16 @@ export default function PortalsList() {
       return;
     }
 
-    // Timeout promise
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Timeout: Supabase demorou muito')), 10000)
     );
 
     try {
       setIsLoading(true);
-
-      // Check auth (non-blocking for debugging)
       supabase.auth.getUser().then(({ data }) => {
         console.log('👤 Usuário (Async):', data.user ? data.user.email : 'Nenhum');
       });
 
-      // Race between fetch and timeout
-      // Simplified query to test connection
       const fetchPromise = supabase
         .from('portals')
         .select('id, name, description, image_url, created_at, updated_at')
@@ -157,16 +139,9 @@ export default function PortalsList() {
         .limit(10);
 
       const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
       const { data, error } = result;
 
-      console.log('📦 Resposta Supabase:', {
-        dataLength: data?.length,
-        error
-      });
-
       if (error) throw error;
-
       console.log(`✅ ${data?.length || 0} portais carregados`);
       setPortals(data || []);
     } catch (error: any) {
@@ -174,7 +149,6 @@ export default function PortalsList() {
       toast.error(`Erro ao carregar: ${error.message || 'Desconhecido'}`);
       setPortals([]);
     } finally {
-      console.log('🏁 Finalizando loading...');
       setIsLoading(false);
     }
   };
@@ -184,14 +158,12 @@ export default function PortalsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handlers
   const handleImageUpload = async (file: File) => {
     if (!file || !file.type.startsWith('image/')) return toast.error('Selecione apenas imagens');
     if (file.size > 5 * 1024 * 1024) return toast.error('Imagem deve ter no máximo 5MB');
 
     try {
       setUploadingImage(true);
-      
       const { getPresignedUrl } = await import('@/app/(admin)/admin/actions');
       const result = await getPresignedUrl(file.name, file.type);
       
@@ -226,7 +198,6 @@ export default function PortalsList() {
   };
 
   const onSubmit = async (data: PortalFormValues) => {
-    console.log('🚀 Iniciando criação do portal...', data);
     try {
       const result = await createPortal({
         name: data.name.trim(),
@@ -235,9 +206,6 @@ export default function PortalsList() {
       });
 
       if (result.error) throw new Error(result.error);
-      const newPortal = result.portal;
-
-      console.log('✅ Portal criado:', newPortal);
       toast.success('Portal criado com sucesso!');
 
       reset();
@@ -250,8 +218,6 @@ export default function PortalsList() {
     } catch (error: any) {
       console.error('❌ Erro ao criar portal:', error);
       toast.error(`Erro ao criar portal: ${error.message || 'Erro desconhecido'}`);
-    } finally {
-      console.log('🏁 Processo de criação finalizado');
     }
   };
 
@@ -263,8 +229,8 @@ export default function PortalsList() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#1A1A1A' }}>Meus Portais</h1>
-            <p style={{ fontSize: '14px', color: '#636E72', marginTop: '4px' }}>Gerencie seus portais e acessos</p>
+            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#1A1A1A', margin: 0 }}>Meus Portais</h1>
+            <p style={{ fontSize: '14px', color: '#888888', marginTop: '4px', margin: '4px 0 0 0' }}>Gerencie seus portais e acessos</p>
           </div>
           <Button variant="primary" onClick={() => setShowCreateModal(true)}>
             <Plus style={{ width: '18px', height: '18px', marginRight: '8px' }} />Criar Novo Portal
@@ -274,11 +240,10 @@ export default function PortalsList() {
         {/* Search */}
         <div style={{ maxWidth: '400px' }}>
           <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-            <Search style={{ width: '20px', height: '20px', color: '#B2BEC3', position: 'absolute', left: '12px' }} />
+            <Search style={{ width: '20px', height: '20px', color: '#CCCCCC', position: 'absolute', left: '12px' }} />
             <Input 
               type="text" 
               placeholder="Buscar portais..." 
-              className="pl-10 w-full" 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
               style={{ paddingLeft: '36px' }}
@@ -293,14 +258,14 @@ export default function PortalsList() {
           <Loader2 style={{ width: '32px', height: '32px', animation: 'spin 1s linear infinite', color: '#FF2D78' }} />
         </div>
       ) : filteredPortals.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
           {filteredPortals.map(portal => <PortalCard key={portal.id} portal={portal} />)}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '48px 24px', backgroundColor: '#FFFFFF', borderRadius: '28px', border: '2px dashed #E9ECEF', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.03)' }}>
-          <Globe style={{ margin: '0 auto', width: '48px', height: '48px', color: '#B2BEC3', marginBottom: '12px' }} />
+        <div style={{ textAlign: 'center', padding: '48px 24px', backgroundColor: '#FFFFFF', borderRadius: '20px', border: '2px dashed rgba(0, 0, 0, 0.08)', boxShadow: '0 10px 32px rgba(0, 0, 0, 0.04)' }}>
+          <Globe style={{ margin: '0 auto', width: '48px', height: '48px', color: '#CCCCCC', marginBottom: '12px' }} />
           <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1A1A', marginBottom: '4px' }}>Nenhum portal encontrado</h3>
-          <p style={{ fontSize: '14px', color: '#636E72', marginBottom: '24px' }}>
+          <p style={{ fontSize: '14px', color: '#888888', marginBottom: '24px' }}>
             {searchTerm ? 'Nenhum portal corresponde à sua busca.' : 'Você ainda não possui portais criados.'}
           </p>
           <Button variant="primary" onClick={() => setShowCreateModal(true)}>
@@ -311,17 +276,17 @@ export default function PortalsList() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', backdropFilter: 'blur(4px)' }}>
-          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '28px', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)', maxWidth: '512px', width: '100%', maxHeight: '90vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', backdropFilter: 'blur(8px)' }}>
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', boxShadow: '0 25px 50px rgba(0, 0, 0, 0.15)', maxWidth: '512px', width: '100%', maxHeight: '90vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
 
             {/* Modal Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #E9ECEF', position: 'sticky', top: 0, backgroundColor: '#FFFFFF', zIndex: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid rgba(0, 0, 0, 0.04)', position: 'sticky', top: 0, backgroundColor: '#FFFFFF', zIndex: 10 }}>
               <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1A1A' }}>Criar Novo Portal</h2>
               <button
                 onClick={() => { setShowCreateModal(false); reset(); setImagePreview(null); }}
-                style={{ padding: '8px', backgroundColor: 'transparent', borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                style={{ padding: '8px', backgroundColor: 'transparent', borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s', border: 'none' }}
                 disabled={isSubmitting}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8F9FB'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F5F5F7'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <X style={{ width: '20px', height: '20px' }} />
@@ -333,16 +298,16 @@ export default function PortalsList() {
 
               {/* Name Field */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' }}>Nome *</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#666666', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nome *</label>
                 <input
                   {...register('name')}
                   type="text"
                   style={{
                     width: '100%',
                     padding: '10px 16px',
-                    border: `1px solid ${errors.name ? '#D63031' : '#E9ECEF'}`,
+                    border: `1px solid ${errors.name ? '#D63031' : 'rgba(0, 0, 0, 0.08)'}`,
                     borderRadius: '12px',
-                    backgroundColor: '#F8F9FB',
+                    backgroundColor: '#F9F9FB',
                     color: '#1A1A1A',
                     fontSize: '14px',
                   }}
@@ -353,16 +318,16 @@ export default function PortalsList() {
 
               {/* Description Field */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' }}>Descrição</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#666666', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Descrição</label>
                 <textarea
                   {...register('description')}
                   rows={3}
                   style={{
                     width: '100%',
                     padding: '10px 16px',
-                    border: '1px solid #E9ECEF',
+                    border: '1px solid rgba(0, 0, 0, 0.08)',
                     borderRadius: '12px',
-                    backgroundColor: '#F8F9FB',
+                    backgroundColor: '#F9F9FB',
                     color: '#1A1A1A',
                     fontSize: '14px',
                     fontFamily: 'inherit',
@@ -373,10 +338,10 @@ export default function PortalsList() {
 
               {/* Image Upload Field */}
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#1A1A1A', marginBottom: '8px' }}>Imagem</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#666666', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Imagem</label>
                 {imagePreview ? (
                   <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
-                    <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '192px', objectFit: 'cover', borderRadius: '12px', border: '2px solid #E9ECEF' }} />
+                    <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '192px', objectFit: 'cover', borderRadius: '12px', border: '1px solid rgba(0, 0, 0, 0.08)' }} />
                     <button
                       type="button"
                       onClick={() => { setImagePreview(null); setValue('image_url', ''); }}
@@ -419,10 +384,10 @@ export default function PortalsList() {
                         justifyContent: 'center',
                         width: '100%',
                         height: '192px',
-                        border: '2px dashed #E9ECEF',
+                        border: '2px dashed rgba(0, 0, 0, 0.1)',
                         borderRadius: '12px',
                         cursor: uploadingImage || isSubmitting ? 'not-allowed' : 'pointer',
-                        backgroundColor: '#F8F9FB',
+                        backgroundColor: '#F9F9FB',
                         transition: 'background-color 0.2s',
                         opacity: uploadingImage || isSubmitting ? 0.5 : 1,
                       }}
@@ -432,19 +397,19 @@ export default function PortalsList() {
                         }
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#F8F9FB';
+                        e.currentTarget.style.backgroundColor = '#F9F9FB';
                       }}
                     >
                       {uploadingImage ? (
                         <>
                           <Loader2 style={{ width: '48px', height: '48px', color: '#FF2D78', animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
-                          <p style={{ fontSize: '14px', color: '#636E72' }}>Enviando...</p>
+                          <p style={{ fontSize: '14px', color: '#888888' }}>Enviando...</p>
                         </>
                       ) : (
                         <>
-                          <Cloud style={{ width: '48px', height: '48px', color: '#B2BEC3', marginBottom: '12px', transition: 'color 0.2s' }} />
-                          <p style={{ fontSize: '14px', color: '#636E72', fontWeight: '600' }}>Clique para fazer upload</p>
-                          <p style={{ fontSize: '12px', color: '#B2BEC3' }}>PNG, JPG até 5MB</p>
+                          <Cloud style={{ width: '48px', height: '48px', color: '#CCCCCC', marginBottom: '12px', transition: 'color 0.2s' }} />
+                          <p style={{ fontSize: '14px', color: '#666666', fontWeight: '600' }}>Clique para fazer upload</p>
+                          <p style={{ fontSize: '12px', color: '#AAAAAA' }}>PNG, JPG até 5MB</p>
                         </>
                       )}
                     </label>
@@ -453,7 +418,7 @@ export default function PortalsList() {
               </div>
 
               {/* Footer Actions */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid #E9ECEF', marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid rgba(0, 0, 0, 0.04)', marginTop: '16px' }}>
                 <Button
                   type="button"
                   variant="outline"

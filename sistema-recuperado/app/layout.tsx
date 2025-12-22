@@ -18,15 +18,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={inter.className} style={{ backgroundColor: "#F8F9FB", color: "#1A1A1A" }}>
+      <body className={inter.className} style={{ backgroundColor: "#F5F5F7", color: "#1A1A1A" }}>
         <AuthProvider>
           <div className="flex min-h-screen w-full">
-            {/* Menu Lateral Fixo */}
+            {/* Menu Lateral Flutuante */}
             <Sidebar />
 
             {/* Área de Conteúdo */}
-            <div className="flex-1" style={{ marginLeft: "260px" }}>
-              <main className="min-h-screen" style={{ backgroundColor: "#F8F9FB", padding: "32px" }}>
+            <div className="flex-1" style={{ marginLeft: "284px" }}>
+              <main className="min-h-screen" style={{ backgroundColor: "#F5F5F7", padding: "32px 32px 32px 20px" }}>
                 {children}
               </main>
             </div>
