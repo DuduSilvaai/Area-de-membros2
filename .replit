@@ -1,0 +1,46 @@
+modules = ["nodejs-20", "web"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+NEXT_PUBLIC_SUPABASE_URL = "https://uoyhemfwkddlulmkvfci.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVveWhlbWZ3a2RkbHVsbWt2ZmNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4NTg4NDMsImV4cCI6MjA3OTQzNDg0M30.b2zEm2z83pfWQt9JiD_YAoMVe462-atccWRhMWcXVKQ"
+SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVveWhlbWZ3a2RkbHVsbWt2ZmNpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzg1ODg0MywiZXhwIjoyMDc5NDM0ODQzfQ.bEo2uozua5ITIdd961Dl-FVPS0CoK3_CpeRVQODUkfQ"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Next.js Dev Server"
+
+[[workflows.workflow]]
+name = "Next.js Dev Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd sistema-recuperado && npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["bash", "-c", "cd sistema-recuperado && npm run start"]
+build = ["bash", "-c", "cd sistema-recuperado && npm run build"]
