@@ -27,7 +27,6 @@ interface Portal {
 const portalSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   description: z.string().optional(),
-  image_url: z.string().optional(),
 });
 
 type PortalFormValues = z.infer<typeof portalSchema>;
@@ -40,8 +39,6 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
       <div
         style={{
           backgroundColor: 'var(--bg-surface)',
-          // Simple gradient or just surface color for dark mode compatibility
-          //backgroundImage: 'linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-canvas) 100%)', 
           borderRadius: 'var(--radius-lg)',
           border: '1px solid var(--border-color)',
           overflow: 'hidden',
@@ -94,13 +91,10 @@ export default function PortalsList() {
   const [portals, setPortals] = useState<Portal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    setValue,
     reset,
     formState: { errors, isSubmitting }
   } = useForm<PortalFormValues>({
@@ -108,7 +102,6 @@ export default function PortalsList() {
     defaultValues: {
       name: '',
       description: '',
-      image_url: ''
     }
   });
 
@@ -159,62 +152,31 @@ export default function PortalsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleImageUpload = async (file: File) => {
-    if (!file || !file.type.startsWith('image/')) return toast.error('Selecione apenas imagens');
-    if (file.size > 5 * 1024 * 1024) return toast.error('Imagem deve ter no máximo 5MB');
-
-    try {
-      setUploadingImage(true);
-      const { getPresignedUrl } = await import('@/app/(admin)/admin/actions');
-      const result = await getPresignedUrl(file.name, file.type);
-
-      if (result.error || !result.signedUrl) {
-        throw new Error(result.error || 'Erro ao gerar URL de upload');
-      }
-
-      const uploadResponse = await fetch(result.signedUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Erro no upload: ${uploadResponse.statusText}`);
-      }
-
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const publicUrl = `${supabaseUrl}/storage/v1/object/public/course-content/${result.path}`;
-
-      setValue('image_url', publicUrl);
-      setImagePreview(publicUrl);
-      toast.success('Imagem enviada!');
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error(`Erro no upload: ${error.message}`);
-    } finally {
-      setUploadingImage(false);
-    }
-  };
+  useEffect(() => {
+    fetchPortals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onSubmit = async (data: PortalFormValues) => {
     try {
       const result = await createPortal({
         name: data.name.trim(),
         description: data.description?.trim() || '',
-        image_url: data.image_url || null,
       });
 
       if (result.error) throw new Error(result.error);
       toast.success('Portal criado com sucesso!');
 
       reset();
-      setImagePreview(null);
       setShowCreateModal(false);
 
-      await fetchPortals();
-      router.refresh();
+      // Redirect to the new portal's settings page
+      if (result.portal?.id) {
+        router.push(`/portals/${result.portal.id}/settings`);
+      } else {
+        await fetchPortals();
+        router.refresh();
+      }
 
     } catch (error: any) {
       console.error('❌ Erro ao criar portal:', error);
@@ -286,7 +248,7 @@ export default function PortalsList() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, backgroundColor: 'var(--bg-surface)', zIndex: 10 }}>
                 <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>Criar Novo Portal</h2>
                 <button
-                  onClick={() => { setShowCreateModal(false); reset(); setImagePreview(null); }}
+                  onClick={() => { setShowCreateModal(false); reset(); }}
                   style={{ padding: '8px', backgroundColor: 'transparent', borderRadius: '8px', cursor: 'pointer', transition: 'background-color 0.2s', border: 'none', color: 'var(--text-secondary)' }}
                   disabled={isSubmitting}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-canvas)'}
@@ -339,89 +301,8 @@ export default function PortalsList() {
                   />
                 </div>
 
-                {/* Image Upload Field */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Imagem</label>
-                  {imagePreview ? (
-                    <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
-                      <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '192px', objectFit: 'cover', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }} />
-                      <button
-                        type="button"
-                        onClick={() => { setImagePreview(null); setValue('image_url', ''); }}
-                        style={{
-                          position: 'absolute',
-                          top: '8px',
-                          right: '8px',
-                          padding: '8px',
-                          backgroundColor: 'var(--status-error)',
-                          color: 'white',
-                          borderRadius: '9999px',
-                          border: 'none',
-                          cursor: 'pointer',
-                          opacity: 0,
-                          transition: 'opacity 0.2s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
-                        disabled={isSubmitting}
-                      >
-                        <X style={{ width: '16px', height: '16px' }} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <input
-                        type="file"
-                        id="upload"
-                        accept="image/*"
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
-                        style={{ display: 'none' }}
-                        disabled={uploadingImage || isSubmitting}
-                      />
-                      <label
-                        htmlFor="upload"
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '100%',
-                          height: '192px',
-                          border: '2px dashed var(--border-color)',
-                          borderRadius: 'var(--radius-md)',
-                          cursor: uploadingImage || isSubmitting ? 'not-allowed' : 'pointer',
-                          backgroundColor: 'var(--bg-canvas)',
-                          transition: 'background-color 0.2s',
-                          opacity: uploadingImage || isSubmitting ? 0.5 : 1,
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!uploadingImage && !isSubmitting) {
-                            e.currentTarget.style.backgroundColor = 'var(--primary-subtle)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--bg-canvas)';
-                        }}
-                      >
-                        {uploadingImage ? (
-                          <>
-                            <Loader2 style={{ width: '48px', height: '48px', color: 'var(--primary-main)', animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
-                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Enviando...</p>
-                          </>
-                        ) : (
-                          <>
-                            <Cloud style={{ width: '48px', height: '48px', color: 'var(--text-disabled)', marginBottom: '12px', transition: 'color 0.2s' }} />
-                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>Clique para fazer upload</p>
-                            <p style={{ fontSize: '12px', color: 'var(--text-disabled)' }}>PNG, JPG até 5MB</p>
-                          </>
-                        )}
-                      </label>
-                    </div>
-                  )}
-                </div>
-
                 {/* Footer Actions */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', marginTop: '16px' }}>
+                <div className="flex gap-4 justify-end pt-4 mt-4" style={{ borderTop: '1px solid var(--border-subtle)' }}>
                   <Button
                     type="button"
                     variant="outline"
@@ -433,9 +314,9 @@ export default function PortalsList() {
                   <Button
                     type="submit"
                     variant="primary"
-                    disabled={isSubmitting || uploadingImage}
+                    disabled={isSubmitting}
                   >
-                    {isSubmitting ? <><Loader2 style={{ width: '16px', height: '16px', marginRight: '8px', animation: 'spin 1s linear infinite' }} />Criando...</> : <><Plus style={{ width: '16px', height: '16px', marginRight: '8px' }} />Criar</>}
+                    {isSubmitting ? <><Loader2 style={{ width: '16px', height: '16px', marginRight: '8px', animation: 'spin 1s linear infinite' }} />Criando...</> : <><Plus style={{ width: '16px', height: '16px', marginRight: '8px' }} />Criar Portal</>}
                   </Button>
                 </div>
               </form>
@@ -443,6 +324,6 @@ export default function PortalsList() {
           </div>
         )
       }
-    </div >
+    </div>
   );
 }

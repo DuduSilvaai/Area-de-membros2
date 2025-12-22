@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -27,134 +27,180 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      // 2. SE o login deu certo, Força a gravação do Log AGORA
+      // 2. Log de acesso
       if (data.user) {
-        console.log("Login OK. Tentando gravar log...");
-        
-        const { error: logError } = await supabase
+        await supabase
           .from('access_logs')
           .insert([
-            { 
+            {
               user_id: data.user.id,
-              action: 'login_page_submit', // Nome diferente para sabermos que veio daqui
+              action: 'login',
               details: { method: 'email_password' }
             }
           ]);
-          
-        if (logError) console.error("Erro ao gravar log:", logError);
-        else console.log("Log gravado com sucesso!");
       }
 
-      // 3. SÓ AGORA redireciona
+      // 3. Redireciona
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
-      console.error("Erro geral:", err);
-      setError(
-        err.message === 'Invalid login credentials' 
-          ? 'Email ou senha incorretos. Tente novamente.' 
-          : 'Ocorreu um erro ao fazer login. Tente novamente.'
-      );
+      setError('Credenciais inválidas. Verifique seu email e senha.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo de volta</h1>
-              <p className="text-gray-600">Faça login para acessar sua conta</p>
-            </div>
+    <div
+      className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-4"
+      style={{ backgroundColor: 'var(--bg-default)' }}
+    >
+      {/* Decorative Background Elements */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, var(--primary-main) 0%, transparent 70%)',
+          filter: 'blur(80px)'
+        }}
+      />
 
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg flex items-start">
-                <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
+      {/* Brand */}
+      <div className="relative z-10 mb-8 text-center">
+        <h1
+          className="text-4xl font-extrabold tracking-tight"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          MOZART
+        </h1>
+        <p
+          className="mt-2 text-sm font-medium tracking-wide uppercase opacity-60"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          Premium Member Area
+        </p>
+      </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="seu@email.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Senha
-                  </label>
-                  <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-                    Esqueceu sua senha?
-                  </Link>
-                </div>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${
-                    isLoading ? 'opacity-75 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {isLoading ? 'Entrando...' : 'Entrar'}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div className="bg-gray-50 px-8 py-6 border-t border-gray-200">
-            <p className="text-sm text-center text-gray-600">
-              Não tem uma conta?{' '}
-              <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                Cadastre-se
-              </Link>
+      {/* Login Card */}
+      <div
+        className="w-full max-w-[480px] relative z-10 transition-all duration-300"
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: 'var(--shadow-card)',
+          border: '1px solid var(--border-color)',
+        }}
+      >
+        <div className="p-10 sm:p-14">
+          <div className="mb-10">
+            <h2
+              className="text-2xl font-semibold mb-3"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              Acessar conta
+            </h2>
+            <p className="text-gray-400 text-sm">
+              Digite suas credenciais para continuar
             </p>
           </div>
-        </div>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p> {new Date().getFullYear()} Sua Empresa. Todos os direitos reservados.</p>
+          {error && (
+            <div
+              className="mb-8 p-4 rounded-lg flex items-start gap-3"
+              style={{ backgroundColor: 'rgba(255, 45, 120, 0.1)' }}
+            >
+              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--status-error)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex flex-col">
+            <div className="mb-6">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium mb-3"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-14 px-4 rounded-lg outline-none transition-all duration-200 text-base placeholder-gray-500 focus:ring-1 focus:ring-[#FF2D78] focus:border-[#FF2D78]"
+                style={{
+                  backgroundColor: '#27272A', // Zinc 800 - SOLID
+                  border: '1px solid #52525B', // Zinc 600
+                  color: '#FFFFFF', // White Pure
+                }}
+                placeholder="seu@email.com"
+              />
+            </div>
+
+            <div className="mb-8">
+              <div className="flex justify-between items-center mb-3">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  Senha
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium transition-colors hover:text-[#FF2D78]"
+                  style={{ color: '#A1A1AA' }} // Zinc 400
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full h-14 px-4 rounded-lg outline-none transition-all duration-200 text-base placeholder-gray-500 focus:ring-1 focus:ring-[#FF2D78] focus:border-[#FF2D78]"
+                style={{
+                  backgroundColor: '#27272A', // Zinc 800 - SOLID
+                  border: '1px solid #52525B', // Zinc 600
+                  color: '#FFFFFF', // White Pure
+                }}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-14 rounded-full font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-pink-500/20"
+              style={{
+                backgroundColor: 'var(--primary-main)',
+              }}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Entrando...</span>
+                </>
+              ) : (
+                <>
+                  <span>Entrar</span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </form>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="mt-16 text-center relative z-10">
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          © {new Date().getFullYear()} Mozart Platform. Todos os direitos reservados.
+        </p>
+      </footer>
     </div>
   );
 }
