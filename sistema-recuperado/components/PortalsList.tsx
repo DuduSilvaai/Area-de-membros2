@@ -41,15 +41,15 @@ const PortalCard = ({ portal }: { portal: Portal }) => {
   const timeAgo = lastUpdated ? formatDistanceToNow(new Date(lastUpdated), { addSuffix: true, locale: ptBR }) : 'Recentemente';
   return (
     <Link href={`/portals/${portal.id}`} className="block group">
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 h-full flex flex-col">
-        {portal.image_url ? <img src={portal.image_url} alt={portal.name} className="w-full h-40 object-cover" /> : <div className="h-2 bg-blue-500"></div>}
+      <div className="bg-background-surface dark:bg-background-surface rounded-xl border border-border dark:border-border overflow-hidden shadow-card hover:shadow-medium transition-shadow duration-200 h-full flex flex-col">
+        {portal.image_url ? <img src={portal.image_url} alt={portal.name} className="w-full h-40 object-cover" /> : <div className="h-2 bg-primary-main"></div>}
         <div className="p-5 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{portal.name}</h3>
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">Ativo</span>
+            <h3 className="text-lg font-semibold text-text-primary dark:text-text-primary group-hover:text-primary-main dark:group-hover:text-primary-main transition-colors">{portal.name}</h3>
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary-subtle dark:bg-primary-subtle text-primary-main dark:text-primary-main">Ativo</span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 flex-1 line-clamp-2">{portal.description || 'Sem descrição'}</p>
-          <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3 mt-auto">
+          <p className="text-sm text-text-secondary dark:text-text-secondary mb-4 flex-1 line-clamp-2">{portal.description || 'Sem descrição'}</p>
+          <div className="flex items-center justify-between text-sm text-text-secondary dark:text-text-secondary border-t border-border dark:border-border pt-3 mt-auto">
             <div className="flex items-center"><Users className="w-4 h-4 mr-1" /><span>0 membros</span></div>
             <span className="text-xs">{timeAgo}</span>
           </div>
@@ -243,8 +243,8 @@ export default function PortalsList() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Meus Portais</h1>
-          <p className="text-gray-500 dark:text-gray-400">Gerencie seus portais e acessos</p>
+          <h1 className="text-2xl font-bold text-text-primary dark:text-text-primary">Meus Portais</h1>
+          <p className="text-text-secondary dark:text-text-secondary">Gerencie seus portais e acessos</p>
         </div>
         <Button variant="primary" className="w-full sm:w-auto" onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4 mr-2" />Criar Novo Portal
@@ -253,22 +253,22 @@ export default function PortalsList() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-5 w-5 text-gray-400" /></div>
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-5 w-5 text-text-secondary" /></div>
         <Input type="text" placeholder="Buscar portais..." className="pl-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
       </div>
 
       {/* List */}
       {isLoading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary-main" /></div>
       ) : filteredPortals.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPortals.map(portal => <PortalCard key={portal.id} portal={portal} />)}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <Globe className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-gray-100">Nenhum portal encontrado</h3>
-          <p className="mt-1 text-gray-500 dark:text-gray-400">{searchTerm ? 'Nenhum portal corresponde à sua busca.' : 'Você ainda não possui portais criados.'}</p>
+        <div className="text-center py-12 bg-background-surface dark:bg-background-surface rounded-xl border border-border dark:border-border shadow-card">
+          <Globe className="mx-auto h-12 w-12 text-text-secondary" />
+          <h3 className="mt-2 text-lg font-medium text-text-primary dark:text-text-primary">Nenhum portal encontrado</h3>
+          <p className="mt-1 text-text-secondary dark:text-text-secondary">{searchTerm ? 'Nenhum portal corresponde à sua busca.' : 'Você ainda não possui portais criados.'}</p>
           <div className="mt-6"><Button variant="primary" onClick={() => setShowCreateModal(true)}><Plus className="w-4 h-4 mr-2" />Criar Novo Portal</Button></div>
         </div>
       )}
@@ -276,14 +276,14 @@ export default function PortalsList() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col">
+          <div className="bg-background-surface dark:bg-background-surface rounded-xl shadow-floating max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col">
 
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Criar Novo Portal</h2>
+            <div className="flex items-center justify-between p-6 border-b border-border dark:border-border sticky top-0 bg-background-surface dark:bg-background-surface z-10">
+              <h2 className="text-xl font-semibold text-text-primary dark:text-text-primary">Criar Novo Portal</h2>
               <button
                 onClick={() => { setShowCreateModal(false); reset(); setImagePreview(null); }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                className="p-2 hover:bg-background-canvas dark:hover:bg-background-canvas rounded-full transition-colors"
                 disabled={isSubmitting}
               >
                 <X className="w-5 h-5" />
@@ -295,37 +295,37 @@ export default function PortalsList() {
 
               {/* Name Field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome *</label>
+                <label className="block text-sm font-medium text-text-primary dark:text-text-primary mb-1">Nome *</label>
                 <input
                   {...register('name')}
                   type="text"
-                  className={`w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors ${errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
+                  className={`w-full px-4 py-2 border rounded-md bg-background-canvas dark:bg-background-canvas text-text-primary dark:text-text-primary transition-colors ${errors.name ? 'border-status-error' : 'border-border dark:border-border'}`}
                   disabled={isSubmitting}
                 />
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+                {errors.name && <p className="text-status-error text-xs mt-1">{errors.name.message}</p>}
               </div>
 
               {/* Description Field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-text-primary dark:text-text-primary mb-1">Descrição</label>
                 <textarea
                   {...register('description')}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 transition-colors"
+                  className="w-full px-4 py-2 border border-border dark:border-border rounded-md bg-background-canvas dark:bg-background-canvas text-text-primary dark:text-text-primary transition-colors"
                   disabled={isSubmitting}
                 />
               </div>
 
               {/* Image Upload Field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Imagem</label>
+                <label className="block text-sm font-medium text-text-primary dark:text-text-primary mb-2">Imagem</label>
                 {imagePreview ? (
                   <div className="relative group">
-                    <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600" />
+                    <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover rounded-lg border-2 border-border dark:border-border" />
                     <button
                       type="button"
                       onClick={() => { setImagePreview(null); setValue('image_url', ''); }}
-                      className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 p-2 bg-status-error hover:bg-status-error/80 text-text-on-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                       disabled={isSubmitting}
                     >
                       <X className="w-4 h-4" />
@@ -343,12 +343,12 @@ export default function PortalsList() {
                     />
                     <label
                       htmlFor="upload"
-                      className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 ease-in-out group ${uploadingImage || isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer bg-background-canvas dark:bg-background-canvas border-border dark:border-border hover:bg-primary-subtle dark:hover:bg-primary-subtle transition-colors duration-200 ease-in-out group ${uploadingImage || isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {uploadingImage ? (
-                        <><Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-3" /><p className="text-sm text-gray-600 dark:text-gray-400">Enviando...</p></>
+                        <><Loader2 className="w-12 h-12 text-primary-main animate-spin mb-3" /><p className="text-sm text-text-secondary dark:text-text-secondary">Enviando...</p></>
                       ) : (
-                        <><Cloud className="w-12 h-12 text-gray-400 group-hover:text-blue-500 transition-colors duration-200 mb-3" /><p className="text-sm text-gray-600 dark:text-gray-400 font-semibold group-hover:text-blue-600 transition-colors">Clique para fazer upload</p><p className="text-xs text-gray-500">PNG, JPG até 5MB</p></>
+                        <><Cloud className="w-12 h-12 text-text-secondary group-hover:text-primary-main transition-colors duration-200 mb-3" /><p className="text-sm text-text-secondary dark:text-text-secondary font-semibold group-hover:text-primary-main transition-colors">Clique para fazer upload</p><p className="text-xs text-text-disabled">PNG, JPG até 5MB</p></>
                       )}
                     </label>
                   </div>
@@ -356,7 +356,7 @@ export default function PortalsList() {
               </div>
 
               {/* Footer Actions */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100 dark:border-gray-700 mt-6">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-border dark:border-border mt-6">
                 <Button
                   type="button"
                   variant="outline"

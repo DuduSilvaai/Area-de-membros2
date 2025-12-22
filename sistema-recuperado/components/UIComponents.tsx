@@ -16,11 +16,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button = ({ className, variant = 'primary', isLoading, children, ...props }: ButtonProps) => {
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700',
-    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600',
-    danger: 'bg-red-500 text-white hover:bg-red-600',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-600 dark:text-gray-400 dark:hover:bg-gray-800',
-    outline: 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700',
+    primary: 'bg-primary-main text-text-on-primary hover:bg-primary-hover dark:bg-primary-main dark:hover:bg-primary-hover',
+    secondary: 'bg-background-canvas text-text-primary hover:bg-border dark:bg-background-canvas dark:text-text-primary dark:hover:bg-border',
+    danger: 'bg-status-error text-text-on-primary hover:bg-status-error/80',
+    ghost: 'bg-transparent hover:bg-background-canvas text-text-secondary dark:text-text-secondary dark:hover:bg-background-canvas',
+    outline: 'bg-background-surface border border-border text-text-primary hover:bg-background-canvas dark:bg-background-surface dark:border-border dark:text-text-primary dark:hover:bg-background-canvas',
   };
 
   return (
@@ -48,17 +48,17 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, className, ...props }, ref) => {
     return (
       <div className="w-full mb-4">
-        {label && <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>}
+        {label && <label className="block text-sm font-medium text-text-primary dark:text-text-primary mb-1">{label}</label>}
         <input
           ref={ref}
           className={cn(
-            'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black dark:text-white dark:bg-gray-800 dark:border-gray-600',
-            error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600',
+            'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-main text-text-primary dark:text-text-primary dark:bg-background-canvas dark:border-border',
+            error ? 'border-status-error' : 'border-border dark:border-border',
             className
           )}
           {...props}
         />
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        {error && <p className="text-status-error text-xs mt-1">{error}</p>}
       </div>
     );
   }
