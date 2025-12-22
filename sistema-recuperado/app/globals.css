@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  /* Light Mode Colors */
+  /* Light Mode Colors - Default */
   --primary-main: #FF2D78;
   --primary-hover: #E61E6A;
   --primary-subtle: #FFF0F5;
@@ -48,55 +48,24 @@
   --font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark Mode Colors */
-    --primary-main: #FF4D94;
-    --primary-hover: #FF70AB;
-    --primary-subtle: rgba(255, 77, 148, 0.1);
-    
-    --bg-default: #0F0F12;
-    --bg-canvas: #050505;
-    --bg-surface: #1A1A1E;
-    --bg-sidebar: #121216;
-    
-    --text-primary: #FFFFFF;
-    --text-secondary: #A0A0AB;
-    --text-disabled: #4D4D54;
-    --text-on-primary: #FFFFFF;
-    
-    --status-success: #2ECC71;
-    --status-warning: #F1C40F;
-    --status-error: #E74C3C;
-    --status-info: #3498DB;
-    
-    --border-color: #2D2D35;
-    
-    /* Shadows (Dark Mode) */
-    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.3);
-    --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.4);
-    --shadow-card: 0 0 1px rgba(255, 255, 255, 0.1);
-    --shadow-floating: 0 20px 40px rgba(0, 0, 0, 0.6);
-  }
-}
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html,
-body {
-  height: 100%;
-  width: 100%;
+html {
+  background-color: #FFFFFF;
+  color: #1A1A1A;
 }
 
 body {
-  background-color: var(--bg-default);
-  color: var(--text-primary);
+  background-color: #FFFFFF;
+  color: #1A1A1A;
   font-family: var(--font-family);
   line-height: 1.5;
+  margin: 0;
+  padding: 0;
 }
 
 /* Typography */
@@ -104,18 +73,25 @@ h1 {
   font-size: 32px;
   line-height: 1.2;
   font-weight: 700;
+  color: #1A1A1A;
 }
 
 h2 {
   font-size: 24px;
   line-height: 1.3;
   font-weight: 600;
+  color: #1A1A1A;
 }
 
 h3 {
   font-size: 18px;
   line-height: 1.4;
   font-weight: 600;
+  color: #1A1A1A;
+}
+
+p {
+  color: #1A1A1A;
 }
 
 .text-body-large {

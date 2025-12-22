@@ -26,37 +26,80 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="w-64 bg-sidebar dark:bg-sidebar border-r border-border dark:border-border h-screen flex flex-col fixed left-0 top-0">
+    <div 
+      className="fixed left-0 top-0 h-screen flex flex-col border-r"
+      style={{
+        width: '260px',
+        backgroundColor: '#F1F3F5',
+        borderColor: '#E9ECEF',
+      }}
+    >
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-border dark:border-border">
-        <h1 className="text-xl font-bold text-primary-main tracking-tight">MOZART</h1>
+      <div 
+        className="flex items-center px-6 border-b flex-shrink-0"
+        style={{
+          height: '64px',
+          borderColor: '#E9ECEF',
+        }}
+      >
+        <h1 
+          className="text-xl font-bold tracking-tight"
+          style={{ color: '#FF2D78' }}
+        >
+          MOZART
+        </h1>
       </div>
 
       {/* Menu */}
-      <nav className="flex-1 py-6 px-3 space-y-1">
+      <nav 
+        className="flex-1 overflow-y-auto py-6 px-3"
+        style={{ gap: '12px', display: 'flex', flexDirection: 'column' }}
+      >
         {MENU_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${isActive
-                  ? 'bg-primary-main text-text-on-primary'
-                  : 'text-text-secondary hover:bg-background-canvas hover:text-text-primary dark:text-text-secondary dark:hover:bg-background-canvas dark:hover:text-text-primary'
-                }`}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: isActive ? '#FF2D78' : 'transparent',
+                color: isActive ? '#FFFFFF' : '#636E72',
+                gap: '12px',
+                padding: '10px 12px',
+                marginBottom: '4px',
+              }}
             >
-              <item.icon className={`w-5 h-5 ${isActive ? 'text-text-on-primary' : 'text-text-secondary'}`} />
-              {item.name}
+              <item.icon 
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  color: isActive ? '#FFFFFF' : '#636E72',
+                  flexShrink: 0,
+                }}
+              />
+              <span>{item.name}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* Rodapé do Menu */}
-      <div className="p-4 border-t border-border dark:border-border">
-        <button className="flex items-center gap-3 px-3 py-2 w-full text-sm font-medium text-status-error hover:bg-primary-subtle dark:hover:bg-primary-subtle rounded-md transition-colors">
-          <LogOut className="w-5 h-5" />
-          Sair
+      <div 
+        className="p-4 border-t flex-shrink-0"
+        style={{ borderColor: '#E9ECEF' }}
+      >
+        <button 
+          className="flex items-center gap-3 px-3 py-2 w-full text-sm font-medium rounded-md transition-colors"
+          style={{
+            color: '#D63031',
+            padding: '10px 12px',
+            backgroundColor: 'transparent',
+            gap: '12px',
+          }}
+        >
+          <LogOut style={{ width: '20px', height: '20px', flexShrink: 0 }} />
+          <span>Sair</span>
         </button>
       </div>
     </div>

@@ -17,16 +17,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="dark">
-      <body className={inter.className}>
+    <html lang="pt-BR">
+      <body className={inter.className} style={{ backgroundColor: "#FFFFFF", color: "#1A1A1A" }}>
         <AuthProvider>
-          <div className="flex min-h-screen bg-gray-50">
+          <div className="flex min-h-screen w-full">
             {/* Menu Lateral Fixo */}
             <Sidebar />
 
-            {/* Área de Conteúdo (empurrada para a direita) */}
-            <div className="flex-1 ml-64 p-8">
-              {children}
+            {/* Área de Conteúdo */}
+            <div className="flex-1" style={{ marginLeft: "260px" }}>
+              <main className="min-h-screen" style={{ backgroundColor: "#FFFFFF", padding: "32px" }}>
+                {children}
+              </main>
             </div>
           </div>
         </AuthProvider>

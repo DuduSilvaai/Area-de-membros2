@@ -73,6 +73,19 @@ sistema-recuperado/
 - Responsive design with light theme
 
 ## Recent Changes
+- 2024-12-22: Layout Fixes
+  - Fixed complete layout structure with proper flex layout
+  - Sidebar: 260px fixed width with light gray background
+  - Icons: Limited to 20px size (no longer gigantic)
+  - Background: Forced white (#FFFFFF) throughout
+  - Text: Dark (#1A1A1A) for proper contrast and readability
+  - Spacing: Added 12px gap between sidebar menu items
+  - Removed dark mode class from HTML tag
+  - Removed any overlapping elements
+  - Pink (#FF2D78) applied only to MOZART logo and active menu items
+  - "Criar Novo Portal" button in pink
+  - Red logout button
+
 - 2024-12-22: Design System Implementation
   - Implemented Nixio Rebrand (Premium SaaS) design system
   - Created CSS variables for all design tokens (colors, spacing, shadows, typography)
