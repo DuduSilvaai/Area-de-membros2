@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from '@/context/ThemeContext';
 import {
   LayoutDashboard,
   Users,
@@ -26,19 +27,11 @@ const MENU_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-
-  const handleThemeToggle = () => {
-    const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', newTheme);
-  };
+  // Using explicit connection to Context
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div 
+    <div
       style={{
         position: 'fixed',
         left: '12px',
@@ -47,30 +40,31 @@ export default function Sidebar() {
         width: '260px',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: 'rgba(255, 255, 255, 0.7)',
-        backdropFilter: 'blur(12px)',
-        borderRight: '1px solid rgba(255, 255, 255, 0.8)',
-        borderRadius: '24px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
+        backgroundColor: 'var(--bg-sidebar)',
+        backdropFilter: 'var(--sidebar-glass)',
+        WebkitBackdropFilter: 'var(--sidebar-glass)',
+        borderRight: '1px solid var(--bg-sidebar-border)',
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: 'var(--sidebar-shadow)',
         transition: 'all 0.3s ease',
       }}
     >
       {/* Logo */}
-      <div 
+      <div
         style={{
           height: '64px',
           display: 'flex',
           alignItems: 'center',
           paddingLeft: '24px',
           paddingRight: '24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.5)',
+          borderBottom: '1px solid var(--bg-sidebar-border)',
         }}
       >
-        <h1 
+        <h1
           style={{
             fontSize: '22px',
             fontWeight: '800',
-            background: 'linear-gradient(135deg, #FF2D78 0%, #E61E6A 100%)',
+            background: 'linear-gradient(135deg, var(--primary-main) 0%, var(--primary-hover) 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -84,7 +78,7 @@ export default function Sidebar() {
       </div>
 
       {/* Menu */}
-      <nav 
+      <nav
         style={{
           flex: 1,
           overflowY: 'auto',
@@ -112,32 +106,34 @@ export default function Sidebar() {
                 fontSize: '14px',
                 fontWeight: isActive ? '600' : '500',
                 transition: 'all 0.2s ease',
-                background: isActive 
-                  ? 'linear-gradient(135deg, #FF2D78 0%, #E61E6A 100%)'
+                background: isActive
+                  ? 'linear-gradient(135deg, var(--primary-main) 0%, var(--primary-hover) 100%)'
                   : 'transparent',
-                color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
-                boxShadow: isActive 
+                color: isActive ? 'var(--text-on-primary)' : 'var(--text-secondary)',
+                boxShadow: isActive
                   ? '0 8px 24px rgba(255, 45, 120, 0.25)'
                   : 'none',
-                border: isActive ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
+                // border: isActive ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
                 textDecoration: 'none',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+                  e.currentTarget.style.backgroundColor = 'var(--sidebar-item-hover)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
                   e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
                 }
               }}
             >
-              <item.icon 
+              <item.icon
                 style={{
                   width: '20px',
                   height: '20px',
-                  color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                  color: isActive ? 'var(--text-on-primary)' : 'currentColor',
                   flexShrink: 0,
                 }}
               />
@@ -148,15 +144,15 @@ export default function Sidebar() {
       </nav>
 
       {/* Theme Toggle */}
-      <div 
+      <div
         style={{
           padding: '12px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.5)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.5)',
+          borderTop: '1px solid var(--bg-sidebar-border)',
+          borderBottom: '1px solid var(--bg-sidebar-border)',
         }}
       >
-        <button 
-          onClick={handleThemeToggle}
+        <button
+          onClick={toggleTheme}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -173,26 +169,30 @@ export default function Sidebar() {
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+            e.currentTarget.style.backgroundColor = 'var(--sidebar-item-hover)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
-          title="Alternar tema"
+          title={`Alternar para modo ${theme === 'light' ? 'escuro' : 'claro'}`}
         >
-          <Sun style={{ width: '20px', height: '20px', flexShrink: 0 }} />
-          <span>Tema</span>
+          {theme === 'light' ? (
+            <Moon style={{ width: '20px', height: '20px', flexShrink: 0 }} />
+          ) : (
+            <Sun style={{ width: '20px', height: '20px', flexShrink: 0 }} />
+          )}
+          <span>{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
         </button>
       </div>
 
       {/* Rodapé do Menu */}
-      <div 
+      <div
         style={{
           padding: '12px',
           flexShrink: 0,
         }}
       >
-        <button 
+        <button
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -201,7 +201,7 @@ export default function Sidebar() {
             width: '100%',
             fontSize: '14px',
             fontWeight: '500',
-            color: '#D63031',
+            color: 'var(--status-error)',
             backgroundColor: 'transparent',
             border: 'none',
             borderRadius: '16px',
@@ -209,6 +209,7 @@ export default function Sidebar() {
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
+            // We can use a slight opacity of error color for hover
             e.currentTarget.style.backgroundColor = 'rgba(214, 48, 49, 0.1)';
           }}
           onMouseLeave={(e) => {

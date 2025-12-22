@@ -1,78 +1,77 @@
 'use client';
 
 import React from 'react';
-import { 
-  ArrowUpRight, 
-  Users, 
-  ShoppingCart, 
-  BarChart3, 
+import {
+  ArrowUpRight,
+  Users,
+  ShoppingCart,
+  BarChart3,
   DollarSign,
   Calendar,
   Clock
 } from 'lucide-react';
 
 // Componente de Card reutilizável
-const StatCard = ({ 
-  title, 
-  value, 
-  change, 
-  icon: Icon 
+const StatCard = ({
+  title,
+  value,
+  change,
+  icon: Icon
 }: {
   title: string;
   value: string;
   change: string;
   icon: React.ElementType;
 }) => (
-  <div 
+  <div
     style={{
-      backgroundColor: '#FFFFFF',
-      backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)',
+      backgroundColor: 'var(--bg-surface)',
       padding: '28px',
-      borderRadius: '20px',
-      boxShadow: '0 10px 32px rgba(0, 0, 0, 0.04)',
-      border: '1px solid rgba(255, 255, 255, 0.8)',
+      borderRadius: 'var(--radius-lg)',
+      boxShadow: 'var(--shadow-card)',
+      border: '1px solid var(--border-color)',
       position: 'relative',
       overflow: 'hidden',
       transition: 'all 0.3s ease',
     }}
     onMouseEnter={(e) => {
-      e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.08)';
+      e.currentTarget.style.boxShadow = 'var(--shadow-floating)';
       e.currentTarget.style.transform = 'translateY(-4px)';
     }}
     onMouseLeave={(e) => {
-      e.currentTarget.style.boxShadow = '0 10px 32px rgba(0, 0, 0, 0.04)';
+      e.currentTarget.style.boxShadow = 'var(--shadow-card)';
       e.currentTarget.style.transform = 'translateY(0)';
     }}
   >
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div>
-        <p style={{ 
-          fontSize: '11px', 
-          fontWeight: '700', 
-          color: '#999999', 
+        <p style={{
+          fontSize: '11px',
+          fontWeight: '700',
+          color: 'var(--text-secondary)',
           marginBottom: '12px',
           textTransform: 'uppercase',
           letterSpacing: '0.05em',
         }}>
           {title}
         </p>
-        <p style={{ fontSize: '32px', fontWeight: '600', marginTop: '0px', color: '#1A1A1A' }}>{value}</p>
-        <div style={{ display: 'flex', alignItems: 'center', marginTop: '12px', color: parseFloat(change) >= 0 ? '#00B894' : '#D63031', fontSize: '13px', fontWeight: '600' }}>
+        <p style={{ fontSize: '32px', fontWeight: '600', marginTop: '0px', color: 'var(--text-primary)' }}>{value}</p>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: '12px', color: parseFloat(change) >= 0 ? 'var(--status-success)' : 'var(--status-error)', fontSize: '13px', fontWeight: '600' }}>
           <ArrowUpRight style={{ width: '14px', height: '14px', marginRight: '4px', transform: parseFloat(change) < 0 ? 'scaleY(-1)' : 'none' }} />
           {change}
-          <span style={{ color: '#999999', marginLeft: '4px', fontWeight: '500' }}>vs mês passado</span>
+          <span style={{ color: 'var(--text-secondary)', marginLeft: '4px', fontWeight: '500' }}>vs mês passado</span>
         </div>
       </div>
-      <div style={{ 
-        padding: '16px', 
+      <div style={{
+        padding: '16px',
         borderRadius: '16px',
-        background: 'linear-gradient(135deg, #FFF0F5 0%, #FFE8F0 100%)',
+        background: 'var(--primary-subtle)',
         boxShadow: '0 8px 20px rgba(255, 45, 120, 0.15)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <Icon style={{ width: '24px', height: '24px', color: '#FF2D78' }} />
+        <Icon style={{ width: '24px', height: '24px', color: 'var(--primary-main)' }} />
       </div>
     </div>
   </div>
@@ -80,38 +79,37 @@ const StatCard = ({
 
 // Componente de Gráfico (placeholder)
 const ChartPlaceholder = ({ title }: { title: string }) => (
-  <div 
+  <div
     style={{
-      backgroundColor: '#FFFFFF',
-      backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)',
+      backgroundColor: 'var(--bg-surface)',
       padding: '28px',
-      borderRadius: '20px',
-      boxShadow: '0 10px 32px rgba(0, 0, 0, 0.04)',
-      border: '1px solid rgba(255, 255, 255, 0.8)',
+      borderRadius: 'var(--radius-lg)',
+      boxShadow: 'var(--shadow-card)',
+      border: '1px solid var(--border-color)',
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
       transition: 'all 0.3s ease',
     }}
     onMouseEnter={(e) => {
-      e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.08)';
+      e.currentTarget.style.boxShadow = 'var(--shadow-floating)';
       e.currentTarget.style.transform = 'translateY(-4px)';
     }}
     onMouseLeave={(e) => {
-      e.currentTarget.style.boxShadow = '0 10px 32px rgba(0, 0, 0, 0.04)';
+      e.currentTarget.style.boxShadow = 'var(--shadow-card)';
       e.currentTarget.style.transform = 'translateY(0)';
     }}
   >
-    <h3 style={{ fontWeight: '600', color: '#1A1A1A', marginBottom: '16px', fontSize: '16px' }}>{title}</h3>
-    <div 
+    <h3 style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px', fontSize: '16px' }}>{title}</h3>
+    <div
       style={{
         height: '256px',
-        backgroundColor: '#F9F9FB',
-        borderRadius: '12px',
+        backgroundColor: 'var(--bg-canvas)',
+        borderRadius: 'var(--radius-md)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#CCCCCC',
+        color: 'var(--text-disabled)',
         fontSize: '14px',
         flex: 1,
       }}
@@ -131,52 +129,51 @@ const RecentActivity = () => {
   ];
 
   return (
-    <div 
+    <div
       style={{
-        backgroundColor: '#FFFFFF',
-        backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)',
+        backgroundColor: 'var(--bg-surface)',
         padding: '28px',
-        borderRadius: '20px',
-        boxShadow: '0 10px 32px rgba(0, 0, 0, 0.04)',
-        border: '1px solid rgba(255, 255, 255, 0.8)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-card)',
+        border: '1px solid var(--border-color)',
         transition: 'all 0.3s ease',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.08)';
+        e.currentTarget.style.boxShadow = 'var(--shadow-floating)';
         e.currentTarget.style.transform = 'translateY(-4px)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = '0 10px 32px rgba(0, 0, 0, 0.04)';
+        e.currentTarget.style.boxShadow = 'var(--shadow-card)';
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      <h3 style={{ fontWeight: '600', color: '#1A1A1A', marginBottom: '20px', fontSize: '16px' }}>Atividades Recentes</h3>
+      <h3 style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '20px', fontSize: '16px' }}>Atividades Recentes</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {activities.map((activity, index) => (
-          <div 
-            key={activity.id} 
+          <div
+            key={activity.id}
             style={{
               display: 'flex',
               alignItems: 'flex-start',
               paddingBottom: '16px',
-              borderBottom: index < activities.length - 1 ? '1px solid rgba(0, 0, 0, 0.04)' : 'none',
+              borderBottom: index < activities.length - 1 ? '1px solid var(--border-subtle)' : 'none',
             }}
           >
-            <div style={{ 
-              backgroundColor: '#FFF0F5',
+            <div style={{
+              backgroundColor: 'var(--primary-subtle)',
               boxShadow: '0 4px 12px rgba(255, 45, 120, 0.12)',
-              padding: '10px', 
-              borderRadius: '10px', 
-              marginRight: '14px', 
-              flexShrink: 0 
+              padding: '10px',
+              borderRadius: '10px',
+              marginRight: '14px',
+              flexShrink: 0
             }}>
-              <Users style={{ width: '16px', height: '16px', color: '#FF2D78' }} />
+              <Users style={{ width: '16px', height: '16px', color: 'var(--primary-main)' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A1A' }}>{activity.user}</p>
-              <p style={{ fontSize: '13px', color: '#888888', marginTop: '2px' }}>{activity.action}</p>
+              <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{activity.user}</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>{activity.action}</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: '#AAAAAA' }}>
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--text-disabled)' }}>
               <Clock style={{ width: '12px', height: '12px', marginRight: '4px' }} />
               {activity.time}
             </div>
@@ -192,35 +189,35 @@ export default function Dashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Cabeçalho */}
       <div>
-        <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#1A1A1A', margin: 0 }}>Visão Geral</h1>
-        <p style={{ color: '#888888', marginTop: '8px', fontSize: '14px', margin: '8px 0 0 0' }}>Bem-vindo de volta! Aqui está o que está acontecendo hoje.</p>
+        <h1 style={{ fontSize: '32px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Visão Geral</h1>
+        <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px', margin: '8px 0 0 0' }}>Bem-vindo de volta! Aqui está o que está acontecendo hoje.</p>
       </div>
 
       {/* Cards de Estatísticas */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-        <StatCard 
-          title="Total de Usuários" 
-          value="1,248" 
-          change="+12.5%" 
-          icon={Users} 
+        <StatCard
+          title="Total de Usuários"
+          value="1,248"
+          change="+12.5%"
+          icon={Users}
         />
-        <StatCard 
-          title="Vendas do Mês" 
-          value="R$ 48,290" 
-          change="+8.2%" 
-          icon={DollarSign} 
+        <StatCard
+          title="Vendas do Mês"
+          value="R$ 48,290"
+          change="+8.2%"
+          icon={DollarSign}
         />
-        <StatCard 
-          title="Novos Clientes" 
-          value="89" 
-          change="-2.4%" 
-          icon={Users} 
+        <StatCard
+          title="Novos Clientes"
+          value="89"
+          change="-2.4%"
+          icon={Users}
         />
-        <StatCard 
-          title="Pedidos" 
-          value="1,245" 
-          change="+18.3%" 
-          icon={ShoppingCart} 
+        <StatCard
+          title="Pedidos"
+          value="1,245"
+          change="+18.3%"
+          icon={ShoppingCart}
         />
       </div>
 
@@ -240,57 +237,56 @@ export default function Dashboard() {
           <RecentActivity />
         </div>
         <div>
-          <div 
+          <div
             style={{
-              backgroundColor: '#FFFFFF',
-              backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)',
+              backgroundColor: 'var(--bg-surface)',
               padding: '28px',
-              borderRadius: '20px',
-              boxShadow: '0 10px 32px rgba(0, 0, 0, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.8)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-card)',
+              border: '1px solid var(--border-color)',
               transition: 'all 0.3s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.08)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-floating)';
               e.currentTarget.style.transform = 'translateY(-4px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 10px 32px rgba(0, 0, 0, 0.04)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-card)';
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            <h3 style={{ fontWeight: '600', color: '#1A1A1A', marginBottom: '16px', fontSize: '16px' }}>Próximos Eventos</h3>
+            <h3 style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px', fontSize: '16px' }}>Próximos Eventos</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <div style={{ 
-                  backgroundColor: '#F0EBFF', 
-                  color: '#7C3AED', 
-                  padding: '10px', 
-                  borderRadius: '10px', 
+                <div style={{
+                  backgroundColor: 'var(--primary-subtle)',
+                  color: 'var(--primary-main)',
+                  padding: '10px',
+                  borderRadius: '10px',
                   marginRight: '12px',
                   boxShadow: '0 4px 12px rgba(124, 58, 237, 0.12)',
                 }}>
                   <Calendar style={{ width: '16px', height: '16px' }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A1A' }}>Reunião de Equipe</p>
-                  <p style={{ fontSize: '12px', color: '#AAAAAA', marginTop: '2px' }}>Amanhã, 10:00 AM</p>
+                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Reunião de Equipe</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-disabled)', marginTop: '2px' }}>Amanhã, 10:00 AM</p>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <div style={{ 
-                  backgroundColor: '#F0FDF4', 
-                  color: '#16A34A', 
-                  padding: '10px', 
-                  borderRadius: '10px', 
+                <div style={{
+                  backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                  color: 'var(--status-success)',
+                  padding: '10px',
+                  borderRadius: '10px',
                   marginRight: '12px',
                   boxShadow: '0 4px 12px rgba(22, 163, 74, 0.12)',
                 }}>
                   <Calendar style={{ width: '16px', height: '16px' }} />
                 </div>
                 <div>
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A1A' }}>Apresentação de Resultados</p>
-                  <p style={{ fontSize: '12px', color: '#AAAAAA', marginTop: '2px' }}>Sexta, 2:00 PM</p>
+                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Apresentação de Resultados</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-disabled)', marginTop: '2px' }}>Sexta, 2:00 PM</p>
                 </div>
               </div>
             </div>

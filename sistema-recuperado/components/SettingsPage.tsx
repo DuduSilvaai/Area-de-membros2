@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  User, 
-  Lock, 
-  CreditCard, 
+import {
+  User,
+  Lock,
+  CreditCard,
   Mail,
   Check,
   X,
@@ -27,13 +27,11 @@ const SettingsPage = () => {
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement save logic
     alert('Perfil atualizado com sucesso!');
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement password change logic
     alert('Senha alterada com sucesso!');
     setCurrentPassword('');
     setNewPassword('');
@@ -47,26 +45,35 @@ const SettingsPage = () => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Configurações</h1>
-      <p className="text-gray-600 mb-8">Gerencie suas preferências e configurações de conta</p>
+    <div style={{ maxWidth: '896px', margin: '0 auto', padding: '24px' }}>
+      <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Configurações</h1>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '14px' }}>Gerencie suas preferências e configurações de conta</p>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-8">
-        <nav className="-mb-px flex space-x-8">
+      {/* Premium Tabs */}
+      <div style={{ borderBottom: '1px solid var(--border-color)', marginBottom: '32px' }}>
+        <nav style={{ display: 'flex', gap: '32px', marginBottom: '-1px' }}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '16px 4px',
+                  borderBottom: isActive ? '2px solid var(--primary-main)' : '2px solid transparent',
+                  color: isActive ? 'var(--primary-main)' : 'var(--text-secondary)',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
               >
-                <Icon className="h-4 w-4 mr-2" />
+                <Icon style={{ width: '16px', height: '16px', marginRight: '8px' }} />
                 {tab.label}
               </button>
             );
@@ -76,65 +83,107 @@ const SettingsPage = () => {
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-        <div className="space-y-8">
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-6">Informações do Perfil</h2>
-            
-            <form onSubmit={handleSaveProfile} className="space-y-6">
-              <div className="flex flex-col sm:flex-row items-start gap-6">
-                <div className="flex-shrink-0">
-                  <div className="relative group">
-                    <div className="h-24 w-24 rounded-full bg-gray-200 overflow-hidden">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={{
+            backgroundColor: 'var(--bg-surface)',
+            boxShadow: 'var(--shadow-card)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '28px',
+            border: '1px solid var(--border-color)',
+          }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Informações do Perfil</h2>
+
+            <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '24px' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{
+                      height: '96px',
+                      width: '96px',
+                      borderRadius: 'var(--radius-full)',
+                      background: 'linear-gradient(135deg, var(--primary-main) 0%, var(--primary-hover) 100%)',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
                       {profile.avatar ? (
-                        <img src={profile.avatar} alt={profile.name} className="h-full w-full object-cover" />
+                        <img src={profile.avatar} alt={profile.name} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <div className="h-full w-full bg-gray-300 flex items-center justify-center">
-                          <User className="h-12 w-12 text-gray-400" />
-                        </div>
+                        <User style={{ width: '48px', height: '48px', color: 'var(--text-on-primary)' }} />
                       )}
                     </div>
                     <button
                       type="button"
-                      className="absolute -bottom-2 -right-2 bg-white p-2 rounded-full shadow-md text-gray-700 hover:bg-gray-100"
+                      style={{
+                        position: 'absolute',
+                        bottom: '-8px',
+                        right: '-8px',
+                        backgroundColor: 'var(--bg-surface)',
+                        padding: '8px',
+                        borderRadius: 'var(--radius-full)',
+                        boxShadow: 'var(--shadow-medium)',
+                        color: 'var(--text-secondary)',
+                        border: '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                      }}
                       title="Alterar foto"
                     >
-                      <Camera className="h-4 w-4" />
+                      <Camera style={{ width: '16px', height: '16px' }} />
                     </button>
                   </div>
                 </div>
 
-                <div className="flex-1 space-y-4">
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Nome
                     </label>
-                    <Input
+                    <input
                       id="name"
                       value={profile.name}
                       onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                      className="w-full"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--bg-canvas)',
+                        color: 'var(--text-primary)',
+                        fontSize: '14px',
+                        transition: 'border-color 0.2s ease',
+                      }}
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Email
                     </label>
-                    <Input
+                    <input
                       id="email"
                       type="email"
                       value={profile.email}
                       onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                      className="w-full"
                       disabled
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--bg-canvas)',
+                        color: 'var(--text-disabled)',
+                        fontSize: '14px',
+                        opacity: 0.7,
+                      }}
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Button type="submit" variant="primary">
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save style={{ width: '16px', height: '16px', marginRight: '8px' }} />
                   Salvar alterações
                 </Button>
               </div>
@@ -145,54 +194,84 @@ const SettingsPage = () => {
 
       {/* Security Tab */}
       {activeTab === 'security' && (
-        <div className="space-y-8">
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-6">Alterar Senha</h2>
-            
-            <form onSubmit={handleChangePassword} className="space-y-6 max-w-md">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={{
+            backgroundColor: 'var(--bg-surface)',
+            boxShadow: 'var(--shadow-card)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '28px',
+            border: '1px solid var(--border-color)',
+          }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Alterar Senha</h2>
+
+            <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px' }}>
               <div>
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Senha Atual
                 </label>
-                <Input
+                <input
                   id="currentPassword"
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full"
                   required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-canvas)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                  }}
                 />
               </div>
 
               <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Nova Senha
                 </label>
-                <Input
+                <input
                   id="newPassword"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full"
                   required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-canvas)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                  }}
                 />
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Confirmar Nova Senha
                 </label>
-                <Input
+                <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full"
                   required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-canvas)',
+                    color: 'var(--text-primary)',
+                    fontSize: '14px',
+                  }}
                 />
               </div>
 
-              <div className="pt-2">
+              <div style={{ paddingTop: '8px' }}>
                 <Button type="submit" variant="primary">
                   Alterar Senha
                 </Button>
@@ -204,25 +283,45 @@ const SettingsPage = () => {
 
       {/* Billing Tab */}
       {activeTab === 'billing' && (
-        <div className="space-y-8">
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-6">Plano Atual</h2>
-            
-            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-              <div className="flex justify-between items-start">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={{
+            backgroundColor: 'var(--bg-surface)',
+            boxShadow: 'var(--shadow-card)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '28px',
+            border: '1px solid var(--border-color)',
+          }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Plano Atual</h2>
+
+            <div style={{
+              backgroundColor: 'var(--bg-canvas)',
+              padding: '24px',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900">Plano Empresarial</h3>
-                  <p className="text-gray-600 mt-1">R$ 199,90/mês</p>
-                  <p className="text-sm text-gray-500 mt-2">Próximo vencimento: 10/12/2023</p>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>Plano Empresarial</h3>
+                  <p style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>R$ 199,90/mês</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-disabled)', marginTop: '8px' }}>Próximo vencimento: 10/12/2023</p>
                 </div>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  backgroundColor: 'rgba(46, 204, 113, 0.15)',
+                  color: 'var(--status-success)',
+                }}>
                   Ativo
                 </span>
               </div>
 
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Recursos Incluídos</h4>
-                <ul className="space-y-2">
+              <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recursos Incluídos</h4>
+                <ul style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {[
                     'Até 50 usuários',
                     '100GB de armazenamento',
@@ -230,63 +329,88 @@ const SettingsPage = () => {
                     'Backup diário',
                     'Domínio personalizado'
                   ].map((feature) => (
-                    <li key={feature} className="flex items-start">
-                      <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-600">{feature}</span>
+                    <li key={feature} style={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <Check style={{ width: '20px', height: '20px', color: 'var(--status-success)', marginRight: '8px', flexShrink: 0, marginTop: '2px' }} />
+                      <span style={{ color: 'var(--text-secondary)' }}>{feature}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
 
-            <div className="mt-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Método de Pagamento</h3>
-              
-              <div className="bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center">
-                <div className="flex items-center">
-                  <div className="h-10 w-16 bg-gray-100 rounded flex items-center justify-center mr-4">
-                    <CreditCard className="h-5 w-5 text-gray-400" />
+            <div style={{ marginTop: '32px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>Método de Pagamento</h3>
+
+              <div style={{
+                backgroundColor: 'var(--bg-canvas)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    height: '40px',
+                    width: '64px',
+                    backgroundColor: 'var(--primary-subtle)',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: '16px',
+                  }}>
+                    <CreditCard style={{ width: '20px', height: '20px', color: 'var(--primary-main)' }} />
                   </div>
                   <div>
-                    <p className="font-medium">Cartão de Crédito</p>
-                    <p className="text-sm text-gray-500">Terminado em 4242</p>
+                    <p style={{ fontWeight: '600', color: 'var(--text-primary)' }}>Cartão de Crédito</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Terminado em 4242</p>
                   </div>
                 </div>
                 <Button variant="outline">Alterar</Button>
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Histórico de Faturas</h3>
-              
-              <div className="overflow-hidden border border-gray-200 rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>Histórico de Faturas</h3>
+
+              <div style={{ overflow: 'hidden', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--bg-canvas)' }}>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Data</th>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Descrição</th>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valor</th>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}></th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody>
                     {[
                       { date: '10/11/2023', description: 'Assinatura Mensal', amount: 'R$ 199,90', status: 'Pago' },
                       { date: '10/10/2023', description: 'Assinatura Mensal', amount: 'R$ 199,90', status: 'Pago' },
                       { date: '10/09/2023', description: 'Assinatura Mensal', amount: 'R$ 199,90', status: 'Pago' },
                     ].map((invoice, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.date}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{invoice.description}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{invoice.amount}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      <tr key={index} style={{ borderTop: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-primary)' }}>{invoice.date}</td>
+                        <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-secondary)' }}>{invoice.description}</td>
+                        <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '500' }}>{invoice.amount}</td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <span style={{
+                            padding: '4px 10px',
+                            display: 'inline-flex',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            borderRadius: 'var(--radius-full)',
+                            backgroundColor: 'rgba(46, 204, 113, 0.15)',
+                            color: 'var(--status-success)',
+                          }}>
                             {invoice.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <a href="#" className="text-blue-600 hover:text-blue-900">Ver recibo</a>
+                        <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                          <a href="#" style={{ color: 'var(--primary-main)', fontSize: '14px', fontWeight: '500', textDecoration: 'none' }}>Ver recibo</a>
                         </td>
                       </tr>
                     ))}

@@ -20,10 +20,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Check localStorage and system preference
     const savedTheme = localStorage.getItem('theme') as Theme | null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
     setTheme(initialTheme);
-    
+
     // Apply theme
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -35,10 +35,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
-    
+
     // Save to localStorage
     localStorage.setItem('theme', newTheme);
-    
+
     // Update HTML class
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -47,11 +47,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Prevent flash of unstyled content
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
+  // We always render the provider to ensure children can use the context.
+  // Hydration mismatch for theme is handled by the useEffect.
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}

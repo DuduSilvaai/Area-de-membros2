@@ -1,30 +1,32 @@
 @import "tailwindcss";
 
 /* Light Mode (Default) */
+/* Light Mode (Default) */
 :root {
   /* Light Mode Colors */
   --primary-main: #FF2D78;
   --primary-hover: #E61E6A;
   --primary-subtle: #FFF0F5;
-  
+
   --bg-default: #FFFFFF;
   --bg-canvas: #F5F5F7;
   --bg-surface: #FFFFFF;
-  --bg-sidebar: #F1F3F5;
-  
+  --bg-sidebar: rgba(255, 255, 255, 0.7);
+  --bg-sidebar-border: rgba(255, 255, 255, 0.8);
+
   --text-primary: #1A1A1A;
   --text-secondary: #636E72;
   --text-disabled: #B2BEC3;
   --text-on-primary: #FFFFFF;
-  
+
   --status-success: #00B894;
   --status-warning: #FDCB6E;
   --status-error: #D63031;
   --status-info: #0984E3;
-  
+
   --border-color: #E9ECEF;
   --border-subtle: rgba(0, 0, 0, 0.04);
-  
+
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -32,20 +34,25 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-xxl: 48px;
-  
+
   /* Border Radius */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
   --radius-xl: 28px;
   --radius-full: 9999px;
-  
+
   /* Shadows (Light Mode) */
   --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
   --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.08);
   --shadow-card: 0 10px 32px rgba(0, 0, 0, 0.04);
   --shadow-floating: 0 20px 40px rgba(0, 0, 0, 0.12);
-  
+
+  /* Sidebar Specific */
+  --sidebar-glass: blur(12px);
+  --sidebar-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  --sidebar-item-hover: rgba(0, 0, 0, 0.05);
+
   /* Font Family */
   --font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -56,30 +63,35 @@ html.dark {
   --primary-main: #FF4D94;
   --primary-hover: #FF70AB;
   --primary-subtle: rgba(255, 77, 148, 0.15);
-  
+
   --bg-default: #0F0F12;
   --bg-canvas: #0A0A0D;
-  --bg-surface: #121216;
-  --bg-sidebar: #121216;
-  
+  --bg-surface: #1A1A1E;
+  --bg-sidebar: rgba(18, 18, 22, 0.7);
+  --bg-sidebar-border: rgba(255, 255, 255, 0.08);
+
   --text-primary: #FFFFFF;
   --text-secondary: #A0A0AB;
   --text-disabled: #4D4D54;
   --text-on-primary: #FFFFFF;
-  
+
   --status-success: #2ECC71;
   --status-warning: #F1C40F;
   --status-error: #E74C3C;
   --status-info: #3498DB;
-  
+
   --border-color: #2D2D35;
   --border-subtle: rgba(255, 255, 255, 0.06);
-  
+
   /* Shadows (Dark Mode) */
   --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.3);
   --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 10px 32px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 0 1px rgba(255, 255, 255, 0.1);
   --shadow-floating: 0 20px 40px rgba(0, 0, 0, 0.6);
+
+  /* Sidebar Specific */
+  --sidebar-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --sidebar-item-hover: rgba(255, 255, 255, 0.05);
 }
 
 * {

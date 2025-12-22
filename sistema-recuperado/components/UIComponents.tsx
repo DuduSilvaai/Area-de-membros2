@@ -76,12 +76,12 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, options, error, className, ...props }, ref) => {
     return (
       <div className="w-full mb-4">
-        {label && <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>}
+        {label && <label className="block text-sm font-medium text-text-primary mb-1">{label}</label>}
         <select
           ref={ref}
           className={cn(
-            'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white dark:bg-gray-800 dark:text-white dark:border-gray-600',
-            error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600',
+            'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-main text-text-primary bg-background-canvas dark:bg-background-canvas dark:text-text-primary dark:border-border',
+            error ? 'border-status-error' : 'border-border dark:border-border',
             className
           )}
           {...props}
@@ -92,7 +92,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+        {error && <p className="text-status-error text-xs mt-1">{error}</p>}
       </div>
     );
   }
@@ -108,14 +108,14 @@ interface SwitchProps {
 
 export const Switch = ({ label, checked, onChange }: SwitchProps) => {
   return (
-    <div className="flex items-center justify-between mb-4 p-2 border rounded-md bg-gray-50 dark:bg-gray-900 dark:border-gray-700">
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
+    <div className="flex items-center justify-between mb-4 p-2 border rounded-md bg-background-canvas border-border dark:bg-background-canvas dark:border-border">
+      <span className="text-sm font-medium text-text-primary">{label}</span>
       <button
         type="button"
         onClick={() => onChange(!checked)}
         className={cn(
-          'w-11 h-6 bg-gray-200 rounded-full relative transition-colors focus:outline-none dark:bg-gray-700',
-          checked ? 'bg-green-500' : 'bg-gray-300'
+          'w-11 h-6 rounded-full relative transition-colors focus:outline-none',
+          checked ? 'bg-status-success' : 'bg-text-disabled'
         )}
       >
         <span
@@ -140,8 +140,8 @@ interface FileUploadProps {
 export const FileUpload = ({ label, onFileSelect, previewUrl, error }: FileUploadProps) => {
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
-      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition">
+      <label className="block text-sm font-medium text-text-primary mb-1">{label}</label>
+      <div className="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center bg-background-canvas hover:bg-background-surface transition">
         {previewUrl ? (
           <div className="mb-2 relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -149,13 +149,13 @@ export const FileUpload = ({ label, onFileSelect, previewUrl, error }: FileUploa
             <button
               type="button"
               onClick={() => onFileSelect(null)}
-              className="text-xs text-red-500 underline mt-1"
+              className="text-xs text-status-error underline mt-1"
             >
               Remover
             </button>
           </div>
         ) : (
-          <Upload className="w-8 h-8 text-gray-400 mb-2" />
+          <Upload className="w-8 h-8 text-text-disabled mb-2" />
         )}
 
         <input
@@ -166,11 +166,11 @@ export const FileUpload = ({ label, onFileSelect, previewUrl, error }: FileUploa
             if (e.target.files?.[0]) onFileSelect(e.target.files[0]);
           }}
         />
-        <label htmlFor={`file-${label}`} className="cursor-pointer text-blue-600 hover:underline text-sm">
+        <label htmlFor={`file-${label}`} className="cursor-pointer text-primary-main hover:underline text-sm">
           Clique para enviar arquivo
         </label>
       </div>
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+      {error && <p className="text-status-error text-xs mt-1">{error}</p>}
     </div>
   );
 };
