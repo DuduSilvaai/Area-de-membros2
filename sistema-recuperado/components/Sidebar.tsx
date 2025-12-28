@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
   Users,
@@ -22,13 +23,14 @@ const MENU_ITEMS = [
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
   { name: 'Configurações', href: '/settings', icon: Settings },
   { name: 'Usuários', href: '/users', icon: Users },
-  { name: 'ViewAI', href: '/viewai', icon: Users },
+
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   // Using explicit connection to Context
   const { theme, toggleTheme } = useTheme();
+  const { signOut } = useAuth();
 
   return (
     <div
@@ -193,6 +195,7 @@ export default function Sidebar() {
         }}
       >
         <button
+          onClick={signOut}
           style={{
             display: 'flex',
             alignItems: 'center',

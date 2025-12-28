@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import {
   User,
   Lock,
-  CreditCard,
+
   Mail,
-  Check,
+
   X,
   Camera,
   Save
@@ -41,7 +41,7 @@ const SettingsPage = () => {
   const tabs = [
     { id: 'profile', label: 'Perfil', icon: User },
     { id: 'security', label: 'Segurança', icon: Lock },
-    { id: 'billing', label: 'Assinatura', icon: CreditCard }
+
   ];
 
   return (
@@ -281,146 +281,7 @@ const SettingsPage = () => {
         </div>
       )}
 
-      {/* Billing Tab */}
-      {activeTab === 'billing' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          <div style={{
-            backgroundColor: 'var(--bg-surface)',
-            boxShadow: 'var(--shadow-card)',
-            borderRadius: 'var(--radius-xl)',
-            padding: '28px',
-            border: '1px solid var(--border-color)',
-          }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '24px' }}>Plano Atual</h2>
 
-            <div style={{
-              backgroundColor: 'var(--bg-canvas)',
-              padding: '24px',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--border-color)',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>Plano Empresarial</h3>
-                  <p style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>R$ 199,90/mês</p>
-                  <p style={{ fontSize: '13px', color: 'var(--text-disabled)', marginTop: '8px' }}>Próximo vencimento: 10/12/2023</p>
-                </div>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '6px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  backgroundColor: 'rgba(46, 204, 113, 0.15)',
-                  color: 'var(--status-success)',
-                }}>
-                  Ativo
-                </span>
-              </div>
-
-              <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recursos Incluídos</h4>
-                <ul style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {[
-                    'Até 50 usuários',
-                    '100GB de armazenamento',
-                    'Suporte prioritário',
-                    'Backup diário',
-                    'Domínio personalizado'
-                  ].map((feature) => (
-                    <li key={feature} style={{ display: 'flex', alignItems: 'flex-start' }}>
-                      <Check style={{ width: '20px', height: '20px', color: 'var(--status-success)', marginRight: '8px', flexShrink: 0, marginTop: '2px' }} />
-                      <span style={{ color: 'var(--text-secondary)' }}>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '32px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>Método de Pagamento</h3>
-
-              <div style={{
-                backgroundColor: 'var(--bg-canvas)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '16px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{
-                    height: '40px',
-                    width: '64px',
-                    backgroundColor: 'var(--primary-subtle)',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: '16px',
-                  }}>
-                    <CreditCard style={{ width: '20px', height: '20px', color: 'var(--primary-main)' }} />
-                  </div>
-                  <div>
-                    <p style={{ fontWeight: '600', color: 'var(--text-primary)' }}>Cartão de Crédito</p>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Terminado em 4242</p>
-                  </div>
-                </div>
-                <Button variant="outline">Alterar</Button>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>Histórico de Faturas</h3>
-
-              <div style={{ overflow: 'hidden', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: 'var(--bg-canvas)' }}>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Data</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Descrição</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valor</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { date: '10/11/2023', description: 'Assinatura Mensal', amount: 'R$ 199,90', status: 'Pago' },
-                      { date: '10/10/2023', description: 'Assinatura Mensal', amount: 'R$ 199,90', status: 'Pago' },
-                      { date: '10/09/2023', description: 'Assinatura Mensal', amount: 'R$ 199,90', status: 'Pago' },
-                    ].map((invoice, index) => (
-                      <tr key={index} style={{ borderTop: '1px solid var(--border-color)' }}>
-                        <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-primary)' }}>{invoice.date}</td>
-                        <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-secondary)' }}>{invoice.description}</td>
-                        <td style={{ padding: '16px 24px', fontSize: '14px', color: 'var(--text-primary)', fontWeight: '500' }}>{invoice.amount}</td>
-                        <td style={{ padding: '16px 24px' }}>
-                          <span style={{
-                            padding: '4px 10px',
-                            display: 'inline-flex',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            borderRadius: 'var(--radius-full)',
-                            backgroundColor: 'rgba(46, 204, 113, 0.15)',
-                            color: 'var(--status-success)',
-                          }}>
-                            {invoice.status}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                          <a href="#" style={{ color: 'var(--primary-main)', fontSize: '14px', fontWeight: '500', textDecoration: 'none' }}>Ver recibo</a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
