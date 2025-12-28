@@ -23,7 +23,7 @@ const MENU_ITEMS = [
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
   { name: 'Configurações', href: '/settings', icon: Settings },
   { name: 'Usuários', href: '/users', icon: Users },
-  { name: 'ViewAI', href: '/viewai', icon: Users },
+
 ];
 
 export default function Sidebar() {
