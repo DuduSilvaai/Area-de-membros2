@@ -36,6 +36,14 @@ export interface Portal {
     image_url: string | null;
     created_at: string;
     is_active: boolean;
+    settings?: {
+        primary_color: string;
+        secondary_color: string;
+        logo_url: string;
+        favicon_url: string;
+        support_email: string;
+        [key: string]: any;
+    };
 }
 
 export interface ModuleWithChildren {
@@ -46,6 +54,8 @@ export interface ModuleWithChildren {
     parent_module_id: string | null;
     order_index: number;
     is_active: boolean;
+    is_released: boolean;
+    release_date: string | null;
     created_at: string;
     updated_at: string | null;
     children?: ModuleWithChildren[];
@@ -56,9 +66,11 @@ export interface Content {
     title: string;
     module_id: string;
     order_index: number;
-    content_type: 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external';
+    content_type: 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external' | 'link';
     content_url?: string | null;
-    duration_minutes?: number | null;
+    video_url?: string | null;
+    duration?: number | null; // Duration in seconds
+    is_preview: boolean;
     is_active: boolean;
     created_at: string;
     updated_at: string | null;

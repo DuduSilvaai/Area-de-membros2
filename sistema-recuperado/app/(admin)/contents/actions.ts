@@ -154,6 +154,8 @@ export async function createModule(data: {
     portal_id: string;
     parent_module_id?: string | null;
     order_index?: number;
+    is_released?: boolean;
+    release_date?: string | null;
 }) {
     const adminSupabase = await createAdminClient();
 
@@ -166,7 +168,9 @@ export async function createModule(data: {
                 portal_id: data.portal_id,
                 parent_module_id: data.parent_module_id || null,
                 order_index: data.order_index ?? 0,
-                is_active: true
+                is_active: true,
+                is_released: data.is_released ?? true,
+                release_date: data.release_date || null
             }])
             .select()
             .single();
@@ -244,6 +248,8 @@ export async function createContent(data: {
     order_index?: number;
     video_url?: string;
     content_url?: string;
+    duration?: number;
+    is_preview?: boolean;
 }) {
     const adminSupabase = await createAdminClient();
 
@@ -257,6 +263,8 @@ export async function createContent(data: {
                 order_index: data.order_index ?? 0,
                 video_url: data.video_url || null,
                 content_url: data.content_url || null,
+                duration: data.duration || 0,
+                is_preview: data.is_preview ?? false,
                 is_active: true
             }])
             .select()
