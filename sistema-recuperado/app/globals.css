@@ -1,175 +1,162 @@
 @import "tailwindcss";
 
-/* Light Mode (Default) */
-/* Light Mode (Default) */
-:root {
-  /* Light Mode Colors */
-  --primary-main: #FF2D78;
-  --primary-hover: #E61E6A;
-  --primary-subtle: #FFF0F5;
+@theme {
+  /* OKLCH Color Palette - Netflix/Premium Style */
+  /* Primary - Vivid Pink/Red */
+  --color-primary-main: oklch(63.68% 0.208 355.56);
+  /* #FF2D78 */
+  --color-primary-hover: oklch(59% 0.208 355.56);
+  /* #E61E6A */
+  --color-primary-subtle: oklch(96% 0.02 355.56);
+  /* #FFF0F5 */
 
-  --bg-default: #FFFFFF;
-  --bg-canvas: #F5F5F7;
-  --bg-surface: #FFFFFF;
-  --bg-sidebar: rgba(255, 255, 255, 0.7);
-  --bg-sidebar-border: rgba(255, 255, 255, 0.8);
+  /* Dark Mode Primary */
+  --color-dark-primary-main: oklch(65% 0.2 340);
+  /* #FF4D94 */
+  --color-dark-primary-hover: oklch(70% 0.2 340);
+  /* #FF70AB */
+  --color-dark-primary-subtle: oklch(65% 0.2 340 / 15%);
 
-  --text-primary: #1A1A1A;
-  --text-secondary: #636E72;
-  --text-disabled: #B2BEC3;
-  --text-on-primary: #FFFFFF;
+  /* Neutrals - Light Mode */
+  --color-bg-default: oklch(100% 0 0);
+  /* #FFFFFF */
+  --color-bg-canvas: oklch(97% 0 0);
+  /* #F5F5F7 */
+  --color-bg-surface: oklch(100% 0 0);
+  /* #FFFFFF */
+  --color-bg-sidebar: oklch(100% 0 0 / 70%);
+  /* Glass */
+  --color-bg-sidebar-border: oklch(100% 0 0 / 80%);
 
-  --status-success: #00B894;
-  --status-warning: #FDCB6E;
-  --status-error: #D63031;
-  --status-info: #0984E3;
+  --color-text-primary: oklch(20% 0 0);
+  /* #1A1A1A */
+  --color-text-secondary: oklch(45% 0 0);
+  /* #636E72 */
+  --color-text-disabled: oklch(75% 0 0);
+  /* #B2BEC3 */
+  --color-text-on-primary: oklch(100% 0 0);
+  /* #FFFFFF */
 
-  --border-color: #E9ECEF;
-  --border-subtle: rgba(0, 0, 0, 0.04);
+  /* Neutrals - Dark Mode (Deep Black/Gray) */
+  --color-dark-bg-default: oklch(15% 0.01 260);
+  /* #0F0F12 */
+  --color-dark-bg-canvas: oklch(12% 0.01 260);
+  /* #0A0A0D */
+  --color-dark-bg-surface: oklch(18% 0.01 260);
+  /* #1A1A1E */
+  --color-dark-bg-sidebar: oklch(15% 0.01 260 / 70%);
+  --color-dark-bg-sidebar-border: oklch(100% 0 0 / 8%);
+
+  --color-dark-text-primary: oklch(100% 0 0);
+  /* #FFFFFF */
+  --color-dark-text-secondary: oklch(70% 0 0);
+  /* #A0A0AB */
+  --color-dark-text-disabled: oklch(40% 0 0);
+  /* #4D4D54 */
+
+  /* Semantic Aliases */
+  --color-primary: var(--color-primary-main);
+
+  /* Fallback Semantic tokens required for @apply border-border and others */
+  --color-border: var(--color-bg-sidebar-border);
+  --color-background: var(--color-bg-default);
+  --color-foreground: var(--color-text-primary);
+
+  /* Status Colors (shared) */
+  --color-status-success: oklch(66% 0.17 155);
+  /* #00B894 */
+  --color-status-warning: oklch(85% 0.15 85);
+  /* #FDCB6E */
+  --color-status-error: oklch(57% 0.2 25);
+  /* #D63031 */
+  --color-status-info: oklch(60% 0.18 250);
+  /* #0984E3 */
+
+  /* Typography */
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-xxl: 48px;
+  --spacing-xs: 0.25rem;
+  /* 4px */
+  --spacing-sm: 0.5rem;
+  /* 8px */
+  --spacing-md: 1rem;
+  /* 16px */
+  --spacing-lg: 1.5rem;
+  /* 24px */
+  --spacing-xl: 2rem;
+  /* 32px */
+  --spacing-xxl: 3rem;
+  /* 48px */
 
-  /* Border Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
-  --radius-full: 9999px;
-
-  /* Shadows (Light Mode) */
-  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.08);
-  --shadow-card: 0 10px 32px rgba(0, 0, 0, 0.04);
-  --shadow-floating: 0 20px 40px rgba(0, 0, 0, 0.12);
-
-  /* Sidebar Specific */
-  --sidebar-glass: blur(12px);
-  --sidebar-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
-  --sidebar-item-hover: rgba(0, 0, 0, 0.05);
-
-  /* Font Family */
-  --font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Radius */
+  --radius-sm: 0.5rem;
+  /* 8px */
+  --radius-md: 0.75rem;
+  /* 12px */
+  --radius-lg: 1.25rem;
+  /* 20px */
+  --radius-xl: 1.75rem;
+  /* 28px */
 }
 
-/* Dark Mode */
-html.dark {
-  /* Dark Mode Colors */
-  --primary-main: #FF4D94;
-  --primary-hover: #FF70AB;
-  --primary-subtle: rgba(255, 77, 148, 0.15);
+/* Layer specific overrides for Dark Mode */
+@layer base {
+  :root {
+    /* Map variables to primitives to support dynamic switching */
+    /* Note: In v4 we can often use dark: modifier directly on tokens defined with --color-*, 
+         but for semantic continuity with existing code, we map custom props. */
 
-  --bg-default: #0F0F12;
-  --bg-canvas: #0A0A0D;
-  --bg-surface: #1A1A1E;
-  --bg-sidebar: rgba(18, 18, 22, 0.7);
-  --bg-sidebar-border: rgba(255, 255, 255, 0.08);
+    --bg-default: var(--color-bg-default);
+    --bg-canvas: var(--color-bg-canvas);
+    --bg-surface: var(--color-bg-surface);
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --primary-main: var(--color-primary-main);
 
-  --text-primary: #FFFFFF;
-  --text-secondary: #A0A0AB;
-  --text-disabled: #4D4D54;
-  --text-on-primary: #FFFFFF;
+    /* Keep existing variable names for backward compatibility with inline styles */
+    --primary-hover: var(--color-primary-hover);
+    --primary-subtle: var(--color-primary-subtle);
+    --bg-sidebar: var(--color-bg-sidebar);
+    --bg-sidebar-border: var(--color-bg-sidebar-border);
+    --text-disabled: var(--color-text-disabled);
+    --text-on-primary: var(--color-text-on-primary);
 
-  --status-success: #2ECC71;
-  --status-warning: #F1C40F;
-  --status-error: #E74C3C;
-  --status-info: #3498DB;
+    --status-success: var(--color-status-success);
+    --status-warning: var(--color-status-warning);
+    --status-error: var(--color-status-error);
+    --status-info: var(--color-status-info);
 
-  --border-color: #2D2D35;
-  --border-subtle: rgba(255, 255, 255, 0.06);
+    /* Ensure border color is set for CSS variables usage */
+    --border-color: var(--color-bg-sidebar-border);
+  }
 
-  /* Shadows (Dark Mode) */
-  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 0 1px rgba(255, 255, 255, 0.1);
-  --shadow-floating: 0 20px 40px rgba(0, 0, 0, 0.6);
+  .dark {
+    --bg-default: var(--color-dark-bg-default);
+    --bg-canvas: var(--color-dark-bg-canvas);
+    --bg-surface: var(--color-dark-bg-surface);
+    --text-primary: var(--color-dark-text-primary);
+    --text-secondary: var(--color-dark-text-secondary);
+    --primary-main: var(--color-dark-primary-main);
 
-  /* Sidebar Specific */
-  --sidebar-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  --sidebar-item-hover: rgba(255, 255, 255, 0.05);
-}
+    --primary-hover: var(--color-dark-primary-hover);
+    --primary-subtle: var(--color-dark-primary-subtle);
+    --bg-sidebar: var(--color-dark-bg-sidebar);
+    --bg-sidebar-border: var(--color-dark-bg-sidebar-border);
+    --text-disabled: var(--color-dark-text-disabled);
+    --text-on-primary: var(--color-dark-text-primary);
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+    /* Ensure border color is set for CSS variables usage */
+    --border-color: var(--color-dark-bg-sidebar-border);
+  }
 
-html {
-  background-color: var(--bg-default);
-  color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-body {
-  background-color: var(--bg-default);
-  color: var(--text-primary);
-  font-family: var(--font-family);
-  line-height: 1.5;
-  margin: 0;
-  padding: 0;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Typography */
-h1 {
-  font-size: 32px;
-  line-height: 1.2;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-h2 {
-  font-size: 24px;
-  line-height: 1.3;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-h3 {
-  font-size: 18px;
-  line-height: 1.4;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-p {
-  color: var(--text-primary);
-}
-
-.text-body-large {
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 400;
-}
-
-.text-body-main {
-  font-size: 14px;
-  line-height: 1.5;
-  font-weight: 400;
-}
-
-.text-caption {
-  font-size: 12px;
-  line-height: 1.4;
-  font-weight: 500;
-}
-
-.text-overline {
-  font-size: 10px;
-  line-height: 1.2;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-/* Smooth transitions for theme changes */
-@media (prefers-reduced-motion: no-preference) {
   * {
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    @apply border-border;
+  }
+
+  body {
+    /* Use arbitrary value syntax to strictly follow the custom variables defined above, 
+       avoiding confusion with the new v4 background utilities */
+    @apply bg-[var(--bg-default)] text-[var(--text-primary)] antialiased transition-colors duration-300;
   }
 }
