@@ -2,9 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
-    console.log('[Middleware] Running for path:', request.nextUrl.pathname);
-    console.log('[Middleware] Cookies:', request.cookies.getAll().map(c => c.name).join(', '));
-
     let response = NextResponse.next({
         request: {
             headers: request.headers,
@@ -34,11 +31,27 @@ export async function middleware(request: NextRequest) {
         }
     );
 
-    // Refresh session if expired - required for Server Components
-    // https://supabase.com/docs/guides/auth/server-side/nextjs
     const {
         data: { user },
     } = await supabase.auth.getUser();
+
+    // Define paths that are public and don't require authentication
+    const publicPaths = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/confirm'];
+    const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path));
+
+    // If user is NOT authenticated and trying to access a protected route
+    if (!user && !isPublicPath) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/login';
+        return NextResponse.redirect(url);
+    }
+
+    // If user IS authenticated and trying to access login/signup pages
+    if (user && isPublicPath && request.nextUrl.pathname !== '/auth/callback') {
+        const url = request.nextUrl.clone();
+        url.pathname = '/'; // Redirect to dashboard or home
+        return NextResponse.redirect(url);
+    }
 
     return response;
 }
@@ -51,7 +64,8 @@ export const config = {
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
          * - public (public folder)
+         * - extensions: svg, png, jpg, jpeg, gif, webp
          */
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)",
     ],
 };
