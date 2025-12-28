@@ -72,6 +72,7 @@ export default function ClassroomPage() {
 
             try {
                 setLoading(true);
+                console.log('Iniciando carregamento para portal:', portalId);
 
                 // Fetch portal info
                 const { data: portalData, error: portalError } = await supabase
@@ -80,7 +81,10 @@ export default function ClassroomPage() {
                     .eq('id', portalId)
                     .single();
 
-                if (portalError) throw portalError;
+                if (portalError) {
+                    console.error('Erro ao buscar portal:', portalError);
+                    throw new Error(`Erro no portal: ${portalError.message || JSON.stringify(portalError)}`);
+                }
                 setPortal(portalData);
 
                 // Fetch modules with contents
@@ -97,9 +101,7 @@ export default function ClassroomPage() {
               title,
               content_type,
               video_url,
-              content_url,
-              description,
-              duration_minutes,
+              duration_seconds,
               order_index
             )
           `)
@@ -107,7 +109,10 @@ export default function ClassroomPage() {
                     .eq('is_active', true)
                     .order('order_index', { ascending: true });
 
-                if (modulesError) throw modulesError;
+                if (modulesError) {
+                    console.error('Erro ao buscar módulos:', modulesError);
+                    throw new Error(`Erro nos módulos: ${modulesError.message || JSON.stringify(modulesError)}`);
+                }
 
                 // Build hierarchy (root modules with submodules)
                 const rootModules: Module[] = [];
@@ -115,9 +120,20 @@ export default function ClassroomPage() {
 
                 // First pass: create all modules
                 (modulesData || []).forEach((mod: any) => {
+                    const mappedContents: Content[] = (mod.contents || []).map((c: any) => ({
+                        id: c.id,
+                        title: c.title,
+                        content_type: c.content_type,
+                        video_url: c.video_url,
+                        content_url: null, // Not in DB
+                        description: null, // Not in DB
+                        duration_minutes: c.duration_seconds ? Math.round(c.duration_seconds / 60) : null,
+                        order_index: c.order_index
+                    })).sort((a: Content, b: Content) => a.order_index - b.order_index);
+
                     const module: Module = {
                         ...mod,
-                        contents: (mod.contents || []).sort((a: Content, b: Content) => a.order_index - b.order_index),
+                        contents: mappedContents,
                         submodules: []
                     };
                     moduleMap.set(mod.id, module);
@@ -143,8 +159,8 @@ export default function ClassroomPage() {
 
                 setModules(rootModules);
 
-                // Set first lesson as current if none selected
-                if (rootModules.length > 0) {
+                // Setup initial lesson only if not already set
+                if (!currentLesson && rootModules.length > 0) {
                     const firstModule = rootModules[0];
                     if (firstModule.contents.length > 0) {
                         setCurrentLesson(firstModule.contents[0]);
@@ -155,8 +171,14 @@ export default function ClassroomPage() {
                     }
                 }
 
-            } catch (error) {
-                console.error('Erro ao carregar dados:', error);
+            } catch (error: any) {
+                console.error('Erro crítico ao carregar dados:', error);
+                console.error('Detalhes do erro:', {
+                    message: error?.message,
+                    details: error?.details,
+                    hint: error?.hint,
+                    full: JSON.stringify(error)
+                });
             } finally {
                 setLoading(false);
             }
@@ -248,7 +270,36 @@ export default function ClassroomPage() {
     const hasNext = currentIndex < allLessons.length - 1;
 
     return (
-        <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-default)' }}>
+        <div
+            className="min-h-screen flex flex-col"
+            style={{
+                backgroundColor: '#0F0F12',
+                color: '#FFFFFF',
+                // Force Dark Mode Variables
+                '--primary-main': '#FF4D94',
+                '--primary-hover': '#FF70AB',
+                '--primary-subtle': 'rgba(255, 77, 148, 0.15)',
+                '--bg-default': '#0F0F12',
+                '--bg-canvas': '#0A0A0D',
+                '--bg-surface': '#1A1A1E',
+                '--bg-sidebar': 'rgba(18, 18, 22, 0.7)',
+                '--bg-sidebar-border': 'rgba(255, 255, 255, 0.08)',
+                '--text-primary': '#FFFFFF',
+                '--text-secondary': '#A0A0AB',
+                '--text-disabled': '#4D4D54',
+                '--text-on-primary': '#FFFFFF',
+                '--status-success': '#2ECC71',
+                '--status-warning': '#F1C40F',
+                '--status-error': '#E74C3C',
+                '--status-info': '#3498DB',
+                '--border-color': '#2D2D35',
+                '--border-subtle': 'rgba(255, 255, 255, 0.06)',
+                '--shadow-soft': '0 4px 12px rgba(0, 0, 0, 0.3)',
+                '--shadow-medium': '0 10px 25px rgba(0, 0, 0, 0.4)',
+                '--shadow-card': '0 0 1px rgba(255, 255, 255, 0.1)',
+                '--shadow-floating': '0 20px 40px rgba(0, 0, 0, 0.6)',
+            } as React.CSSProperties}
+        >
             {/* Header */}
             <header
                 className="sticky top-0 z-50 flex items-center justify-between px-4 h-16"
@@ -423,9 +474,10 @@ export default function ClassroomPage() {
                                         <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
                                             Material de Apoio
                                         </h3>
-                                        <p style={{ color: 'var(--text-secondary)' }}>
-                                            Nenhum arquivo disponível para esta aula.
-                                        </p>
+                                        <div className="flex flex-col items-center justify-center py-8 text-center" style={{ color: 'var(--text-secondary)' }}>
+                                            <Download className="w-12 h-12 mb-4 opacity-50" />
+                                            <p>Nenhum arquivo disponível para esta aula.</p>
+                                        </div>
                                     </div>
                                 )}
 
