@@ -35,6 +35,8 @@ export interface Portal {
     description: string | null;
     image_url: string | null;
     created_at: string;
+    updated_at?: string | null;
+    created_by?: string | null;
     is_active: boolean;
     settings?: {
         primary_color: string;
@@ -43,7 +45,7 @@ export interface Portal {
         favicon_url: string;
         support_email: string;
         [key: string]: any;
-    };
+    } | null;
 }
 
 export interface ModuleWithChildren {
@@ -66,11 +68,12 @@ export interface Content {
     title: string;
     module_id: string;
     order_index: number;
-    content_type: 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external' | 'link';
+    content_type: 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external' | 'link' | string;
     content_url?: string | null;
     video_url?: string | null;
     duration?: number | null; // Duration in seconds
-    is_preview: boolean;
+    duration_seconds?: number | null; // Also support duration_seconds from DB
+    is_preview?: boolean;
     is_active: boolean;
     created_at: string;
     updated_at: string | null;

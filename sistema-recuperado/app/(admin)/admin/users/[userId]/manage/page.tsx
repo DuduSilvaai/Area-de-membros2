@@ -72,7 +72,7 @@ export default async function ManageUserPage({ params }: PageProps) {
                 <PermissionManager
                     userId={userId}
                     userEmail={targetUser.email || 'Email não disponível'}
-                    initialPortals={portals || []}
+                    initialPortals={(portals || []) as import('@/types/enrollment').Portal[]}
                     initialModules={modules || []}
                     initialEnrollments={enrollments || []}
                 />

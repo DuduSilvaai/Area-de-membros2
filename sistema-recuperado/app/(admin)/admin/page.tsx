@@ -6,9 +6,10 @@ import { supabase } from '@/lib/supabaseClient';
 type AccessLog = {
   id: string;
   created_at: string;
-  user_id: string;
+  user_id: string | null;
   action: string;
-  metadata: any;
+  details: any;
+  content_id: string | null;
 };
 
 export default function AdminDashboard() {
@@ -17,7 +18,7 @@ export default function AdminDashboard() {
     activeToday: 0,
     totalLogs: 0,
   });
-  
+
   const [logs, setLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,7 +26,7 @@ export default function AdminDashboard() {
     async function fetchData() {
       try {
         setLoading(true);
-        
+
         // Fetch stats
         const [users, logs] = await Promise.all([
           supabase.from('profiles').select('*', { count: 'exact' }),
@@ -75,7 +76,7 @@ export default function AdminDashboard() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow">
@@ -120,7 +121,7 @@ export default function AdminDashboard() {
                         {log.action}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {JSON.stringify(log.metadata || {})}
+                        {JSON.stringify(log.details || {})}
                       </td>
                     </tr>
                   ))
