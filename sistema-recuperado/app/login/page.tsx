@@ -27,20 +27,18 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      // 2. Log de acesso
+      // Log access (non-blocking)
       if (data.user) {
-        await supabase
+        void supabase
           .from('access_logs')
-          .insert([
-            {
-              user_id: data.user.id,
-              action: 'login',
-              details: { method: 'email_password' }
-            }
-          ]);
+          .insert({
+            user_id: data.user.id,
+            action: 'login',
+            details: { method: 'email_password' }
+          });
       }
 
-      // 3. Redireciona
+      // Redirect to dashboard
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {

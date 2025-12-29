@@ -286,6 +286,33 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      },
+      access_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          action: string
+          details: Json | null
+          content_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action: string
+          details?: Json | null
+          content_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action?: string
+          details?: Json | null
+          content_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
