@@ -20,8 +20,8 @@
   /* Neutrals - Light Mode */
   --color-bg-default: oklch(100% 0 0);
   /* #FFFFFF */
-  --color-bg-canvas: oklch(97% 0 0);
-  /* #F5F5F7 */
+  --color-bg-canvas: oklch(98.15% 0.004 251.3);
+  /* #F8F9FB */
   --color-bg-surface: oklch(100% 0 0);
   /* #FFFFFF */
   --color-bg-sidebar: oklch(100% 0 0 / 70%);
@@ -98,6 +98,9 @@
   /* 20px */
   --radius-xl: 1.75rem;
   /* 28px */
+
+  /* Shadows */
+  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.02);
 }
 
 /* Layer specific overrides for Dark Mode */
@@ -157,6 +160,6 @@
   body {
     /* Use arbitrary value syntax to strictly follow the custom variables defined above, 
        avoiding confusion with the new v4 background utilities */
-    @apply bg-[var(--bg-default)] text-[var(--text-primary)] antialiased transition-colors duration-300;
+    @apply bg-[var(--bg-canvas)] text-[var(--text-primary)] antialiased transition-colors duration-300;
   }
 }
