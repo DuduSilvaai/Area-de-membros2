@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import VideoPlayer from '@/components/members/VideoPlayer';
 import LessonSidebar from '@/components/members/LessonSidebar';
+import LessonComments from '@/components/members/LessonComments';
 import {
     ChevronLeft,
     ChevronRight,
@@ -482,13 +483,17 @@ export default function ClassroomPage() {
                                 )}
 
                                 {activeTab === 'comments' && (
-                                    <div>
+                                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                                         <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
                                             Comentários
                                         </h3>
-                                        <p style={{ color: 'var(--text-secondary)' }}>
-                                            A seção de comentários estará disponível em breve.
-                                        </p>
+                                        {currentLesson ? (
+                                            <LessonComments lessonId={currentLesson.id} />
+                                        ) : (
+                                            <p style={{ color: 'var(--text-secondary)' }}>
+                                                Selecione uma aula para ver os comentários.
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                             </div>

@@ -1,0 +1,439 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import {
+    MessageSquare,
+    Send,
+    CornerDownRight,
+    ThumbsUp,
+    MoreVertical,
+    Trash2
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface Comment {
+    id: string;
+    user_id: string;
+    content_id: string;
+    text: string;
+    created_at: string;
+    parent_comment_id: string | null;
+    profiles: {
+        full_name: string | null;
+        avatar_url: string | null;
+    } | null;
+    likes_count?: number;
+    user_liked?: boolean;
+}
+
+interface LessonCommentsProps {
+    lessonId: string;
+}
+
+export default function LessonComments({ lessonId }: LessonCommentsProps) {
+    const { user } = useAuth();
+    const [comments, setComments] = useState<Comment[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [newComment, setNewComment] = useState('');
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [replyText, setReplyText] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    // Load comments
+    useEffect(() => {
+        if (!lessonId) return;
+
+        const fetchComments = async () => {
+            try {
+                setLoading(true);
+                const { data, error } = await supabase
+                    .from('comments')
+                    .select(`
+            *,
+            profiles (
+              full_name,
+              avatar_url
+            )
+          `)
+                    .eq('content_id', lessonId)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                // Fetch likes separately or as a count if possible, but simplest is to fetch all likes for these comments
+                // For optimization, we could use a custom view or subquery. 
+                // For now, let's just create a quick map of likes.
+
+                const commentIds = data.map(c => c.id);
+                if (commentIds.length > 0) {
+                    const { data: likesData, error: likesError } = await supabase
+                        .from('comment_likes')
+                        .select('comment_id, user_id')
+                        .in('comment_id', commentIds);
+
+                    if (!likesError && likesData) {
+                        const updatedComments = data.map((comment: any) => {
+                            const likes = likesData.filter(l => l.comment_id === comment.id);
+                            return {
+                                ...comment,
+                                likes_count: likes.length,
+                                user_liked: user ? likes.some(l => l.user_id === user.id) : false
+                            };
+                        });
+                        setComments(updatedComments);
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+                setComments(data as Comment[]);
+            } catch (error) {
+                console.error('Error fetching comments:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchComments();
+
+        // Subscribe to realtime changes
+        const channel = supabase
+            .channel('public:comments')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'comments',
+                filter: `content_id=eq.${lessonId}`
+            }, (payload) => {
+                // Simple re-fetch strategy for consistency
+                fetchComments();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [lessonId, user]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newComment.trim() || !user) return;
+
+        setSubmitting(true);
+        try {
+            const { error } = await supabase
+                .from('comments')
+                .insert({
+                    content_id: lessonId,
+                    user_id: user.id,
+                    text: newComment,
+                    parent_comment_id: null
+                });
+
+            if (error) throw error;
+            setNewComment('');
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            alert('Erro ao enviar comentário.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleReply = async (parentId: string) => {
+        if (!replyText.trim() || !user) return;
+
+        setSubmitting(true);
+        try {
+            const { error } = await supabase
+                .from('comments')
+                .insert({
+                    content_id: lessonId,
+                    user_id: user.id,
+                    text: replyText,
+                    parent_comment_id: parentId
+                });
+
+            if (error) throw error;
+            setReplyText('');
+            setReplyingTo(null);
+        } catch (error) {
+            console.error('Error posting reply:', error);
+            alert('Erro ao enviar resposta.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleLike = async (commentId: string, currentLiked: boolean) => {
+        if (!user) return;
+
+        // Optimistic update
+        setComments(prev => prev.map(c => {
+            if (c.id === commentId) {
+                return {
+                    ...c,
+                    likes_count: (c.likes_count || 0) + (currentLiked ? -1 : 1),
+                    user_liked: !currentLiked
+                };
+            }
+            return c;
+        }));
+
+        try {
+            if (currentLiked) {
+                await supabase
+                    .from('comment_likes')
+                    .delete()
+                    .eq('comment_id', commentId)
+                    .eq('user_id', user.id);
+            } else {
+                await supabase
+                    .from('comment_likes')
+                    .insert({
+                        comment_id: commentId,
+                        user_id: user.id
+                    });
+            }
+        } catch (error) {
+            console.error('Error toggling like:', error);
+            // Revert optimistic update? For now assume it works or next fetch corrects it.
+        }
+    };
+
+    const handleDelete = async (commentId: string) => {
+        if (!confirm('Tem certeza que deseja excluir este comentário?')) return;
+
+        try {
+            const { error } = await supabase
+                .from('comments')
+                .delete()
+                .eq('id', commentId);
+
+            if (error) throw error;
+            // Realtime update will handle the list refresh
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+            alert('Erro ao excluir comentário');
+        }
+    }
+
+    // Helper to render user avatar
+    const UserAvatar = ({ name, url }: { name: string | null, url: string | null }) => {
+        const initials = name
+            ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+            : 'U';
+
+        return (
+            <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden shrink-0"
+                style={{ backgroundColor: 'var(--primary-subtle)', color: 'var(--primary-main)' }}>
+                {url ? (
+                    <img src={url} alt={name || 'User'} className="w-full h-full object-cover" />
+                ) : (
+                    <span className="font-bold text-sm">{initials}</span>
+                )}
+            </div>
+        );
+    };
+
+    // Filter root comments
+    const rootComments = comments.filter(c => !c.parent_comment_id);
+
+    // Group replies
+    const getReplies = (parentId: string) => comments.filter(c => c.parent_comment_id === parentId).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* New Comment Form */}
+            <form onSubmit={handleSubmit} className="mb-8">
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Deixe sua dúvida ou comentário
+                </label>
+                <div className="flex gap-4">
+                    <div className="hidden sm:block">
+                        <UserAvatar
+                            name={user?.user_metadata?.full_name || 'Eu'}
+                            url={user?.user_metadata?.avatar_url || null}
+                        />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <Textarea
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder="Escreva algo..."
+                            className="w-full min-h-[100px] resize-y border-0 focus-visible:ring-1"
+                            style={{
+                                backgroundColor: 'var(--bg-canvas)',
+                                color: 'var(--text-primary)',
+                                borderColor: 'var(--border-color)'
+                            }}
+                        />
+                        <div className="flex justify-end">
+                            <Button
+                                type="submit"
+                                disabled={submitting || !newComment.trim()}
+                                className="gap-2"
+                            // Using style to override button variants if needed, or rely on tailwind classes if they map to vars
+                            >
+                                <Send className="w-4 h-4" />
+                                Enviar Comentário
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            {/* Comments List */}
+            <div className="space-y-6">
+                {loading && comments.length === 0 ? (
+                    <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
+                        Carregando comentários...
+                    </div>
+                ) : rootComments.length === 0 ? (
+                    <div className="text-center py-8 border rounded-lg border-dashed"
+                        style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>
+                        <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                        <p>Nenhum comentário ainda. Seja o primeiro a comentar!</p>
+                    </div>
+                ) : (
+                    rootComments.map(comment => (
+                        <div key={comment.id} className="group">
+                            {/* Root Comment */}
+                            <div className="flex gap-4">
+                                <UserAvatar
+                                    name={comment.profiles?.full_name || 'Desconhecido'}
+                                    url={comment.profiles?.avatar_url || null}
+                                />
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                                            {comment.profiles?.full_name || 'Usuário Desconhecido'}
+                                        </span>
+                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                            • {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
+                                        </span>
+                                    </div>
+
+                                    <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--text-secondary)' }}>
+                                        {comment.text}
+                                    </p>
+
+                                    <div className="flex items-center gap-4 text-xs font-medium">
+                                        <button
+                                            onClick={() => handleLike(comment.id, !!comment.user_liked)}
+                                            className={`flex items-center gap-1.5 transition-colors ${comment.user_liked ? 'text-pink-500' : 'text-gray-500 hover:text-gray-300'}`}
+                                        >
+                                            <ThumbsUp className={`w-3.5 h-3.5 ${comment.user_liked ? 'fill-current' : ''}`} />
+                                            {comment.likes_count || 0} Curtidas
+                                        </button>
+
+                                        <button
+                                            onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                                            className="flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors"
+                                        >
+                                            <MessageSquare className="w-3.5 h-3.5" />
+                                            Responder
+                                        </button>
+
+                                        {user && user.id === comment.user_id && (
+                                            <button
+                                                onClick={() => handleDelete(comment.id)}
+                                                className="flex items-center gap-1.5 text-red-500/70 hover:text-red-500 transition-colors ml-auto opacity-0 group-hover:opacity-100"
+                                            >
+                                                Excluir
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Reply Form */}
+                                    {replyingTo === comment.id && (
+                                        <div className="mt-4 pl-4 border-l-2" style={{ borderColor: 'var(--border-color)' }}>
+                                            <div className="flex gap-3">
+                                                <Textarea
+                                                    value={replyText}
+                                                    onChange={(e) => setReplyText(e.target.value)}
+                                                    placeholder="Escreva sua resposta..."
+                                                    className="min-h-[80px] text-sm bg-transparent"
+                                                    autoFocus
+                                                    style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-canvas)' }}
+                                                />
+                                                <div className="flex flex-col gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => handleReply(comment.id)}
+                                                        disabled={submitting || !replyText.trim()}
+                                                    >
+                                                        Responder
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => setReplyingTo(null)}
+                                                    >
+                                                        Cancelar
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Replies */}
+                                    {getReplies(comment.id).length > 0 && (
+                                        <div className="mt-4 pl-4 space-y-4 border-l-2" style={{ borderColor: 'var(--border-subtle)' }}>
+                                            {getReplies(comment.id).map(reply => (
+                                                <div key={reply.id} className="flex gap-3">
+                                                    <div className="w-8 h-8">
+                                                        <UserAvatar
+                                                            name={reply.profiles?.full_name || 'Desconhecido'}
+                                                            url={reply.profiles?.avatar_url || null}
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="font-semibold text-xs" style={{ color: 'var(--text-primary)' }}>
+                                                                {reply.profiles?.full_name || 'Usuário Desconhecido'}
+                                                            </span>
+                                                            <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+                                                                • {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: ptBR })}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                            {reply.text}
+                                                        </p>
+                                                        <div className="flex items-center gap-4 text-xs">
+                                                            <button
+                                                                onClick={() => handleLike(reply.id, !!reply.user_liked)}
+                                                                className={`flex items-center gap-1.5 transition-colors ${reply.user_liked ? 'text-pink-500' : 'text-gray-500 hover:text-gray-300'}`}
+                                                            >
+                                                                <ThumbsUp className={`w-3 h-3 ${reply.user_liked ? 'fill-current' : ''}`} />
+                                                                {reply.likes_count || 0}
+                                                            </button>
+
+                                                            {user && user.id === reply.user_id && (
+                                                                <button
+                                                                    onClick={() => handleDelete(reply.id)}
+                                                                    className="text-red-500/70 hover:text-red-500 transition-colors ml-auto"
+                                                                >
+                                                                    <Trash2 className="w-3 h-3" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+}

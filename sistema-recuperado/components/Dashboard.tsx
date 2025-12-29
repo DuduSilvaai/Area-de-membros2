@@ -8,174 +8,104 @@ import {
   BarChart3,
   DollarSign,
   Calendar,
-  Clock
+  Clock,
+  BookOpen,
+  Activity
 } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend
+} from 'recharts';
+
+interface DashboardProps {
+  stats: {
+    totalStudents: number;
+    totalLessons: number;
+    accessesToday: number;
+    monthlyGrowth: { name: string; students: number }[];
+    popularLessons: { name: string; accesses: number }[];
+    recentActivity: any[];
+  };
+}
 
 // Componente de Card reutilizável
 const StatCard = ({
   title,
   value,
-  change,
-  icon: Icon
+  // change, // Omitido por enquanto pois não temos dados históricos para comparar
+  icon: Icon,
+  trend
 }: {
   title: string;
   value: string;
-  change: string;
+  // change?: string;
   icon: React.ElementType;
+  trend?: string;
 }) => (
   <div
-    style={{
-      backgroundColor: 'var(--bg-surface)',
-      padding: '28px',
-      borderRadius: 'var(--radius-lg)',
-      boxShadow: 'var(--shadow-card)',
-      border: '1px solid var(--border-color)',
-      position: 'relative',
-      overflow: 'hidden',
-      transition: 'all 0.3s ease',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.boxShadow = 'var(--shadow-floating)';
-      e.currentTarget.style.transform = 'translateY(-4px)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.boxShadow = 'var(--shadow-card)';
-      e.currentTarget.style.transform = 'translateY(0)';
-    }}
+    className="bg-[var(--bg-surface)] p-7 rounded-xl border-transparent dark:border-white/5 shadow-card dark:shadow-none relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
   >
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <div className="flex justify-between items-start">
       <div>
-        <p style={{
-          fontSize: '11px',
-          fontWeight: '700',
-          color: 'var(--text-secondary)',
-          marginBottom: '12px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-        }}>
+        <p className="text-xs font-bold text-[var(--text-secondary)] mb-3 uppercase tracking-wider opacity-70">
           {title}
         </p>
-        <p style={{ fontSize: '32px', fontWeight: '600', marginTop: '0px', color: 'var(--text-primary)' }}>{value}</p>
-        <div style={{ display: 'flex', alignItems: 'center', marginTop: '12px', color: parseFloat(change) >= 0 ? 'var(--status-success)' : 'var(--status-error)', fontSize: '13px', fontWeight: '600' }}>
-          <ArrowUpRight style={{ width: '14px', height: '14px', marginRight: '4px', transform: parseFloat(change) < 0 ? 'scaleY(-1)' : 'none' }} />
+        <p className="text-3xl font-extrabold text-[var(--text-primary)] m-0 tracking-tight">{value}</p>
+        {/*
+        <div className={`flex items-center mt-3 text-sm font-semibold ${parseFloat(change || '0') >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+          <ArrowUpRight className={`w-3.5 h-3.5 mr-1 ${parseFloat(change || '0') < 0 ? 'scale-y-[-1]' : ''}`} />
           {change}
-          <span style={{ color: 'var(--text-secondary)', marginLeft: '4px', fontWeight: '500' }}>vs mês passado</span>
+          <span className="text-gray-400 ml-1 font-medium text-xs">vs mês passado</span>
         </div>
+        */}
       </div>
-      <div style={{
-        padding: '16px',
-        borderRadius: '16px',
-        background: 'var(--primary-subtle)',
-        boxShadow: '0 8px 20px rgba(255, 45, 120, 0.15)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <Icon style={{ width: '24px', height: '24px', color: 'var(--primary-main)' }} />
+      <div className="p-4 rounded-2xl bg-pink-500/10 shadow-[0_8px_20px_rgba(255,45,120,0.1)] flex items-center justify-center">
+        <Icon className="w-6 h-6 text-pink-500" />
       </div>
     </div>
   </div>
 );
 
-// Componente de Gráfico (placeholder)
-const ChartPlaceholder = ({ title }: { title: string }) => (
-  <div
-    style={{
-      backgroundColor: 'var(--bg-surface)',
-      padding: '28px',
-      borderRadius: 'var(--radius-lg)',
-      boxShadow: 'var(--shadow-card)',
-      border: '1px solid var(--border-color)',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      transition: 'all 0.3s ease',
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.boxShadow = 'var(--shadow-floating)';
-      e.currentTarget.style.transform = 'translateY(-4px)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.boxShadow = 'var(--shadow-card)';
-      e.currentTarget.style.transform = 'translateY(0)';
-    }}
-  >
-    <h3 style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px', fontSize: '16px' }}>{title}</h3>
-    <div
-      style={{
-        height: '256px',
-        backgroundColor: 'var(--bg-canvas)',
-        borderRadius: 'var(--radius-md)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--text-disabled)',
-        fontSize: '14px',
-        flex: 1,
-      }}
-    >
-      Gráfico de {title}
-    </div>
-  </div>
-);
-
-// Componente de Tabela Recente
-const RecentActivity = () => {
-  const activities = [
-    { id: 1, user: 'João Silva', action: 'Criou um novo time', time: '2 min atrás' },
-    { id: 2, user: 'Maria Santos', action: 'Atualizou o portal', time: '1 hora atrás' },
-    { id: 3, user: 'Carlos Oliveira', action: 'Enviou relatório', time: '3 horas atrás' },
-    { id: 4, user: 'Ana Pereira', action: 'Adicionou novo membro', time: '5 horas atrás' },
-  ];
+// Componente de Tabela Recente Atualizada
+const RecentActivity = ({ activities }: { activities: any[] }) => {
+  if (!activities || activities.length === 0) {
+    return (
+      <div className="bg-[var(--bg-surface)] p-8 rounded-xl border-transparent dark:border-white/5 shadow-card dark:shadow-none">
+        <h3 className="font-bold text-[var(--text-primary)] mb-6 text-lg">Atividades Recentes</h3>
+        <p className="text-sm text-[var(--text-secondary)]">Nenhuma atividade recente encontrada.</p>
+      </div>
+    )
+  }
 
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--bg-surface)',
-        padding: '28px',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-card)',
-        border: '1px solid var(--border-color)',
-        transition: 'all 0.3s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = 'var(--shadow-floating)';
-        e.currentTarget.style.transform = 'translateY(-4px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = 'var(--shadow-card)';
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
-    >
-      <h3 style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '20px', fontSize: '16px' }}>Atividades Recentes</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="bg-[var(--bg-surface)] p-8 rounded-xl border-transparent dark:border-white/5 shadow-card dark:shadow-none transition-all duration-300 hover:shadow-lg">
+      <h3 className="font-bold text-[var(--text-primary)] mb-6 text-lg">Atividades Recentes</h3>
+      <div className="flex flex-col gap-1">
         {activities.map((activity, index) => (
           <div
             key={activity.id}
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              paddingBottom: '16px',
-              borderBottom: index < activities.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-            }}
+            className={`flex items-center py-4 px-2 rounded-xl transition-colors hover:bg-[var(--bg-canvas)]/50 ${index < activities.length - 1 ? 'border-b border-gray-50 dark:border-white/5' : ''}`}
           >
-            <div style={{
-              backgroundColor: 'var(--primary-subtle)',
-              boxShadow: '0 4px 12px rgba(255, 45, 120, 0.12)',
-              padding: '10px',
-              borderRadius: '10px',
-              marginRight: '14px',
-              flexShrink: 0
-            }}>
-              <Users style={{ width: '16px', height: '16px', color: 'var(--primary-main)' }} />
+            <div className="bg-pink-500/10 shadow-sm p-3 rounded-xl mr-4 flex-shrink-0">
+              <Users className="w-5 h-5 text-pink-500" />
             </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{activity.user}</p>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>{activity.action}</p>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-[var(--text-primary)] leading-tight">
+                {activity.profile?.full_name || activity.profile?.email || 'Usuário'}
+              </p>
+              <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">{activity.action}</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: 'var(--text-disabled)' }}>
-              <Clock style={{ width: '12px', height: '12px', marginRight: '4px' }} />
-              {activity.time}
+            <div className="flex items-center text-xs font-semibold text-[var(--text-secondary)] opacity-60">
+              <Clock className="w-3.5 h-3.5 mr-1.5" />
+              {new Date(activity.created_at).toLocaleDateString('pt-BR')}
             </div>
           </div>
         ))}
@@ -184,115 +114,130 @@ const RecentActivity = () => {
   );
 };
 
-export default function Dashboard() {
+export default function Dashboard({ stats }: DashboardProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div className="flex flex-col gap-8">
       {/* Cabeçalho */}
-      <div>
-        <h1 style={{ fontSize: '32px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Visão Geral</h1>
-        <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '14px', margin: '8px 0 0 0' }}>Bem-vindo de volta! Aqui está o que está acontecendo hoje.</p>
+      <div className="mb-2">
+        <h1 className="text-4xl font-extrabold text-[var(--text-primary)] m-0 tracking-tight">Visão Geral</h1>
+        <p className="text-[var(--text-secondary)] mt-2.5 text-base font-medium opacity-80">
+          Bem-vindo de volta! Aqui está o resumo atualizado do seu sistema.
+        </p>
       </div>
 
       {/* Cards de Estatísticas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
-          title="Total de Usuários"
-          value="1,248"
-          change="+12.5%"
+          title="Total de Alunos"
+          value={stats.totalStudents.toString()}
           icon={Users}
         />
         <StatCard
-          title="Vendas do Mês"
-          value="R$ 48,290"
-          change="+8.2%"
-          icon={DollarSign}
+          title="Total de Aulas"
+          value={stats.totalLessons.toString()}
+          icon={BookOpen}
         />
         <StatCard
-          title="Novos Clientes"
-          value="89"
-          change="-2.4%"
-          icon={Users}
-        />
-        <StatCard
-          title="Pedidos"
-          value="1,245"
-          change="+18.3%"
-          icon={ShoppingCart}
+          title="Acessos Hoje"
+          value={stats.accessesToday.toString()}
+          icon={Activity}
         />
       </div>
 
       {/* Gráficos */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', gridAutoFlow: 'dense' }}>
-        <div style={{ gridColumn: 'span 2' }}>
-          <ChartPlaceholder title="Desempenho de Vendas" />
-        </div>
-        <div>
-          <ChartPlaceholder title="Metas do Mês" />
-        </div>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-      {/* Atividades Recentes e Próximos Eventos */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-        <div style={{ gridColumn: 'span 2' }}>
-          <RecentActivity />
-        </div>
-        <div>
-          <div
-            style={{
-              backgroundColor: 'var(--bg-surface)',
-              padding: '28px',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: 'var(--shadow-card)',
-              border: '1px solid var(--border-color)',
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = 'var(--shadow-floating)';
-              e.currentTarget.style.transform = 'translateY(-4px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'var(--shadow-card)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            <h3 style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px', fontSize: '16px' }}>Próximos Eventos</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <div style={{
-                  backgroundColor: 'var(--primary-subtle)',
-                  color: 'var(--primary-main)',
-                  padding: '10px',
-                  borderRadius: '10px',
-                  marginRight: '12px',
-                  boxShadow: '0 4px 12px rgba(124, 58, 237, 0.12)',
-                }}>
-                  <Calendar style={{ width: '16px', height: '16px' }} />
-                </div>
-                <div>
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Reunião de Equipe</p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-disabled)', marginTop: '2px' }}>Amanhã, 10:00 AM</p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <div style={{
-                  backgroundColor: 'rgba(46, 204, 113, 0.1)',
-                  color: 'var(--status-success)',
-                  padding: '10px',
-                  borderRadius: '10px',
-                  marginRight: '12px',
-                  boxShadow: '0 4px 12px rgba(22, 163, 74, 0.12)',
-                }}>
-                  <Calendar style={{ width: '16px', height: '16px' }} />
-                </div>
-                <div>
-                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Apresentação de Resultados</p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-disabled)', marginTop: '2px' }}>Sexta, 2:00 PM</p>
-                </div>
-              </div>
-            </div>
+        {/* Gráfico de Novos Alunos */}
+        <div className="bg-[var(--bg-surface)] p-8 rounded-xl border-transparent dark:border-white/5 shadow-card dark:shadow-none transition-all duration-300 hover:shadow-lg">
+          <h3 className="font-bold text-[var(--text-primary)] mb-8 text-lg">Novos Alunos por Mês</h3>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={stats.monthlyGrowth}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#CED4DA" opacity={0.3} />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#636E72', fontSize: 12, fontWeight: 500 }}
+                  dy={15}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#636E72', fontSize: 12, fontWeight: 500 }}
+                  dx={-10}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: '16px',
+                    border: 'none',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    backgroundColor: 'var(--bg-surface)',
+                    padding: '12px 16px'
+                  }}
+                  itemStyle={{ color: 'var(--text-primary)', fontWeight: 'bold' }}
+                  labelStyle={{ color: 'var(--text-secondary)', marginBottom: '4px' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="students"
+                  stroke="#FF2D78"
+                  strokeWidth={4}
+                  dot={{ fill: '#FF2D78', strokeWidth: 3, r: 5, stroke: '#fff' }}
+                  activeDot={{ r: 8, strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Gráfico de Aulas Populares */}
+        <div className="bg-[var(--bg-surface)] p-8 rounded-xl border-transparent dark:border-white/5 shadow-card dark:shadow-none transition-all duration-300 hover:shadow-lg">
+          <h3 className="font-bold text-[var(--text-primary)] mb-8 text-lg">Aulas Mais Populares (Top 5)</h3>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.popularLessons} layout="vertical" margin={{ left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#CED4DA" opacity={0.3} />
+                <XAxis type="number" hide />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={120}
+                  tick={{ fill: '#636E72', fontSize: 11, fontWeight: 500 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  cursor={{ fill: 'var(--bg-canvas)', opacity: 0.4 }}
+                  contentStyle={{
+                    borderRadius: '16px',
+                    border: 'none',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    backgroundColor: 'var(--bg-surface)',
+                    padding: '12px 16px'
+                  }}
+                  itemStyle={{ color: 'var(--text-primary)', fontWeight: 'bold' }}
+                  labelStyle={{ color: 'var(--text-secondary)', marginBottom: '4px' }}
+                />
+                <Bar
+                  dataKey="accesses"
+                  fill="#FF2D78"
+                  radius={[0, 8, 8, 0]}
+                  barSize={24}
+                  background={{ fill: 'var(--bg-canvas)', radius: 8 }}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Atividades Recentes (e removi eventos futuros por ser fictício) */}
+      <div className="grid grid-cols-1 gap-4">
+        <RecentActivity activities={stats.recentActivity} />
       </div>
     </div>
   );
 }
+
