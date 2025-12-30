@@ -313,6 +313,144 @@ export interface Database {
           created_at?: string
         }
         Relationships: []
+      },
+      progress: {
+        Row: {
+          id: string
+          user_id: string
+          content_id: string
+          is_completed: boolean
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          content_id: string
+          is_completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          content_id?: string
+          is_completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progress_content_id_fkey"
+            columns: ["content_id"]
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      conversations: {
+        Row: {
+          id: string
+          student_id: string
+          admin_id: string | null
+          portal_id: string | null
+          last_message_at: string
+          last_message_preview: string | null
+          unread_count_admin: number
+          unread_count_student: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          admin_id?: string | null
+          portal_id?: string | null
+          last_message_at?: string
+          last_message_preview?: string | null
+          unread_count_admin?: number
+          unread_count_student?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          admin_id?: string | null
+          portal_id?: string | null
+          last_message_at?: string
+          last_message_preview?: string | null
+          unread_count_admin?: number
+          unread_count_student?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_student_id_fkey"
+            columns: ["student_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_portal_id_fkey"
+            columns: ["portal_id"]
+            referencedRelation: "portals"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      messages: {
+        Row: {
+          id: string
+          conversation_id: string
+          sender_id: string
+          type: 'text' | 'image' | 'file' | 'video' | 'meeting'
+          content: Json
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          sender_id: string
+          type?: 'text' | 'image' | 'file' | 'video' | 'meeting'
+          content: Json
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          sender_id?: string
+          type?: 'text' | 'image' | 'file' | 'video' | 'meeting'
+          content?: Json
+          is_read?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

@@ -115,6 +115,20 @@ export default function ClassroomPage() {
                     throw new Error(`Erro nos módulos: ${modulesError.message || JSON.stringify(modulesError)}`);
                 }
 
+                // Fetch user's progress from database
+                if (user?.id) {
+                    const { data: progressData, error: progressError } = await supabase
+                        .from('progress')
+                        .select('content_id')
+                        .eq('user_id', user.id)
+                        .eq('is_completed', true);
+
+                    if (!progressError && progressData) {
+                        const completedIds = new Set(progressData.map(p => p.content_id));
+                        setCompletedLessons(completedIds);
+                    }
+                }
+
                 // Build hierarchy (root modules with submodules)
                 const rootModules: Module[] = [];
                 const moduleMap = new Map<string, Module>();
@@ -186,7 +200,7 @@ export default function ClassroomPage() {
         };
 
         loadData();
-    }, [portalId]);
+    }, [portalId, user?.id]);
 
     // Get all lessons in order for navigation
     const getAllLessons = useCallback((): { lesson: Content; moduleId: string }[] => {
@@ -223,11 +237,53 @@ export default function ClassroomPage() {
         }
     };
 
-    // Mark lesson as completed
-    const markAsCompleted = () => {
-        if (currentLesson) {
-            setCompletedLessons(prev => new Set([...prev, currentLesson.id]));
-            // TODO: Save to database
+    // Toggle lesson completion status (mark as completed or uncompleted)
+    const toggleLessonCompletion = async () => {
+        if (!currentLesson || !user?.id) return;
+
+        const isCurrentlyCompleted = completedLessons.has(currentLesson.id);
+        const newCompletedState = !isCurrentlyCompleted;
+
+        try {
+            // Optimistic UI update
+            setCompletedLessons(prev => {
+                const newSet = new Set(prev);
+                if (newCompletedState) {
+                    newSet.add(currentLesson.id);
+                } else {
+                    newSet.delete(currentLesson.id);
+                }
+                return newSet;
+            });
+
+            // UPSERT to Supabase
+            const { error } = await supabase
+                .from('progress')
+                .upsert({
+                    user_id: user.id,
+                    content_id: currentLesson.id,
+                    is_completed: newCompletedState,
+                    completed_at: newCompletedState ? new Date().toISOString() : null,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id,content_id'
+                });
+
+            if (error) {
+                console.error('Erro ao salvar progresso:', error);
+                // Revert optimistic update on error
+                setCompletedLessons(prev => {
+                    const newSet = new Set(prev);
+                    if (newCompletedState) {
+                        newSet.delete(currentLesson.id);
+                    } else {
+                        newSet.add(currentLesson.id);
+                    }
+                    return newSet;
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar progresso:', error);
         }
     };
 
@@ -375,19 +431,20 @@ export default function ClassroomPage() {
                                 <div className="flex items-center gap-3">
                                     {/* Mark as Complete Button */}
                                     <button
-                                        onClick={markAsCompleted}
-                                        disabled={currentLesson ? completedLessons.has(currentLesson.id) : true}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm transition-all"
+                                        onClick={toggleLessonCompletion}
+                                        disabled={!currentLesson || !user?.id}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm transition-all hover:scale-105"
                                         style={{
                                             backgroundColor: currentLesson && completedLessons.has(currentLesson.id)
                                                 ? 'var(--status-success)'
                                                 : 'var(--primary-main)',
                                             color: 'var(--text-on-primary)',
-                                            opacity: currentLesson && completedLessons.has(currentLesson.id) ? 0.7 : 1
+                                            cursor: currentLesson && user?.id ? 'pointer' : 'not-allowed',
+                                            opacity: currentLesson && user?.id ? 1 : 0.5
                                         }}
                                     >
                                         <CheckCircle2 className="w-4 h-4" />
-                                        {currentLesson && completedLessons.has(currentLesson.id) ? 'Concluída' : 'Marcar como vista'}
+                                        {currentLesson && completedLessons.has(currentLesson.id) ? 'Concluída ✓' : 'Marcar como vista'}
                                     </button>
                                 </div>
                             </div>

@@ -13,16 +13,18 @@ import {
   LogOut,
   Globe,
   Sun,
-  Moon
+  Moon,
+  MessageCircle
 } from 'lucide-react';
 
 const MENU_ITEMS = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Meus Portais', href: '/portals', icon: Globe },
   { name: 'Times', href: '/', icon: Users },
+  { name: 'Usuários', href: '/users', icon: Users },
+  { name: 'Chat & Mentoria', href: '/chat', icon: MessageCircle },
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
   { name: 'Configurações', href: '/settings', icon: Settings },
-  { name: 'Usuários', href: '/users', icon: Users },
 
 ];
 
