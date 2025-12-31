@@ -78,7 +78,7 @@ export function VideoUploader({ onUploadComplete, folderPath = 'videos' }: Video
             // Let's implement standard upload for simplicity and robustness first.
 
             const { data, error } = await supabase.storage
-                .from('content-assets') // Make sure this bucket exists
+                .from('course-content') // Make sure this bucket exists
                 .upload(filePath, file, {
                     cacheControl: '3600',
                     upsert: false,
@@ -88,7 +88,7 @@ export function VideoUploader({ onUploadComplete, folderPath = 'videos' }: Video
 
             // Get public URL
             const { data: { publicUrl } } = supabase.storage
-                .from('content-assets')
+                .from('course-content')
                 .getPublicUrl(filePath);
 
             // Attempt to get video duration

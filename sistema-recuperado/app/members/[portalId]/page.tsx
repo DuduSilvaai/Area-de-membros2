@@ -1,35 +1,24 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import VideoPlayer from '@/components/members/VideoPlayer';
-import LessonSidebar from '@/components/members/LessonSidebar';
-import LessonComments from '@/components/members/LessonComments';
-import {
-    ChevronLeft,
-    ChevronRight,
-    CheckCircle2,
-    ArrowLeft,
-    FileText,
-    MessageSquare,
-    Download,
-    Loader2
-} from 'lucide-react';
+import { HeroBanner } from '@/components/members/HeroBanner';
+import { ContinueWatching } from '@/components/members/ContinueWatching';
+import { OverallProgressBar } from '@/components/members/OverallProgressBar';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { PlayCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 // Types
 interface Content {
     id: string;
     title: string;
-    content_type: 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external';
-    video_url: string | null;
-    content_url: string | null;
-    description: string | null;
     duration_minutes: number | null;
+    duration_seconds: number | null;
     order_index: number;
-    is_completed?: boolean;
 }
 
 interface Module {
@@ -40,6 +29,7 @@ interface Module {
     parent_module_id: string | null;
     contents: Content[];
     submodules: Module[];
+    image_url?: string | null; // Optional if we add module images later
 }
 
 interface Portal {
@@ -49,9 +39,16 @@ interface Portal {
     image_url: string | null;
 }
 
-type TabType = 'description' | 'files' | 'comments';
+interface LastViewed {
+    lessonId: string;
+    lessonTitle: string;
+    lessonThumbnail?: string | null;
+    moduleTitle: string;
+    progress: number;
+    updatedAt: string;
+}
 
-export default function ClassroomPage() {
+export default function PortalLobbyPage() {
     const params = useParams();
     const router = useRouter();
     const { user } = useAuth();
@@ -59,36 +56,29 @@ export default function ClassroomPage() {
 
     const [portal, setPortal] = useState<Portal | null>(null);
     const [modules, setModules] = useState<Module[]>([]);
-    const [currentLesson, setCurrentLesson] = useState<Content | null>(null);
-    const [currentModuleId, setCurrentModuleId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<TabType>('description');
     const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [lastViewed, setLastViewed] = useState<LastViewed | null>(null);
+    const [totalLessons, setTotalLessons] = useState(0);
 
-    // Load portal data and modules
     useEffect(() => {
         const loadData = async () => {
-            if (!portalId) return;
+            if (!portalId || !user?.id) return;
 
             try {
                 setLoading(true);
-                console.log('Iniciando carregamento para portal:', portalId);
 
-                // Fetch portal info
+                // 1. Fetch Portal Info
                 const { data: portalData, error: portalError } = await supabase
                     .from('portals')
                     .select('*')
                     .eq('id', portalId)
                     .single();
 
-                if (portalError) {
-                    console.error('Erro ao buscar portal:', portalError);
-                    throw new Error(`Erro no portal: ${portalError.message || JSON.stringify(portalError)}`);
-                }
+                if (portalError) throw portalError;
                 setPortal(portalData);
 
-                // Fetch modules with contents
+                // 2. Fetch Modules & Contents
                 const { data: modulesData, error: modulesError } = await supabase
                     .from('modules')
                     .select(`
@@ -100,8 +90,6 @@ export default function ClassroomPage() {
             contents (
               id,
               title,
-              content_type,
-              video_url,
               duration_seconds,
               order_index
             )
@@ -110,90 +98,74 @@ export default function ClassroomPage() {
                     .eq('is_active', true)
                     .order('order_index', { ascending: true });
 
-                if (modulesError) {
-                    console.error('Erro ao buscar módulos:', modulesError);
-                    throw new Error(`Erro nos módulos: ${modulesError.message || JSON.stringify(modulesError)}`);
+                if (modulesError) throw modulesError;
+
+                // 3. Fetch User Progress
+                const { data: progressData } = await supabase
+                    .from('progress')
+                    .select('content_id, updated_at, is_completed, last_position')
+                    .eq('user_id', user.id)
+                    .order('updated_at', { ascending: false });
+
+                const completedSet = new Set<string>();
+                let totalLessonCount = 0;
+                let lastViewedLesson: LastViewed | null = null;
+
+                // Process Progress
+                if (progressData) {
+                    progressData.forEach(p => {
+                        if (p.is_completed) completedSet.add(p.content_id);
+                    });
                 }
+                setCompletedLessons(completedSet);
 
-                // Fetch user's progress from database
-                if (user?.id) {
-                    const { data: progressData, error: progressError } = await supabase
-                        .from('progress')
-                        .select('content_id')
-                        .eq('user_id', user.id)
-                        .eq('is_completed', true);
-
-                    if (!progressError && progressData) {
-                        const completedIds = new Set(progressData.map(p => p.content_id));
-                        setCompletedLessons(completedIds);
-                    }
-                }
-
-                // Build hierarchy (root modules with submodules)
-                const rootModules: Module[] = [];
-                const moduleMap = new Map<string, Module>();
-
-                // First pass: create all modules
-                (modulesData || []).forEach((mod: any) => {
-                    const mappedContents: Content[] = (mod.contents || []).map((c: any) => ({
-                        id: c.id,
-                        title: c.title,
-                        content_type: c.content_type,
-                        video_url: c.video_url,
-                        content_url: null, // Not in DB
-                        description: null, // Not in DB
-                        duration_minutes: c.duration_seconds ? Math.round(c.duration_seconds / 60) : null,
-                        order_index: c.order_index
-                    })).sort((a: Content, b: Content) => a.order_index - b.order_index);
-
-                    const module: Module = {
+                // Process Modules & Find Last Viewed
+                const processedModules: Module[] = (modulesData || []).map((mod: any) => {
+                    totalLessonCount += (mod.contents?.length || 0);
+                    return {
                         ...mod,
-                        contents: mappedContents,
-                        submodules: []
+                        contents: (mod.contents || []).sort((a: any, b: any) => a.order_index - b.order_index),
+                        submodules: [] // Flat for now unless we need recursion for display
                     };
-                    moduleMap.set(mod.id, module);
                 });
 
-                // Second pass: build hierarchy
-                moduleMap.forEach((module) => {
-                    if (module.parent_module_id) {
-                        const parent = moduleMap.get(module.parent_module_id);
-                        if (parent) {
-                            parent.submodules.push(module);
+                // Determine "Continue Watching" based on most recent progress
+                if (progressData && progressData.length > 0) {
+                    const lastActivity = progressData[0];
+                    // Find lesson details
+                    for (const mod of processedModules) {
+                        const lesson = mod.contents.find((c: any) => c.id === lastActivity.content_id);
+                        if (lesson) {
+                            lastViewedLesson = {
+                                lessonId: lesson.id,
+                                lessonTitle: lesson.title,
+                                moduleTitle: mod.title,
+                                progress: lastActivity.is_completed ? 100 : (lastActivity.last_position ? 50 : 0), // Estimate if no duration
+                                updatedAt: lastActivity.updated_at
+                            };
+                            break;
                         }
-                    } else {
-                        rootModules.push(module);
-                    }
-                });
-
-                // Sort root modules and submodules
-                rootModules.sort((a, b) => a.order_index - b.order_index);
-                rootModules.forEach(mod => {
-                    mod.submodules.sort((a, b) => a.order_index - b.order_index);
-                });
-
-                setModules(rootModules);
-
-                // Setup initial lesson only if not already set
-                if (!currentLesson && rootModules.length > 0) {
-                    const firstModule = rootModules[0];
-                    if (firstModule.contents.length > 0) {
-                        setCurrentLesson(firstModule.contents[0]);
-                        setCurrentModuleId(firstModule.id);
-                    } else if (firstModule.submodules.length > 0 && firstModule.submodules[0].contents.length > 0) {
-                        setCurrentLesson(firstModule.submodules[0].contents[0]);
-                        setCurrentModuleId(firstModule.submodules[0].id);
                     }
                 }
 
-            } catch (error: any) {
-                console.error('Erro crítico ao carregar dados:', error);
-                console.error('Detalhes do erro:', {
-                    message: error?.message,
-                    details: error?.details,
-                    hint: error?.hint,
-                    full: JSON.stringify(error)
-                });
+                // If no history, suggest first lesson of first module
+                if (!lastViewedLesson && processedModules.length > 0 && processedModules[0].contents.length > 0) {
+                    const firstLesson = processedModules[0].contents[0];
+                    lastViewedLesson = {
+                        lessonId: firstLesson.id,
+                        lessonTitle: firstLesson.title,
+                        moduleTitle: processedModules[0].title,
+                        progress: 0,
+                        updatedAt: new Date().toISOString()
+                    }
+                }
+
+                setModules(processedModules);
+                setTotalLessons(totalLessonCount);
+                setLastViewed(lastViewedLesson);
+
+            } catch (error) {
+                console.error('Error loading lobby:', error);
             } finally {
                 setLoading(false);
             }
@@ -202,374 +174,159 @@ export default function ClassroomPage() {
         loadData();
     }, [portalId, user?.id]);
 
-    // Get all lessons in order for navigation
-    const getAllLessons = useCallback((): { lesson: Content; moduleId: string }[] => {
-        const lessons: { lesson: Content; moduleId: string }[] = [];
+    const overallProgress = totalLessons > 0
+        ? (completedLessons.size / totalLessons) * 100
+        : 0;
 
-        const collectLessons = (mods: Module[]) => {
-            mods.forEach(mod => {
-                mod.contents.forEach(content => {
-                    lessons.push({ lesson: content, moduleId: mod.id });
-                });
-                if (mod.submodules.length > 0) {
-                    collectLessons(mod.submodules);
-                }
-            });
-        };
-
-        collectLessons(modules);
-        return lessons;
-    }, [modules]);
-
-    // Navigate to next/previous lesson
-    const navigateLesson = (direction: 'next' | 'prev') => {
-        const allLessons = getAllLessons();
-        const currentIndex = allLessons.findIndex(l => l.lesson.id === currentLesson?.id);
-
-        if (direction === 'next' && currentIndex < allLessons.length - 1) {
-            const next = allLessons[currentIndex + 1];
-            setCurrentLesson(next.lesson);
-            setCurrentModuleId(next.moduleId);
-        } else if (direction === 'prev' && currentIndex > 0) {
-            const prev = allLessons[currentIndex - 1];
-            setCurrentLesson(prev.lesson);
-            setCurrentModuleId(prev.moduleId);
-        }
+    const calculateModuleProgress = (module: Module) => {
+        const modTotal = module.contents.length;
+        if (modTotal === 0) return 0;
+        const modCompleted = module.contents.filter(c => completedLessons.has(c.id)).length;
+        return Math.round((modCompleted / modTotal) * 100);
     };
 
-    // Toggle lesson completion status (mark as completed or uncompleted)
-    const toggleLessonCompletion = async () => {
-        if (!currentLesson || !user?.id) return;
-
-        const isCurrentlyCompleted = completedLessons.has(currentLesson.id);
-        const newCompletedState = !isCurrentlyCompleted;
-
-        try {
-            // Optimistic UI update
-            setCompletedLessons(prev => {
-                const newSet = new Set(prev);
-                if (newCompletedState) {
-                    newSet.add(currentLesson.id);
-                } else {
-                    newSet.delete(currentLesson.id);
-                }
-                return newSet;
-            });
-
-            // UPSERT to Supabase
-            const { error } = await supabase
-                .from('progress')
-                .upsert({
-                    user_id: user.id,
-                    content_id: currentLesson.id,
-                    is_completed: newCompletedState,
-                    completed_at: newCompletedState ? new Date().toISOString() : null,
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'user_id,content_id'
-                });
-
-            if (error) {
-                console.error('Erro ao salvar progresso:', error);
-                // Revert optimistic update on error
-                setCompletedLessons(prev => {
-                    const newSet = new Set(prev);
-                    if (newCompletedState) {
-                        newSet.delete(currentLesson.id);
-                    } else {
-                        newSet.add(currentLesson.id);
-                    }
-                    return newSet;
-                });
-            }
-        } catch (error) {
-            console.error('Erro ao atualizar progresso:', error);
-        }
-    };
-
-    // Select a lesson
-    const selectLesson = (lesson: Content, moduleId: string) => {
-        setCurrentLesson(lesson);
-        setCurrentModuleId(moduleId);
-    };
-
-    // Calculate progress
-    const calculateProgress = (): number => {
-        const allLessons = getAllLessons();
-        if (allLessons.length === 0) return 0;
-        return Math.round((completedLessons.size / allLessons.length) * 100);
-    };
-
-    // Loading state
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-default)' }}>
-                <Loader2 className="w-12 h-12 animate-spin" style={{ color: 'var(--primary-main)' }} />
+            <div className="min-h-screen bg-[#0F0F12] p-8 space-y-8">
+                <Skeleton className="w-full h-[400px] rounded-2xl bg-zinc-800" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-4">
+                        <Skeleton className="h-8 w-48 bg-zinc-800" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-xl bg-zinc-800" />)}
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <Skeleton className="h-64 rounded-xl bg-zinc-800" />
+                    </div>
+                </div>
             </div>
-        );
+        )
     }
 
-    // No portal found
-    if (!portal) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--bg-default)', color: 'var(--text-primary)' }}>
-                <h1 className="text-2xl font-bold mb-4">Portal não encontrado</h1>
-                <Link href="/members" style={{ color: 'var(--primary-main)' }}>
-                    Voltar para a lista de cursos
-                </Link>
-            </div>
-        );
-    }
-
-    const allLessons = getAllLessons();
-    const currentIndex = allLessons.findIndex(l => l.lesson.id === currentLesson?.id);
-    const hasPrev = currentIndex > 0;
-    const hasNext = currentIndex < allLessons.length - 1;
+    if (!portal) return null;
 
     return (
-        <div
-            className="min-h-screen flex flex-col"
-            style={{
-                backgroundColor: '#0F0F12',
-                color: '#FFFFFF',
-                // Force Dark Mode Variables
-                '--primary-main': '#FF4D94',
-                '--primary-hover': '#FF70AB',
-                '--primary-subtle': 'rgba(255, 77, 148, 0.15)',
-                '--bg-default': '#0F0F12',
-                '--bg-canvas': '#0A0A0D',
-                '--bg-surface': '#1A1A1E',
-                '--bg-sidebar': 'rgba(18, 18, 22, 0.7)',
-                '--bg-sidebar-border': 'rgba(255, 255, 255, 0.08)',
-                '--text-primary': '#FFFFFF',
-                '--text-secondary': '#A0A0AB',
-                '--text-disabled': '#4D4D54',
-                '--text-on-primary': '#FFFFFF',
-                '--status-success': '#2ECC71',
-                '--status-warning': '#F1C40F',
-                '--status-error': '#E74C3C',
-                '--status-info': '#3498DB',
-                '--border-color': '#2D2D35',
-                '--border-subtle': 'rgba(255, 255, 255, 0.06)',
-                '--shadow-soft': '0 4px 12px rgba(0, 0, 0, 0.3)',
-                '--shadow-medium': '0 10px 25px rgba(0, 0, 0, 0.4)',
-                '--shadow-card': '0 0 1px rgba(255, 255, 255, 0.1)',
-                '--shadow-floating': '0 20px 40px rgba(0, 0, 0, 0.6)',
-            } as React.CSSProperties}
-        >
-            {/* Header */}
-            <header
-                className="sticky top-0 z-50 flex items-center justify-between px-4 h-16"
-                style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    borderBottom: '1px solid var(--border-color)',
-                    boxShadow: 'var(--shadow-soft)'
-                }}
-            >
-                <div className="flex items-center gap-4">
-                    <Link
-                        href="/members"
-                        className="flex items-center gap-2 transition-colors"
-                        style={{ color: 'var(--text-secondary)' }}
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="hidden sm:inline">Voltar</span>
-                    </Link>
-                    <div className="hidden sm:block h-6 w-px" style={{ backgroundColor: 'var(--border-color)' }} />
-                    <h1 className="text-sm sm:text-base font-medium truncate max-w-[200px] sm:max-w-none" style={{ color: 'var(--text-primary)' }}>
-                        {portal.name}
-                    </h1>
-                </div>
+        <div className="min-h-screen bg-[#0F0F12] text-white selection:bg-pink-500/30">
+            {/* Header / Nav could go here if separate */}
 
-                <div className="flex items-center gap-3">
-                    {/* Progress indicator */}
-                    <div className="hidden sm:flex items-center gap-2">
-                        <div className="w-32 h-2 rounded-full" style={{ backgroundColor: 'var(--bg-canvas)' }}>
-                            <div
-                                className="h-full rounded-full transition-all duration-300"
-                                style={{
-                                    width: `${calculateProgress()}%`,
-                                    backgroundColor: 'var(--primary-main)'
-                                }}
-                            />
-                        </div>
-                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            {calculateProgress()}%
-                        </span>
-                    </div>
-                </div>
-            </header>
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-12">
 
-            {/* Main Content */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Video Area */}
-                <main className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'lg:mr-96' : ''}`}>
-                    {/* Video Player */}
-                    <div className="w-full" style={{ backgroundColor: '#000' }}>
-                        <VideoPlayer
-                            videoUrl={currentLesson?.video_url || null}
-                            title={currentLesson?.title || 'Selecione uma aula'}
-                        />
-                    </div>
+                {/* Hero Section */}
+                <section>
+                    <HeroBanner
+                        title={portal.name}
+                        description={portal.description}
+                        imageUrl={portal.image_url}
+                        onStartConfig={lastViewed ? {
+                            label: overallProgress > 0 ? "Continuar Curso" : "Iniciar Curso",
+                            onClick: () => router.push(`/members/${portalId}/lesson/${lastViewed?.lessonId}`)
+                        } : undefined}
+                    />
+                </section>
 
-                    {/* Lesson Info & Controls */}
-                    <div className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--bg-canvas)' }}>
-                        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-                            {/* Lesson Title & Actions */}
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
-                                <div>
-                                    <h2 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-                                        {currentLesson?.title || 'Nenhuma aula selecionada'}
-                                    </h2>
-                                    {currentLesson?.duration_minutes && (
-                                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                            Duração: {currentLesson.duration_minutes} min
-                                        </p>
-                                    )}
-                                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
-                                <div className="flex items-center gap-3">
-                                    {/* Mark as Complete Button */}
-                                    <button
-                                        onClick={toggleLessonCompletion}
-                                        disabled={!currentLesson || !user?.id}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm transition-all hover:scale-105"
-                                        style={{
-                                            backgroundColor: currentLesson && completedLessons.has(currentLesson.id)
-                                                ? 'var(--status-success)'
-                                                : 'var(--primary-main)',
-                                            color: 'var(--text-on-primary)',
-                                            cursor: currentLesson && user?.id ? 'pointer' : 'not-allowed',
-                                            opacity: currentLesson && user?.id ? 1 : 0.5
-                                        }}
-                                    >
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        {currentLesson && completedLessons.has(currentLesson.id) ? 'Concluída ✓' : 'Marcar como vista'}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Navigation Buttons */}
-                            <div className="flex items-center justify-between gap-4 mb-6 pb-6" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                <button
-                                    onClick={() => navigateLesson('prev')}
-                                    disabled={!hasPrev}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all"
-                                    style={{
-                                        backgroundColor: 'var(--bg-surface)',
-                                        color: hasPrev ? 'var(--text-primary)' : 'var(--text-disabled)',
-                                        border: '1px solid var(--border-color)',
-                                        opacity: hasPrev ? 1 : 0.5,
-                                        cursor: hasPrev ? 'pointer' : 'not-allowed'
-                                    }}
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                    Aula Anterior
-                                </button>
-
-                                <button
-                                    onClick={() => navigateLesson('next')}
-                                    disabled={!hasNext}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all"
-                                    style={{
-                                        backgroundColor: hasNext ? 'var(--primary-main)' : 'var(--bg-surface)',
-                                        color: hasNext ? 'var(--text-on-primary)' : 'var(--text-disabled)',
-                                        border: hasNext ? 'none' : '1px solid var(--border-color)',
-                                        opacity: hasNext ? 1 : 0.5,
-                                        cursor: hasNext ? 'pointer' : 'not-allowed'
-                                    }}
-                                >
-                                    Próxima Aula
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            {/* Tabs */}
-                            <div className="mb-6">
-                                <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--bg-surface)' }}>
-                                    {[
-                                        { id: 'description' as TabType, label: 'Descrição', icon: FileText },
-                                        { id: 'files' as TabType, label: 'Arquivos', icon: Download },
-                                        { id: 'comments' as TabType, label: 'Comentários', icon: MessageSquare },
-                                    ].map(tab => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all"
-                                            style={{
-                                                backgroundColor: activeTab === tab.id ? 'var(--primary-main)' : 'transparent',
-                                                color: activeTab === tab.id ? 'var(--text-on-primary)' : 'var(--text-secondary)'
+                    {/* Left Column: Modules Grid */}
+                    <div className="lg:col-span-8 flex flex-col gap-10">
+                        {/* Modules Grid */}
+                        <div>
+                            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                                <PlayCircle className="text-pink-500" />
+                                Módulos do Curso
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                {modules.map((module) => {
+                                    const progress = calculateModuleProgress(module);
+                                    return (
+                                        <motion.div
+                                            key={module.id}
+                                            whileHover={{ y: -4 }}
+                                            className="group bg-[#1A1A1E] border border-white/5 rounded-xl p-5 hover:border-pink-500/30 transition-all cursor-pointer shadow-card hover:shadow-floating"
+                                            onClick={() => {
+                                                if (module.contents.length > 0) {
+                                                    router.push(`/members/${portalId}/lesson/${module.contents[0].id}`)
+                                                }
                                             }}
                                         >
-                                            <tab.icon className="w-4 h-4" />
-                                            <span className="hidden sm:inline">{tab.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="w-10 h-10 rounded-lg bg-pink-500/10 flex items-center justify-center group-hover:bg-pink-500 transition-colors">
+                                                    <PlayCircle className="w-5 h-5 text-pink-500 group-hover:text-white" />
+                                                </div>
+                                                <span className="text-xs font-mono text-zinc-500">
+                                                    {module.contents.length} AULAS
+                                                </span>
+                                            </div>
 
-                            {/* Tab Content */}
-                            <div
-                                className="rounded-xl p-6"
-                                style={{
-                                    backgroundColor: 'var(--bg-surface)',
-                                    border: '1px solid var(--border-color)'
-                                }}
-                            >
-                                {activeTab === 'description' && (
-                                    <div>
-                                        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                                            Sobre esta aula
-                                        </h3>
-                                        <p style={{ color: 'var(--text-secondary)' }}>
-                                            {currentLesson?.description || 'Esta aula não possui descrição.'}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {activeTab === 'files' && (
-                                    <div>
-                                        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                                            Material de Apoio
-                                        </h3>
-                                        <div className="flex flex-col items-center justify-center py-8 text-center" style={{ color: 'var(--text-secondary)' }}>
-                                            <Download className="w-12 h-12 mb-4 opacity-50" />
-                                            <p>Nenhum arquivo disponível para esta aula.</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {activeTab === 'comments' && (
-                                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                        <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-                                            Comentários
-                                        </h3>
-                                        {currentLesson ? (
-                                            <LessonComments lessonId={currentLesson.id} />
-                                        ) : (
-                                            <p style={{ color: 'var(--text-secondary)' }}>
-                                                Selecione uma aula para ver os comentários.
+                                            <h3 className="font-bold text-lg mb-2 group-hover:text-pink-400 transition-colors line-clamp-1">
+                                                {module.title}
+                                            </h3>
+                                            <p className="text-sm text-zinc-400 line-clamp-2 mb-4 h-10">
+                                                {module.description || "Sem descrição disponível."}
                                             </p>
-                                        )}
-                                    </div>
-                                )}
+
+                                            <div className="relative h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className="absolute top-0 left-0 h-full bg-pink-500 transition-all duration-500"
+                                                    style={{ width: `${progress}%` }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-between mt-2 text-xs text-zinc-500">
+                                                <span>{progress}% Concluído</span>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
-                </main>
 
-                {/* Sidebar */}
-                <LessonSidebar
-                    modules={modules}
-                    currentLessonId={currentLesson?.id || null}
-                    currentModuleId={currentModuleId}
-                    completedLessons={completedLessons}
-                    onSelectLesson={selectLesson}
-                    isOpen={sidebarOpen}
-                    onToggle={() => setSidebarOpen(!sidebarOpen)}
-                    portalName={portal.name}
-                />
-            </div>
+                    {/* Right Column: Sidebar Widgets */}
+                    <div className="lg:col-span-4 space-y-8">
+                        {/* Overall Progress */}
+                        <div className="bg-[#1A1A1E] border border-white/5 rounded-2xl p-6 shadow-card">
+                            <OverallProgressBar progress={overallProgress} />
+
+                            <div className="grid grid-cols-2 gap-4 mt-6">
+                                <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-white mb-1">{completedLessons.size}</div>
+                                    <div className="text-xs text-zinc-500 uppercase tracking-wider">Aulas Vistas</div>
+                                </div>
+                                <div className="bg-zinc-900/50 rounded-lg p-3 text-center">
+                                    <div className="text-2xl font-bold text-zinc-400 mb-1">{totalLessons}</div>
+                                    <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Aulas</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Continue Watching */}
+                        {lastViewed && (
+                            <div className="h-64">
+                                <ContinueWatching
+                                    lessonId={lastViewed.lessonId}
+                                    portalId={portalId}
+                                    title={lastViewed.lessonTitle}
+                                    progressPercentage={lastViewed.progress}
+                                    timeLeft="2 min"
+                                />
+                            </div>
+                        )}
+
+                        {/* Support or Extra Info */}
+                        <div className="bg-[#1A1A1E] border border-white/5 rounded-2xl p-6">
+                            <h3 className="font-bold mb-4 flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-pink-500" />
+                                Histórico Recente
+                            </h3>
+                            <div className="space-y-3">
+                                <p className="text-sm text-zinc-400 text-center py-4 italic">
+                                    Seu histórico de atividades aparecerá aqui.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
     );
 }

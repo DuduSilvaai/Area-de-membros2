@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useChat } from '@/lib/hooks/useChat';
+import { useParams } from 'next/navigation';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { MessageContent, MessageType } from '@/types/chat';
 import { supabase } from '@/lib/supabaseClient';
@@ -10,9 +11,12 @@ interface ChatDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     portalId?: string;
+    lessonId?: string;
+    lessonTitle?: string;
+    moduleTitle?: string;
 }
 
-export function ChatDrawer({ isOpen, onClose, portalId }: ChatDrawerProps) {
+export function ChatDrawer({ isOpen, onClose, portalId, lessonId, lessonTitle, moduleTitle }: ChatDrawerProps) {
     const [text, setText] = useState('');
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -20,6 +24,33 @@ export function ChatDrawer({ isOpen, onClose, portalId }: ChatDrawerProps) {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const params = useParams();
+    const currentLessonId = lessonId || (params?.lessonId as string);
+    const [contextData, setContextData] = useState<{ lessonTitle?: string, moduleTitle?: string }>({
+        lessonTitle: lessonTitle,
+        moduleTitle: moduleTitle
+    });
+
+    useEffect(() => {
+        if (currentLessonId && !lessonTitle) {
+            const fetchContext = async () => {
+                const { data } = await supabase
+                    .from('contents')
+                    .select('title, module:modules(title)')
+                    .eq('id', currentLessonId)
+                    .single();
+
+                if (data) {
+                    setContextData({
+                        lessonTitle: data.title,
+                        moduleTitle: (data.module as any)?.title
+                    });
+                }
+            };
+            fetchContext();
+        }
+    }, [currentLessonId, lessonTitle]);
 
     const {
         messages,
@@ -32,6 +63,15 @@ export function ChatDrawer({ isOpen, onClose, portalId }: ChatDrawerProps) {
         subscribeToMessages,
         unsubscribe
     } = useChat({ isAdmin: false });
+
+    // CONST context payload
+    const contextPayload = currentLessonId ? {
+        source: 'lesson',
+        lessonId: currentLessonId,
+        lessonTitle: contextData.lessonTitle,
+        moduleTitle: contextData.moduleTitle,
+        url: window.location.href
+    } : null;
 
     // Get current user
     useEffect(() => {
@@ -102,7 +142,7 @@ export function ChatDrawer({ isOpen, onClose, portalId }: ChatDrawerProps) {
             textareaRef.current.style.height = 'auto';
         }
 
-        await sendMessage(content, 'text');
+        await sendMessage(content, 'text', contextPayload);
     };
 
     // Handle file upload

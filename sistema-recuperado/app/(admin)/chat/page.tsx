@@ -91,7 +91,7 @@ function EmptyState() {
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl font-bold text-[#1A1A1E] dark:text-white mb-3 transition-colors">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3 transition-colors">
                 Central de Mentoria
             </h2>
 

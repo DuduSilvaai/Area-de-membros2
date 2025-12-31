@@ -11,6 +11,8 @@ import {
     Menu,
     BookOpen
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MobileDrawer } from './MobileDrawer';
 
 interface Content {
     id: string;
@@ -21,6 +23,7 @@ interface Content {
     description: string | null;
     duration_minutes: number | null;
     order_index: number;
+    module_id?: string;
 }
 
 interface Module {
@@ -42,6 +45,7 @@ interface LessonSidebarProps {
     isOpen: boolean;
     onToggle: () => void;
     portalName: string;
+    allowedModuleIds?: Set<string> | null;
 }
 
 export default function LessonSidebar({
@@ -52,7 +56,8 @@ export default function LessonSidebar({
     onSelectLesson,
     isOpen,
     onToggle,
-    portalName
+    portalName,
+    allowedModuleIds
 }: LessonSidebarProps) {
     const [expandedModules, setExpandedModules] = useState<Set<string>>(
         new Set(currentModuleId ? [currentModuleId] : [])
@@ -89,24 +94,34 @@ export default function LessonSidebar({
         return { completed, total };
     };
 
+    const isModuleLocked = (moduleId: string) => {
+        if (!allowedModuleIds) return false; // Access all
+        return !allowedModuleIds.has(moduleId);
+    };
+
     // Render a single lesson item
-    const renderLesson = (lesson: Content, moduleId: string, index: number) => {
+    const renderLesson = (lesson: Content, moduleId: string, index: number, isLocked: boolean) => {
         const isActive = lesson.id === currentLessonId;
         const isCompleted = completedLessons.has(lesson.id);
 
         return (
-            <button
+            <motion.button
                 key={lesson.id}
-                onClick={() => onSelectLesson(lesson, moduleId)}
-                className="w-full flex items-start gap-3 px-4 py-3 text-left transition-all hover:opacity-80"
+                initial={false}
+                animate={{ backgroundColor: isActive ? 'var(--primary-subtle)' : 'transparent' }}
+                whileHover={{ x: 4 }}
+                onClick={() => !isLocked && onSelectLesson(lesson, moduleId)}
+                disabled={isLocked}
+                className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-all ${isLocked ? 'cursor-not-allowed opacity-50' : 'hover:opacity-80'}`}
                 style={{
-                    backgroundColor: isActive ? 'var(--primary-subtle)' : 'transparent',
                     borderLeft: isActive ? '3px solid var(--primary-main)' : '3px solid transparent'
                 }}
             >
                 {/* Status Icon */}
                 <div className="flex-shrink-0 mt-0.5">
-                    {isCompleted ? (
+                    {isLocked ? (
+                        <Lock className="w-5 h-5 text-gray-500" />
+                    ) : isCompleted ? (
                         <CheckCircle2
                             className="w-5 h-5"
                             style={{ color: 'var(--status-success)' }}
@@ -134,7 +149,7 @@ export default function LessonSidebar({
                     <p
                         className="text-sm font-medium truncate"
                         style={{
-                            color: isActive ? 'var(--primary-main)' : 'var(--text-primary)'
+                            color: isActive ? 'var(--primary-main)' : isLocked ? 'var(--text-disabled)' : 'var(--text-primary)'
                         }}
                     >
                         {lesson.title}
@@ -148,7 +163,7 @@ export default function LessonSidebar({
                         </p>
                     )}
                 </div>
-            </button>
+            </motion.button>
         );
     };
 
@@ -157,13 +172,14 @@ export default function LessonSidebar({
         const isExpanded = expandedModules.has(module.id);
         const progress = getModuleProgress(module);
         const hasContent = module.contents.length > 0 || module.submodules.length > 0;
+        const isLocked = isModuleLocked(module.id);
 
         return (
             <div key={module.id}>
                 {/* Module Header */}
                 <button
                     onClick={() => toggleModule(module.id)}
-                    className="w-full flex items-center gap-3 px-4 py-3 transition-all hover:opacity-80"
+                    className="w-full flex items-center gap-3 px-4 py-3 transition-all hover:bg-white/5"
                     style={{
                         backgroundColor: depth === 0 ? 'var(--bg-canvas)' : 'transparent',
                         paddingLeft: depth === 0 ? '16px' : `${16 + depth * 16}px`
@@ -184,17 +200,21 @@ export default function LessonSidebar({
 
                     {/* Module Icon */}
                     <div
-                        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: 'var(--primary-subtle)' }}
+                        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center relative"
+                        style={{ backgroundColor: isLocked ? 'var(--bg-surface)' : 'var(--primary-subtle)' }}
                     >
-                        <BookOpen className="w-4 h-4" style={{ color: 'var(--primary-main)' }} />
+                        {isLocked ? (
+                            <Lock className="w-4 h-4 text-gray-500" />
+                        ) : (
+                            <BookOpen className="w-4 h-4" style={{ color: 'var(--primary-main)' }} />
+                        )}
                     </div>
 
                     {/* Module Info */}
                     <div className="flex-1 min-w-0 text-left">
                         <p
                             className="text-sm font-semibold truncate"
-                            style={{ color: 'var(--text-primary)' }}
+                            style={{ color: isLocked ? 'var(--text-disabled)' : 'var(--text-primary)' }}
                         >
                             {module.title}
                         </p>
@@ -207,7 +227,7 @@ export default function LessonSidebar({
                     </div>
 
                     {/* Progress */}
-                    {progress.total > 0 && (
+                    {!isLocked && progress.total > 0 && (
                         <div className="flex-shrink-0">
                             <div
                                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium"
@@ -227,107 +247,80 @@ export default function LessonSidebar({
                 </button>
 
                 {/* Module Contents */}
-                {isExpanded && hasContent && (
-                    <div style={{ backgroundColor: 'var(--bg-surface)' }}>
-                        {/* Lessons */}
-                        {module.contents.map((lesson, index) => renderLesson(lesson, module.id, index))}
+                <AnimatePresence>
+                    {isExpanded && hasContent && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                            style={{ backgroundColor: 'var(--bg-surface)' }}
+                        >
+                            {/* Lessons */}
+                            {module.contents.map((lesson, index) => renderLesson(lesson, module.id, index, isLocked))}
 
-                        {/* Submodules */}
-                        {module.submodules.map(submod => renderModule(submod, depth + 1))}
-                    </div>
-                )}
+                            {/* Submodules */}
+                            {module.submodules.map(submod => renderModule(submod, depth + 1))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         );
     };
 
-    return (
-        <>
-            {/* Mobile Toggle Button */}
-            <button
-                onClick={onToggle}
-                className="lg:hidden fixed bottom-4 right-4 z-50 p-4 rounded-full shadow-lg"
-                style={{
-                    backgroundColor: 'var(--primary-main)',
-                    color: 'var(--text-on-primary)'
-                }}
+    const SidebarContent = () => (
+        <div className="flex flex-col h-full bg-[#1A1A1E] border-l border-white/5">
+            <div
+                className="flex items-center justify-between px-4 py-4 flex-shrink-0 border-b border-white/5"
             >
-                {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+                <div>
+                    <h2
+                        className="text-sm font-bold text-white"
+                    >
+                        Conteúdo do Curso
+                    </h2>
+                    <p
+                        className="text-xs mt-1 text-zinc-400"
+                    >
+                        {modules.length} módulos
+                    </p>
+                </div>
+                {/* Close for mobile handled by Drawer wrapper, but we can add one just in case if needed inside Drawer content */}
+            </div>
 
-            {/* Sidebar Overlay (mobile) */}
-            {isOpen && (
-                <div
-                    className="lg:hidden fixed inset-0 z-40"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-                    onClick={onToggle}
-                />
-            )}
-
-            {/* Sidebar */}
-            <aside
-                className={`
-          fixed top-16 right-0 bottom-0 z-40 w-96 max-w-[85vw]
-          transform transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-          lg:translate-x-0
-          flex flex-col
-        `}
-                style={{
-                    backgroundColor: 'var(--bg-surface)',
-                    borderLeft: '1px solid var(--border-color)'
-                }}
-            >
-                {/* Sidebar Header */}
-                <div
-                    className="flex items-center justify-between px-4 py-4 flex-shrink-0"
-                    style={{ borderBottom: '1px solid var(--border-color)' }}
-                >
-                    <div>
-                        <h2
-                            className="text-sm font-bold"
-                            style={{ color: 'var(--text-primary)' }}
-                        >
-                            Conteúdo do Curso
-                        </h2>
-                        <p
-                            className="text-xs mt-1"
-                            style={{ color: 'var(--text-secondary)' }}
-                        >
-                            {modules.length} módulos
+            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                {modules.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full px-4 py-12">
+                        <BookOpen className="w-12 h-12 mb-4 text-zinc-600" />
+                        <p className="text-center text-sm text-zinc-500">
+                            Nenhum módulo disponível ainda.
                         </p>
                     </div>
+                ) : (
+                    <div className="divide-y divide-white/5">
+                        {modules.map(module => renderModule(module))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 
-                    <button
-                        onClick={onToggle}
-                        className="lg:hidden p-2 rounded-lg hover:opacity-80"
-                        style={{ backgroundColor: 'var(--bg-canvas)' }}
-                    >
-                        <X className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />
-                    </button>
-                </div>
-
-                {/* Modules List */}
-                <div
-                    className="flex-1 overflow-y-auto"
-                    style={{ scrollbarWidth: 'thin' }}
-                >
-                    {modules.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full px-4 py-12">
-                            <BookOpen className="w-12 h-12 mb-4" style={{ color: 'var(--text-disabled)' }} />
-                            <p
-                                className="text-center text-sm"
-                                style={{ color: 'var(--text-secondary)' }}
-                            >
-                                Nenhum módulo disponível ainda.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
-                            {modules.map(module => renderModule(module))}
-                        </div>
-                    )}
-                </div>
+    return (
+        <>
+            {/* Desktop Sidebar */}
+            <aside className="hidden lg:block w-96 border-l border-white/5 flex-shrink-0 h-[calc(100vh-64px)] overflow-hidden sticky top-16">
+                <SidebarContent />
             </aside>
+
+            {/* Mobile Drawer */}
+            <MobileDrawer
+                isOpen={isOpen}
+                onClose={onToggle}
+                side="right"
+                className="bg-[#1A1A1E] border-l border-white/5 sm:w-80"
+            >
+                <SidebarContent />
+            </MobileDrawer>
         </>
     );
 }

@@ -221,6 +221,21 @@ export function CourseTree({ portalId }: CourseTreeProps) {
         const title = prompt('Nome do novo módulo:');
         if (!title) return;
 
+        // DEBUGGING: Log antes do insert
+        console.log('🟡 [DEBUG] Tentando criar módulo:', {
+            title,
+            portal_id: portalId,
+            parent_module_id: parentId,
+            portalIdType: typeof portalId,
+            portalIdValue: portalId
+        });
+
+        if (!portalId) {
+            toast.error('ERRO CRÍTICO: portal_id está undefined! O módulo não será criado.');
+            console.error('❌ [FATAL] portal_id está undefined!');
+            return;
+        }
+
         const result = await createModule({
             title,
             description: '',
@@ -229,8 +244,13 @@ export function CourseTree({ portalId }: CourseTreeProps) {
             order_index: 999
         });
 
-        if (result.error) toast.error(result.error);
-        else {
+        console.log('🔵 [DEBUG] Resultado do createModule:', result);
+
+        if (result.error) {
+            console.error('❌ [ERROR] Erro ao criar módulo:', result.error);
+            toast.error(`Erro ao criar módulo: ${result.error}`);
+        } else {
+            console.log('✅ [SUCCESS] Módulo criado com sucesso:', result.data);
             toast.success('Módulo criado!');
             fetchModules();
         }
@@ -242,7 +262,16 @@ export function CourseTree({ portalId }: CourseTreeProps) {
     };
 
     const handleAddNewContent = async () => {
-        if (!selectedModuleId) return;
+        if (!selectedModuleId) {
+            toast.error('Selecione um módulo primeiro!');
+            return;
+        }
+
+        // DEBUGGING: Log antes do insert
+        console.log('🟡 [DEBUG] Tentando criar aula:', {
+            module_id: selectedModuleId,
+            order_index: contents.length
+        });
 
         const result = await createContent({
             title: 'Nova Aula Sem Título',
@@ -251,11 +280,18 @@ export function CourseTree({ portalId }: CourseTreeProps) {
             order_index: contents.length
         });
 
-        if (result.data) {
+        console.log('🔵 [DEBUG] Resultado do createContent:', result);
+
+        if (result.error) {
+            console.error('❌ [ERROR] Erro ao criar aula:', result.error);
+            toast.error(`Erro ao criar aula: ${result.error}`);
+        } else if (result.data) {
+            console.log('✅ [SUCCESS] Aula criada com sucesso:', result.data);
             const newContent = result.data as unknown as Content;
             setEditingContent(newContent);
             fetchContents(selectedModuleId);
             setIsDrawerOpen(true);
+            toast.success('Aula criada!');
         } else {
             await fetchContents(selectedModuleId);
         }

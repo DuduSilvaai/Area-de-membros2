@@ -20,7 +20,7 @@ import {
 const MENU_ITEMS = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Meus Portais', href: '/portals', icon: Globe },
-  { name: 'Times', href: '/', icon: Users },
+
   { name: 'Usuários', href: '/users', icon: Users },
   { name: 'Chat & Mentoria', href: '/chat', icon: MessageCircle },
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
