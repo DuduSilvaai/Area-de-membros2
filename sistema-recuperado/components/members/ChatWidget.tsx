@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { ChatDrawer } from './ChatDrawer';
+import { ChatDrawer } from '@/components/members/ChatDrawer';
 
 interface ChatWidgetProps {
     portalId?: string;
+    lessonId?: string;
+    lessonTitle?: string;
+    moduleTitle?: string;
 }
 
-export function ChatWidget({ portalId }: ChatWidgetProps) {
+export function ChatWidget({ portalId, lessonId, lessonTitle, moduleTitle }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [hasNewMessage, setHasNewMessage] = useState(false);
@@ -121,6 +124,9 @@ export function ChatWidget({ portalId }: ChatWidgetProps) {
                 isOpen={isOpen}
                 onClose={() => setIsOpen(false)}
                 portalId={portalId}
+                lessonId={lessonId}
+                lessonTitle={lessonTitle}
+                moduleTitle={moduleTitle}
             />
         </>
     );

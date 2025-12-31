@@ -31,7 +31,7 @@ interface UseChatReturn {
     loadMoreMessages: () => Promise<void>;
 
     // Actions
-    sendMessage: (content: MessageContent, type: MessageType) => Promise<void>;
+    sendMessage: (content: MessageContent, type: MessageType, context?: Json, attachments?: Json[]) => Promise<void>;
     markAsRead: (conversationId: string) => Promise<void>;
     createConversation: (portalId?: string) => Promise<string | null>;
 
@@ -166,7 +166,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     }, [fetchMessages, loadingMessages, hasMore]);
 
     // Send a message
-    const sendMessage = useCallback(async (content: MessageContent, type: MessageType) => {
+    const sendMessage = useCallback(async (content: MessageContent, type: MessageType, context?: Json, attachments?: Json[]) => {
         if (!currentConversationRef.current) return;
 
         setIsSending(true);
@@ -185,6 +185,8 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
             type,
             content: content as any,
             is_read: false,
+            context: context || null,
+            attachments: attachments || null,
             created_at: new Date().toISOString(),
             sender: {
                 id: user.id,
@@ -202,7 +204,9 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                     conversation_id: currentConversationRef.current,
                     sender_id: user.id,
                     type,
-                    content: content as unknown as Json
+                    content: content as unknown as Json,
+                    context: context || null,
+                    attachments: attachments || null
                 })
                 .select(`
           *,

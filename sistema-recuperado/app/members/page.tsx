@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import EventCard from '@/components/members/EventCard';
 
 interface Portal {
   id: string;
@@ -25,25 +26,93 @@ export default function MemberDashboard() {
 
   useEffect(() => {
     const loadPortals = async () => {
+      if (!user?.id) return;
+
       try {
         setLoading(true);
-        // BUSCAR TODOS OS PORTAIS (Sem filtro de usuário por enquanto)
-        const { data, error } = await supabase
-          .from('portals')
-          .select('*')
-          .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        // Fetch only portals where user has active enrollment
+        const { data: enrollmentData, error: enrollmentError } = await supabase
+          .from('enrollments')
+          .select(`
+            portal_id,
+            permissions,
+            portals!inner (
+              id,
+              name,
+              description,
+              image_url,
+              created_at
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('is_active', true);
 
-        // Formata os portais com progresso simulado
-        const formattedPortals = (data || []).map((portal: any) => ({
-          id: portal.id,
-          name: portal.name,
-          description: portal.description,
-          image_url: portal.image_url,
-          progress: Math.floor(Math.random() * 100), // Progresso simulado
-          created_at: portal.created_at
-        }));
+        if (enrollmentError) throw enrollmentError;
+
+        if (!enrollmentData || enrollmentData.length === 0) {
+          setPortals([]);
+          setLastCourse(null);
+          setLoading(false);
+          return;
+        }
+
+        // Get all content IDs for these portals to calculate progress
+        const portalIds = enrollmentData.map((e: any) => e.portal_id);
+
+        // Fetch modules and contents for these portals
+        const { data: modulesData } = await supabase
+          .from('modules')
+          .select(`
+            id,
+            portal_id,
+            contents (id)
+          `)
+          .in('portal_id', portalIds)
+          .eq('is_active', true);
+
+        // Fetch user's completed progress
+        const { data: progressData } = await supabase
+          .from('progress')
+          .select('content_id')
+          .eq('user_id', user.id)
+          .eq('is_completed', true);
+
+        const completedContentIds = new Set((progressData || []).map(p => p.content_id));
+
+        // Build content count per portal
+        const portalContentMap = new Map<string, { total: number; completed: number }>();
+        (modulesData || []).forEach((mod: any) => {
+          const portalId = mod.portal_id;
+          if (!portalContentMap.has(portalId)) {
+            portalContentMap.set(portalId, { total: 0, completed: 0 });
+          }
+          const portalStats = portalContentMap.get(portalId)!;
+          (mod.contents || []).forEach((content: any) => {
+            portalStats.total++;
+            if (completedContentIds.has(content.id)) {
+              portalStats.completed++;
+            }
+          });
+        });
+
+        // Format portals with real progress
+        const formattedPortals = enrollmentData.map((enrollment: any) => {
+          const portal = enrollment.portals as any;
+          const stats = portalContentMap.get(portal.id) || { total: 0, completed: 0 };
+          const progress = stats.total > 0
+            ? Math.round((stats.completed / stats.total) * 100)
+            : 0;
+
+          return {
+            id: portal.id,
+            name: portal.name,
+            description: portal.description,
+            image_url: portal.image_url,
+            progress,
+            created_at: portal.created_at
+          };
+        });
 
         setPortals(formattedPortals);
 
@@ -102,6 +171,7 @@ export default function MemberDashboard() {
 
       {/* Cursos em Destaque */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <EventCard />
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Meus Cursos</h2>
 

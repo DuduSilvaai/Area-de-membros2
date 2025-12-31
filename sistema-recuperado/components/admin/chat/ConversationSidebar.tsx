@@ -45,10 +45,10 @@ export function ConversationSidebar({
     }, [conversations, searchQuery]);
 
     return (
-        <div className="w-80 h-full flex flex-col bg-white dark:bg-[#121216] flex-shrink-0 transition-colors duration-200 border-r border-gray-100 dark:border-zinc-800">
+        <div className="w-80 h-full flex flex-col bg-white dark:bg-[#121216] flex-shrink-0 transition-colors duration-200 border-r border-gray-200 dark:border-gray-800">
             {/* Header */}
-            <div className="p-4 border-b border-gray-100 dark:border-zinc-800/80">
-                <h1 className="text-xl font-bold text-[#1A1A1E] dark:text-white flex items-center gap-3 transition-colors">
+            <div className="p-4 border-b border-gray-200 dark:border-zinc-800/80">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3 transition-colors">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center shadow-lg shadow-pink-500/20 text-white">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -72,7 +72,7 @@ export function ConversationSidebar({
                         placeholder="Buscar aluno..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-zinc-800/80 border-transparent focus:bg-white dark:focus:bg-zinc-800 border focus:border-pink-500 rounded-xl text-[#1A1A1E] dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all text-sm"
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-zinc-800 border-transparent focus:bg-white dark:focus:bg-zinc-800 border focus:border-pink-500 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all text-sm"
                     />
                 </div>
             </div>
@@ -98,7 +98,7 @@ export function ConversationSidebar({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                         </div>
-                        <p className="text-[#1A1A1E] dark:text-zinc-400 font-medium mb-1 transition-colors">
+                        <p className="text-gray-900 dark:text-zinc-400 font-medium mb-1 transition-colors">
                             {searchQuery ? 'Nenhum resultado' : 'Nenhuma conversa'}
                         </p>
                         <p className="text-gray-500 dark:text-zinc-500 text-sm leading-relaxed max-w-[200px]">
@@ -186,8 +186,8 @@ function ConversationItem({
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                     <span className={`font-medium truncate transition-colors ${hasUnread
-                            ? 'text-[#1A1A1E] dark:text-white font-bold'
-                            : 'text-[#1A1A1E] dark:text-zinc-300'
+                            ? 'text-gray-900 dark:text-white font-bold'
+                            : 'text-gray-900 dark:text-zinc-300'
                         }`}>
                         {conversation.student?.full_name || 'Aluno'}
                     </span>
