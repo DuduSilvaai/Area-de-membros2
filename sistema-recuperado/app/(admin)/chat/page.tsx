@@ -98,7 +98,7 @@ function EmptyState() {
             {/* Description - properly constrained */}
             <p className="w-full max-w-2xl px-8 text-center text-gray-500 dark:text-gray-400 leading-relaxed transition-colors">
                 Selecione uma conversa ao lado para começar a ajudar seus alunos.
-                Aqui você pode tirar dúvidas e agendar reuniões ao vivo.
+                Aqui você pode tirar dúvidas e acompanhar o progresso.
             </p>
 
             {/* Decorative hint */}
