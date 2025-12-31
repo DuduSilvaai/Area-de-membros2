@@ -73,6 +73,7 @@ export interface Database {
           order_index: number
           content_type: string
           is_active: boolean
+          config: Json | null
         }
         Insert: {
           id?: string
@@ -85,6 +86,7 @@ export interface Database {
           order_index?: number
           content_type?: string
           is_active?: boolean
+          config?: Json | null
         }
         Update: {
           id?: string
@@ -97,12 +99,62 @@ export interface Database {
           order_index?: number
           content_type?: string
           is_active?: boolean
+          config?: Json | null
         }
         Relationships: [
           {
             foreignKeyName: "contents_module_id_fkey"
             columns: ["module_id"]
             referencedRelation: "modules"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      lesson_attachments: {
+        Row: {
+          id: string
+          lesson_id: string
+          portal_id: string
+          type: 'file' | 'link'
+          title: string
+          url: string
+          file_size: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          lesson_id: string
+          portal_id: string
+          type: 'file' | 'link'
+          title: string
+          url: string
+          file_size?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          lesson_id?: string
+          portal_id?: string
+          type?: 'file' | 'link'
+          title?: string
+          url?: string
+          file_size?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_attachments_lesson_id_fkey"
+            columns: ["lesson_id"]
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_attachments_portal_id_fkey"
+            columns: ["portal_id"]
+            referencedRelation: "portals"
             referencedColumns: ["id"]
           }
         ]

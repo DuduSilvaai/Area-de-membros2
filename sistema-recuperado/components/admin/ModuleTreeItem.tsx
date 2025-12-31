@@ -1,47 +1,33 @@
-// components/admin/ModuleTreeItem.tsx
 'use client';
 
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-    GripVertical,
-    ChevronRight,
-    ChevronDown,
-    Plus,
-    Edit2,
-    Trash2,
-    Folder,
-    FolderOpen
-} from 'lucide-react';
-import { ModuleWithChildren } from '@/types/enrollment';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { ModuleWithContents, Content } from '@/types/enrollment';
+import { Folder, FolderOpen, MoreVertical, Plus, Trash2, Edit2, GripVertical, ChevronRight, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { LessonTreeItem } from './LessonTreeItem';
 
 interface ModuleTreeItemProps {
-    module: ModuleWithChildren;
-    depth: number;
-    onEdit: (moduleId: string, currentTitle: string) => void;
+    module: ModuleWithContents;
+    onEdit: (module: ModuleWithContents) => void;
     onDelete: (moduleId: string) => void;
-    onAddChild: (parentId: string) => void;
-    onSelectModule: (moduleId: string) => void;
-    selectedModuleId?: string;
-    isLastChild?: boolean;
-    parentPath?: boolean[];
+    onAddLesson: (moduleId: string) => void;
+    onEditLesson: (lesson: Content) => void;
+    onDeleteLesson: (lessonId: string) => void;
 }
 
 export function ModuleTreeItem({
     module,
-    depth,
     onEdit,
     onDelete,
-    onAddChild,
-    onSelectModule,
-    selectedModuleId,
-    isLastChild = false,
-    parentPath = []
+    onAddLesson,
+    onEditLesson,
+    onDeleteLesson
 }: ModuleTreeItemProps) {
-    const [isExpanded, setIsExpanded] = useState(true);
-    const hasChildren = module.children && module.children.length > 0;
-    const isSelected = selectedModuleId === module.id;
+    const [isOpen, setIsOpen] = useState(false); // Default closed or open? Maybe closed to look clean.
 
     const {
         attributes,
@@ -50,189 +36,109 @@ export function ModuleTreeItem({
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: module.id });
+    } = useSortable({ id: module.id, data: { type: 'Module', module } });
 
     const style = {
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
     };
 
-    const indentPx = depth * 28;
-    const maxDepth = 4;
-
-    // Color coding by depth
-    const depthColors = [
-        'text-blue-600 bg-blue-50',
-        'text-purple-600 bg-purple-50',
-        'text-green-600 bg-green-50',
-        'text-orange-600 bg-orange-50',
-        'text-pink-600 bg-pink-50'
-    ];
-
-    const colorClass = depthColors[depth % depthColors.length];
-    const borderColorClass = [
-        'border-blue-600',
-        'border-purple-600',
-        'border-green-600',
-        'border-orange-600',
-        'border-pink-600'
-    ][depth % 5];
-
     return (
-        <div ref={setNodeRef} style={style} className="relative">
-            {/* Tree connector lines */}
-            {depth > 0 && (
-                <div className="absolute pointer-events-none">
-                    {/* Vertical line from parent */}
-                    {!isLastChild && (
-                        <div
-                            className="absolute w-0.5 bg-gray-300"
-                            style={{
-                                left: `${indentPx - 14}px`,
-                                top: 0,
-                                bottom: 0,
-                            }}
-                        />
-                    )}
-
-                    {/* Horizontal line to this module */}
-                    <div
-                        className="absolute h-0.5 bg-gray-300"
-                        style={{
-                            left: `${indentPx - 14}px`,
-                            top: '20px',
-                            width: '14px',
-                        }}
-                    />
-
-                    {/* Vertical line for previous siblings */}
-                    {parentPath.map((shouldDraw, idx) => (
-                        shouldDraw && (
-                            <div
-                                key={idx}
-                                className="absolute w-0.5 bg-gray-300"
-                                style={{
-                                    left: `${(idx + 1) * 28 - 14}px`,
-                                    top: 0,
-                                    bottom: 0,
-                                }}
-                            />
-                        )
-                    ))}
-                </div>
-            )}
-
-            {/* Module Row */}
+        <div ref={setNodeRef} style={style} className="mb-2">
+            {/* Module Header Row */}
             <div
-                className={`group relative flex items-center py-2.5 px-3 rounded-lg transition-all duration-200 ${isSelected
-                        ? `bg-gradient-to-r from-blue-50 to-transparent border-l-4 ${borderColorClass} shadow-sm`
-                        : 'hover:bg-gray-50 border-l-4 border-transparent hover:shadow-sm'
-                    } ${isDragging ? 'shadow-xl ring-2 ring-blue-400 scale-105 bg-white z-50' : ''}`}
-                style={{ marginLeft: `${indentPx}px` }}
-            >
-                {/* Depth Badge */}
-                {depth > 0 && (
-                    <div
-                        className={`absolute -left-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${colorClass} ring-2 ring-white shadow-sm`}
-                    >
-                        {depth}
-                    </div>
+                className={cn(
+                    "group flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer select-none",
+                    isDragging && "opacity-50 bg-zinc-800",
+                    isOpen && "bg-zinc-900/30"
                 )}
-
+                onClick={() => setIsOpen(!isOpen)}
+            >
                 {/* Drag Handle */}
-                <button
-                    className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-gray-200 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+                <div
                     {...attributes}
                     {...listeners}
-                    title="Arrastar para reordenar"
+                    className="opacity-0 group-hover:opacity-100 cursor-grab text-zinc-600 hover:text-zinc-400 transition-opacity"
+                    onClick={(e) => e.stopPropagation()}
                 >
-                    <GripVertical className="w-4 h-4 text-gray-400" />
-                </button>
-
-                {/* Expand/Collapse */}
-                {hasChildren ? (
-                    <button
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        className="p-1.5 hover:bg-gray-200 rounded-md ml-1 transition-all duration-200"
-                    >
-                        {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-gray-600" />
-                        ) : (
-                            <ChevronRight className="w-4 h-4 text-gray-600" />
-                        )}
-                    </button>
-                ) : (
-                    <div className="w-8" />
-                )}
-
-                {/* Module Icon */}
-                <div className="ml-2 mr-3">
-                    {hasChildren && isExpanded ? (
-                        <FolderOpen className={`w-5 h-5 ${colorClass.split(' ')[0]}`} />
-                    ) : (
-                        <Folder className={`w-5 h-5 ${colorClass.split(' ')[0]}`} />
-                    )}
+                    <GripVertical className="w-4 h-4" />
                 </div>
 
-                {/* Module Title */}
-                <button
-                    onClick={() => onSelectModule(module.id)}
-                    className="flex-1 text-left text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
-                >
+                {/* Collapse Icon */}
+                <div className="text-zinc-500">
+                    {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </div>
+
+                {/* Folder Icon */}
+                <div className={cn("text-pink-500/80 transition-colors", isOpen ? "text-pink-500" : "")}>
+                    {isOpen ? <FolderOpen className="w-5 h-5" /> : <Folder className="w-5 h-5" />}
+                </div>
+
+                {/* Title */}
+                <span className="flex-1 font-semibold text-zinc-300 group-hover:text-white transition-colors text-sm">
                     {module.title}
-                </button>
+                </span>
 
-                {/* Content Count Badge */}
-                <div className="mr-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Nível {depth}
-                </div>
-
-                {/* Action Buttons (on hover) */}
-                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                    {depth < maxDepth && (
-                        <button
-                            onClick={() => onAddChild(module.id)}
-                            className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-all hover:scale-110"
-                            title="Adicionar Submódulo"
-                        >
-                            <Plus className="w-4 h-4" />
-                        </button>
-                    )}
-                    <button
-                        onClick={() => onEdit(module.id, module.title)}
-                        className="p-1.5 hover:bg-gray-200 rounded-md text-gray-600 transition-all hover:scale-110"
-                        title="Editar Título"
+                {/* Actions */}
+                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-zinc-400 hover:text-pink-500 hover:bg-pink-500/10"
+                        title="Adicionar Aula"
+                        onClick={(e) => { e.stopPropagation(); onAddLesson(module.id); }}
                     >
-                        <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={() => onDelete(module.id)}
-                        className="p-1.5 hover:bg-red-100 rounded-md text-red-600 transition-all hover:scale-110"
-                        title="Excluir"
+                        <Plus className="w-4 h-4" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        title="Editar Módulo"
+                        onClick={(e) => { e.stopPropagation(); onEdit(module); }}
                     >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
+                        <Edit2 className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-zinc-400 hover:text-red-400 hover:bg-red-400/10"
+                        title="Excluir Módulo"
+                        onClick={(e) => { e.stopPropagation(); onDelete(module.id); }}
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                 </div>
             </div>
 
-            {/* Children (recursive) */}
-            {hasChildren && isExpanded && (
-                <div className="mt-0.5">
-                    {module.children!.map((child, index) => (
-                        <ModuleTreeItem
-                            key={child.id}
-                            module={child}
-                            depth={depth + 1}
-                            onEdit={onEdit}
-                            onDelete={onDelete}
-                            onAddChild={onAddChild}
-                            onSelectModule={onSelectModule}
-                            selectedModuleId={selectedModuleId}
-                            isLastChild={index === module.children!.length - 1}
-                            parentPath={[...parentPath, !isLastChild]}
-                        />
-                    ))}
+            {/* Lessons List (Children) */}
+            {isOpen && module.contents && module.contents.length > 0 && (
+                <div className="mt-1 relative">
+                    {/* Vertical guideline */}
+                    <div className="absolute left-[27px] top-0 bottom-2 w-px bg-zinc-800" />
+
+                    <SortableContext
+                        items={module.contents.map(c => c.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <div className="space-y-0.5">
+                            {module.contents.map(lesson => (
+                                <LessonTreeItem
+                                    key={lesson.id}
+                                    lesson={lesson}
+                                    onEdit={onEditLesson}
+                                    onDelete={onDeleteLesson}
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                </div>
+            )}
+
+            {/* Empty State when expanded */}
+            {isOpen && (!module.contents || module.contents.length === 0) && (
+                <div className="pl-9 py-2 text-xs text-zinc-600 italic">
+                    Nenhuma aula neste módulo.
                 </div>
             )}
         </div>
