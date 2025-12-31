@@ -7,6 +7,7 @@ import { ConversationWithStudent, MessageWithSender, MessageContent, MessageType
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { MessageInput } from '@/components/admin/chat/MessageInput';
 import { supabase } from '@/lib/supabaseClient';
+import { CornerDownRight } from 'lucide-react';
 
 interface ChatAreaProps {
     conversation: ConversationWithStudent;
@@ -157,24 +158,38 @@ export function ChatArea({
                     );
 
                     return (
-                        <MessageBubble
-                            key={message.id}
-                            message={message}
-                            isOwn={isOwn}
-                            showSender={showSender}
-                        />
+                        <div key={message.id}>
+                            {/* Context Header */}
+                            {(message as any).context && (message as any).context.source === 'lesson' && (
+                                <div className="flex justify-center mb-2">
+                                    <div className="bg-gray-100 dark:bg-zinc-800 rounded-lg px-3 py-1.5 text-xs text-gray-500 dark:text-zinc-400 flex items-center gap-2">
+                                        <CornerDownRight className="w-3 h-3" />
+                                        <span>
+                                            Enviado de: <strong>{(message as any).context.moduleTitle}</strong> {'>'} {(message as any).context.lessonTitle}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <MessageBubble
+                                key={message.id}
+                                message={message}
+                                isOwn={isOwn}
+                                showSender={showSender}
+                            />
+                        </div>
                     );
                 })}
 
                 {/* Empty state */}
                 {!loading && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mb-4">
-                            <svg className="w-8 h-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-4 transition-colors">
+                            <svg className="w-8 h-8 text-gray-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
                         </div>
-                        <p className="text-zinc-500">
+                        <p className="text-gray-500 dark:text-zinc-500 transition-colors">
                             Nenhuma mensagem ainda.<br />
                             Inicie a conversa!
                         </p>

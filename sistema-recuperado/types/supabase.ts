@@ -204,55 +204,7 @@ export interface Database {
         }
         Relationships: []
       },
-      comments: {
-        Row: {
-          id: string
-          user_id: string
-          content_id: string
-          text: string
-          created_at: string
-          updated_at: string | null
-          parent_comment_id: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          content_id: string
-          text: string
-          created_at?: string
-          updated_at?: string | null
-          parent_comment_id?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          content_id?: string
-          text?: string
-          created_at?: string
-          updated_at?: string | null
-          parent_comment_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "comments_user_id_fkey"
-            columns: ["user_id"]
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_content_id_fkey"
-            columns: ["content_id"]
-            referencedRelation: "contents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comments_parent_comment_id_fkey"
-            columns: ["parent_comment_id"]
-            referencedRelation: "comments"
-            referencedColumns: ["id"]
-          }
-        ]
-      },
+
       comment_likes: {
         Row: {
           id: string
@@ -321,6 +273,7 @@ export interface Database {
           content_id: string
           is_completed: boolean
           completed_at: string | null
+          last_position: number
           created_at: string
           updated_at: string
         }
@@ -330,6 +283,7 @@ export interface Database {
           content_id: string
           is_completed?: boolean
           completed_at?: string | null
+          last_position?: number
           created_at?: string
           updated_at?: string
         }
@@ -339,6 +293,7 @@ export interface Database {
           content_id?: string
           is_completed?: boolean
           completed_at?: string | null
+          last_position?: number
           created_at?: string
           updated_at?: string
         }
@@ -417,6 +372,8 @@ export interface Database {
           type: 'text' | 'image' | 'file' | 'video' | 'meeting'
           content: Json
           is_read: boolean
+          context: Json | null
+          attachments: Json[] | null
           created_at: string
         }
         Insert: {
@@ -426,6 +383,8 @@ export interface Database {
           type?: 'text' | 'image' | 'file' | 'video' | 'meeting'
           content: Json
           is_read?: boolean
+          context?: Json | null
+          attachments?: Json[] | null
           created_at?: string
         }
         Update: {
@@ -435,6 +394,8 @@ export interface Database {
           type?: 'text' | 'image' | 'file' | 'video' | 'meeting'
           content?: Json
           is_read?: boolean
+          context?: Json | null
+          attachments?: Json[] | null
           created_at?: string
         }
         Relationships: [
@@ -451,6 +412,91 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      },
+      comments: {
+        Row: {
+          id: string
+          content_id: string | null
+          user_id: string
+          parent_id: string | null
+          text: string
+          is_pinned: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          content_id?: string | null
+          user_id: string
+          parent_id?: string | null
+          text: string
+          is_pinned?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          content_id?: string | null
+          user_id?: string
+          parent_id?: string | null
+          text?: string
+          is_pinned?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_content_id_fkey"
+            columns: ["content_id"]
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      events: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          event_date: string
+          link_url: string | null
+          banner_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          event_date: string
+          link_url?: string | null
+          banner_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          event_date?: string
+          link_url?: string | null
+          banner_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

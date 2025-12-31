@@ -157,34 +157,52 @@ export async function createModule(data: {
     is_released?: boolean;
     release_date?: string | null;
 }) {
+    // DEBUGGING: Log dos dados recebidos
+    console.log('🟡 [SERVER] createModule - Dados recebidos:', JSON.stringify(data, null, 2));
+
+    if (!data.portal_id) {
+        console.error('❌ [SERVER] CRÍTICO: portal_id está vazio ou undefined!');
+        return { error: 'portal_id é obrigatório para criar um módulo' };
+    }
+
     const adminSupabase = await createAdminClient();
+
+    const insertData = {
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        portal_id: data.portal_id,
+        parent_module_id: data.parent_module_id || null,
+        order_index: data.order_index ?? 0,
+        is_active: true,
+        is_released: data.is_released ?? true,
+        release_date: data.release_date || null
+    };
+
+    console.log('🔵 [SERVER] createModule - Dados a inserir:', JSON.stringify(insertData, null, 2));
 
     try {
         const { data: newModule, error } = await adminSupabase
             .from('modules')
-            .insert([{
-                title: data.title.trim(),
-                description: data.description?.trim() || null,
-                portal_id: data.portal_id,
-                parent_module_id: data.parent_module_id || null,
-                order_index: data.order_index ?? 0,
-                is_active: true,
-                is_released: data.is_released ?? true,
-                release_date: data.release_date || null
-            }])
+            .insert([insertData])
             .select()
             .single();
 
         if (error) {
-            console.error('Error creating module:', error);
-            return { error: error.message };
+            console.error('❌ [SERVER] Erro Supabase ao criar módulo:', {
+                code: error.code,
+                message: error.message,
+                details: error.details,
+                hint: error.hint
+            });
+            return { error: `${error.message} (Código: ${error.code})${error.hint ? ' - Dica: ' + error.hint : ''}` };
         }
 
+        console.log('✅ [SERVER] Módulo criado com sucesso:', newModule);
         revalidatePath('/admin/contents');
         return { data: newModule, success: true };
-    } catch (error) {
-        console.error('Error in createModule:', error);
-        return { error: 'Erro ao criar módulo' };
+    } catch (error: any) {
+        console.error('❌ [SERVER] Exception em createModule:', error);
+        return { error: error?.message || 'Erro desconhecido ao criar módulo' };
     }
 }
 
@@ -251,34 +269,52 @@ export async function createContent(data: {
     duration?: number;
     is_preview?: boolean;
 }) {
+    // DEBUGGING: Log dos dados recebidos
+    console.log('🟡 [SERVER] createContent - Dados recebidos:', JSON.stringify(data, null, 2));
+
+    if (!data.module_id) {
+        console.error('❌ [SERVER] CRÍTICO: module_id está vazio ou undefined!');
+        return { error: 'module_id é obrigatório para criar uma aula' };
+    }
+
     const adminSupabase = await createAdminClient();
+
+    const insertData = {
+        title: data.title.trim(),
+        module_id: data.module_id,
+        content_type: data.content_type,
+        order_index: data.order_index ?? 0,
+        video_url: data.video_url || null,
+        content_url: data.content_url || null,
+        duration: data.duration || 0,
+        is_preview: data.is_preview ?? false,
+        is_active: true
+    };
+
+    console.log('🔵 [SERVER] createContent - Dados a inserir:', JSON.stringify(insertData, null, 2));
 
     try {
         const { data: newContent, error } = await adminSupabase
             .from('contents')
-            .insert([{
-                title: data.title.trim(),
-                module_id: data.module_id,
-                content_type: data.content_type,
-                order_index: data.order_index ?? 0,
-                video_url: data.video_url || null,
-                content_url: data.content_url || null,
-                duration: data.duration || 0,
-                is_preview: data.is_preview ?? false,
-                is_active: true
-            }])
+            .insert([insertData])
             .select()
             .single();
 
         if (error) {
-            console.error('Error creating content:', error);
-            return { error: error.message };
+            console.error('❌ [SERVER] Erro Supabase ao criar conteúdo:', {
+                code: error.code,
+                message: error.message,
+                details: error.details,
+                hint: error.hint
+            });
+            return { error: `${error.message} (Código: ${error.code})${error.hint ? ' - Dica: ' + error.hint : ''}` };
         }
 
+        console.log('✅ [SERVER] Conteúdo criado com sucesso:', newContent);
         revalidatePath('/admin/contents');
         return { data: newContent, success: true };
-    } catch (error) {
-        console.error('Error in createContent:', error);
-        return { error: 'Erro ao criar conteúdo' };
+    } catch (error: any) {
+        console.error('❌ [SERVER] Exception em createContent:', error);
+        return { error: error?.message || 'Erro desconhecido ao criar conteúdo' };
     }
 }

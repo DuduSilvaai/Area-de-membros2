@@ -1,20 +1,40 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, Settings, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Settings, Loader2, SkipForward, X } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface VideoPlayerProps {
     videoUrl: string | null;
     title: string;
+    lessonId?: string;
+    userId?: string;
+    initialPosition?: number;
     onComplete?: () => void;
+    onNextLesson?: () => void;
+    hasNextLesson?: boolean;
 }
 
-export default function VideoPlayer({ videoUrl, title, onComplete }: VideoPlayerProps) {
+export default function VideoPlayer({
+    videoUrl,
+    title,
+    lessonId,
+    userId,
+    initialPosition = 0,
+    onComplete,
+    onNextLesson,
+    hasNextLesson = false
+}: VideoPlayerProps) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [progress, setProgress] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    const [showNextOverlay, setShowNextOverlay] = useState(false);
+    const [countdown, setCountdown] = useState(5);
+    const [hasMarkedComplete, setHasMarkedComplete] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const lastSavedPositionRef = useRef<number>(0);
+    const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Detect video type from URL
     const getVideoType = (url: string | null): 'youtube' | 'vimeo' | 'direct' | null => {
@@ -29,7 +49,6 @@ export default function VideoPlayer({ videoUrl, title, onComplete }: VideoPlayer
         const videoType = getVideoType(url);
 
         if (videoType === 'youtube') {
-            // Extract video ID
             const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
             const videoId = match ? match[1] : '';
             return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
@@ -44,19 +63,143 @@ export default function VideoPlayer({ videoUrl, title, onComplete }: VideoPlayer
         return url;
     };
 
-    const videoType = getVideoType(videoUrl);
+    // Save position to database (debounced)
+    const savePosition = useCallback(async (position: number) => {
+        if (!lessonId || !userId || position === lastSavedPositionRef.current) return;
+
+        // Only save if position changed by at least 5 seconds
+        if (Math.abs(position - lastSavedPositionRef.current) < 5) return;
+
+        lastSavedPositionRef.current = position;
+
+        try {
+            await supabase
+                .from('progress')
+                .upsert({
+                    user_id: userId,
+                    content_id: lessonId,
+                    last_position: Math.floor(position),
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id,content_id'
+                });
+        } catch (error) {
+            console.error('Error saving position:', error);
+        }
+    }, [lessonId, userId]);
+
+    // Mark lesson as complete
+    const markComplete = useCallback(async () => {
+        if (!lessonId || !userId || hasMarkedComplete) return;
+
+        setHasMarkedComplete(true);
+
+        try {
+            await supabase
+                .from('progress')
+                .upsert({
+                    user_id: userId,
+                    content_id: lessonId,
+                    is_completed: true,
+                    completed_at: new Date().toISOString(),
+                    last_position: 0, // Reset position since completed
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'user_id,content_id'
+                });
+
+            onComplete?.();
+        } catch (error) {
+            console.error('Error marking complete:', error);
+        }
+    }, [lessonId, userId, hasMarkedComplete, onComplete]);
+
+    // Handle video end
+    const handleVideoEnd = useCallback(() => {
+        markComplete();
+
+        if (hasNextLesson && onNextLesson) {
+            setShowNextOverlay(true);
+            setCountdown(5);
+        }
+    }, [markComplete, hasNextLesson, onNextLesson]);
+
+    // Countdown for next lesson
+    useEffect(() => {
+        if (!showNextOverlay) return;
+
+        if (countdown <= 0) {
+            setShowNextOverlay(false);
+            onNextLesson?.();
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setCountdown(prev => prev - 1);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [showNextOverlay, countdown, onNextLesson]);
+
+    // Set initial position when video loads
+    const handleVideoLoaded = () => {
+        setIsLoading(false);
+        if (videoRef.current && initialPosition > 0) {
+            videoRef.current.currentTime = initialPosition;
+        }
+    };
 
     // Handle video progress for direct videos
     const handleTimeUpdate = () => {
         if (videoRef.current) {
-            const progressPercent = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+            const currentTime = videoRef.current.currentTime;
+            const duration = videoRef.current.duration;
+            const progressPercent = (currentTime / duration) * 100;
             setProgress(progressPercent);
 
-            // Trigger complete when video is 90% watched
-            if (progressPercent >= 90 && onComplete) {
-                onComplete();
+            // Mark complete when video is 90% watched
+            if (progressPercent >= 90 && !hasMarkedComplete) {
+                markComplete();
             }
         }
+    };
+
+    // Setup position saving interval
+    useEffect(() => {
+        if (!lessonId || !userId) return;
+
+        // Save position every 30 seconds
+        saveIntervalRef.current = setInterval(() => {
+            if (videoRef.current && !videoRef.current.paused) {
+                savePosition(videoRef.current.currentTime);
+            }
+        }, 30000);
+
+        return () => {
+            if (saveIntervalRef.current) {
+                clearInterval(saveIntervalRef.current);
+            }
+            // Save position on unmount
+            if (videoRef.current) {
+                savePosition(videoRef.current.currentTime);
+            }
+        };
+    }, [lessonId, userId, savePosition]);
+
+    // Reset state when video URL changes
+    useEffect(() => {
+        setHasMarkedComplete(false);
+        setShowNextOverlay(false);
+        setCountdown(5);
+        lastSavedPositionRef.current = 0;
+    }, [videoUrl]);
+
+    const videoType = getVideoType(videoUrl);
+
+    // Cancel auto-advance
+    const cancelNextLesson = () => {
+        setShowNextOverlay(false);
+        setCountdown(5);
     };
 
     // Placeholder when no video
@@ -135,11 +278,72 @@ export default function VideoPlayer({ videoUrl, title, onComplete }: VideoPlayer
                 className="absolute inset-0 w-full h-full object-contain"
                 style={{ backgroundColor: '#0F0F12' }}
                 onTimeUpdate={handleTimeUpdate}
-                onLoadedData={() => setIsLoading(false)}
+                onLoadedData={handleVideoLoaded}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
+                onEnded={handleVideoEnd}
                 controls
             />
+
+            {/* Next Lesson Overlay */}
+            {showNextOverlay && (
+                <div
+                    className="absolute inset-0 z-20 flex flex-col items-center justify-center"
+                    style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        backdropFilter: 'blur(8px)'
+                    }}
+                >
+                    <div className="text-center">
+                        <div
+                            className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
+                            style={{
+                                backgroundColor: 'var(--primary-main)',
+                                boxShadow: '0 0 40px rgba(255, 77, 148, 0.4)'
+                            }}
+                        >
+                            <SkipForward className="w-10 h-10 text-white" />
+                        </div>
+
+                        <h3 className="text-2xl font-bold text-white mb-2">
+                            Próxima aula em {countdown}s...
+                        </h3>
+                        <p className="text-gray-400 mb-8">
+                            Preparando o próximo conteúdo
+                        </p>
+
+                        <div className="flex items-center justify-center gap-4">
+                            <button
+                                onClick={cancelNextLesson}
+                                className="flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all hover:scale-105"
+                                style={{
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'white',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                                }}
+                            >
+                                <X className="w-4 h-4" />
+                                Cancelar
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setShowNextOverlay(false);
+                                    onNextLesson?.();
+                                }}
+                                className="flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all hover:scale-105"
+                                style={{
+                                    backgroundColor: 'var(--primary-main)',
+                                    color: 'white'
+                                }}
+                            >
+                                <SkipForward className="w-4 h-4" />
+                                Ir Agora
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Custom Controls Overlay (shown on hover) */}
             <div
@@ -224,3 +428,4 @@ export default function VideoPlayer({ videoUrl, title, onComplete }: VideoPlayer
         </div>
     );
 }
+
