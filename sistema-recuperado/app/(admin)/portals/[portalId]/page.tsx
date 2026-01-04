@@ -118,13 +118,13 @@ export default function PortalDetailPage() {
                     {activeTab === 'students' && (
                         <div className="animate-in fade-in zoom-in-95 duration-300">
                             {/* <StudentList portalId={portalId} /> */}
-                            <div className="bg-[#18181B] rounded-2xl border border-[#27272A] p-6 min-h-[600px] flex flex-col">
+                            <div className="bg-white dark:bg-[#18181B] rounded-2xl border border-gray-200 dark:border-[#27272A] p-6 min-h-[600px] flex flex-col shadow-sm">
                                 <div className="mb-6">
-                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                                         <Users className="w-5 h-5 text-[#FF2D78]" />
                                         Gestão de Alunos
                                     </h2>
-                                    <p className="text-zinc-500 text-sm mt-1">
+                                    <p className="text-gray-500 dark:text-zinc-400 text-sm mt-1">
                                         Gerencie quem tem acesso a este portal.
                                     </p>
                                 </div>

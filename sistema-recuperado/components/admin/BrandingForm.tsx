@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Portal } from '@/types/enrollment';
 import { Loader2, Save, Image as ImageIcon, Palette, Mail, Layout, Type, Laptop, Smartphone, Check } from 'lucide-react';
+import { updatePortalSettings } from '@/app/(admin)/admin/actions';
 import { useRouter } from 'next/navigation';
+import { ImageUploader } from '@/components/admin/ImageUploader';
 
 interface BrandingFormProps {
     portal: Portal;
@@ -13,11 +15,16 @@ interface BrandingFormProps {
 
 export function BrandingForm({ portal }: BrandingFormProps) {
     const [loading, setLoading] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [uploadingFavicon, setUploadingFavicon] = useState(false);
+    const [uploadingBanner, setUploadingBanner] = useState(false);
+
     const [settings, setSettings] = useState({
         primary_color: portal.settings?.primary_color || '#FF2D78',
         secondary_color: portal.settings?.secondary_color || '#1f2937',
         logo_url: portal.settings?.logo_url || '',
         favicon_url: portal.settings?.favicon_url || '',
+        banner_url: portal.settings?.banner_url || '',
         support_email: portal.settings?.support_email || '',
     });
 
@@ -33,18 +40,22 @@ export function BrandingForm({ portal }: BrandingFormProps) {
         setLoading(true);
 
         try {
-            const { error } = await supabase
-                .from('portals')
-                .update({ settings })
-                .eq('id', portal.id);
+            const result = await updatePortalSettings(portal.id, {
+                name: portal.name, // Preserve existing name
+                description: portal.description || '', // Preserve existing description
+                settings: {
+                    ...settings,
+                    theme_mode: portal.settings?.theme_mode || 'dark' // Preserve theme mode
+                }
+            });
 
-            if (error) throw error;
+            if (result.error) throw new Error(result.error);
 
             toast.success('Configurações salvas!');
             router.refresh();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving branding:', error);
-            toast.error('Erro ao salvar.');
+            toast.error(error.message || 'Erro ao salvar.');
         } finally {
             setLoading(false);
         }
@@ -52,11 +63,11 @@ export function BrandingForm({ portal }: BrandingFormProps) {
 
     const InputField = ({ label, value, onChange, icon: Icon, placeholder, type = "text" }: any) => (
         <div className="flex flex-col gap-2">
-            <label className="text-[#A1A1AA] text-sm font-medium ml-1">
+            <label className="text-gray-500 dark:text-[#A1A1AA] text-sm font-medium ml-1">
                 {label}
             </label>
             <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-[#FF2D78] transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500 group-focus-within:text-[#FF2D78] transition-colors">
                     {Icon && <Icon className="w-5 h-5" />}
                 </div>
                 <input
@@ -64,7 +75,7 @@ export function BrandingForm({ portal }: BrandingFormProps) {
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
-                    className={`w-full h-[52px] bg-[#27272A] border border-[#52525B] text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none transition-all placeholder:text-zinc-600 ${Icon ? 'pl-12' : 'pl-4'} pr-4`}
+                    className={`w-full h-[52px] bg-white dark:bg-[#27272A] border border-gray-200 dark:border-[#52525B] text-zinc-900 dark:text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 ${Icon ? 'pl-12' : 'pl-4'} pr-4`}
                 />
             </div>
         </div>
@@ -72,12 +83,12 @@ export function BrandingForm({ portal }: BrandingFormProps) {
 
     const ColorPicker = ({ label, value, onChange }: any) => (
         <div className="flex flex-col gap-2">
-            <label className="text-[#A1A1AA] text-sm font-medium ml-1">
+            <label className="text-gray-500 dark:text-[#A1A1AA] text-sm font-medium ml-1">
                 {label}
             </label>
             <div className="flex items-center gap-3">
                 <div
-                    className="w-[52px] h-[52px] rounded-xl border border-[#52525B] shadow-sm flex-shrink-0 relative overflow-hidden ring-1 ring-black/20"
+                    className="w-[52px] h-[52px] rounded-xl border border-gray-200 dark:border-[#52525B] shadow-sm flex-shrink-0 relative overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
                     style={{ backgroundColor: value }}
                 >
                     <input
@@ -88,12 +99,12 @@ export function BrandingForm({ portal }: BrandingFormProps) {
                     />
                 </div>
                 <div className="flex-1 relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">#</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500">#</span>
                     <input
                         type="text"
                         value={value.replace('#', '')}
                         onChange={(e) => onChange(`#${e.target.value.replace('#', '')}`)}
-                        className="w-full h-[52px] bg-[#27272A] border border-[#52525B] text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none transition-all pl-8 uppercase font-mono"
+                        className="w-full h-[52px] bg-white dark:bg-[#27272A] border border-gray-200 dark:border-[#52525B] text-zinc-900 dark:text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none transition-all pl-8 uppercase font-mono"
                     />
                 </div>
             </div>
@@ -109,32 +120,45 @@ export function BrandingForm({ portal }: BrandingFormProps) {
 
                     {/* Visual Identity */}
                     <div className="space-y-6">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                             <ImageIcon className="w-5 h-5 text-[#FF2D78]" />
                             Identidade Visual
                         </h3>
 
                         <div className="space-y-5">
-                            <InputField
-                                label="URL do Logotipo"
-                                value={settings.logo_url}
-                                onChange={(v: string) => handleChange('logo_url', v)}
-                                icon={ImageIcon}
-                                placeholder="https://exemplo.com/logo.png"
+                            <ImageUploader
+                                label="Capa do Portal (Banner)"
+                                imageUrl={settings.banner_url}
+                                setImageUrl={(url) => handleChange('banner_url', url)}
+                                uploading={uploadingBanner}
+                                setUploading={setUploadingBanner}
+                                helpText="Recomendado: 1200x300 pixels. Aparecerá no topo da área de membros."
+                                previewHeight="h-32"
                             />
-                            <InputField
-                                label="URL do Favicon"
-                                value={settings.favicon_url}
-                                onChange={(v: string) => handleChange('favicon_url', v)}
-                                icon={Type}
-                                placeholder="https://exemplo.com/favicon.ico"
+                            <ImageUploader
+                                label="Logotipo"
+                                imageUrl={settings.logo_url}
+                                setImageUrl={(url) => handleChange('logo_url', url)}
+                                uploading={uploadingLogo}
+                                setUploading={setUploadingLogo}
+                                helpText="PNG com fundo transparente. Ideal para fundos escuros."
+                                darkBackground={true}
+                            />
+                            <ImageUploader
+                                label="Favicon"
+                                imageUrl={settings.favicon_url}
+                                setImageUrl={(url) => handleChange('favicon_url', url)}
+                                uploading={uploadingFavicon}
+                                setUploading={setUploadingFavicon}
+                                helpText="Ícone do navegador (32x32px)"
+                                previewHeight="h-16"
                             />
                         </div>
                     </div>
 
                     {/* Colors */}
                     <div className="space-y-6">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                             <Palette className="w-5 h-5 text-[#FF2D78]" />
                             Tema e Cores
                         </h3>
@@ -155,7 +179,7 @@ export function BrandingForm({ portal }: BrandingFormProps) {
 
                     {/* Support */}
                     <div className="space-y-6">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                             <Mail className="w-5 h-5 text-[#FF2D78]" />
                             Suporte
                         </h3>
@@ -251,8 +275,8 @@ export function BrandingForm({ portal }: BrandingFormProps) {
             </div>
 
             {/* STICKY BOTTOM BAR */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-black/60 backdrop-blur-xl border-t border-white/10 z-50 flex justify-end items-center gap-4">
-                <span className="text-zinc-400 text-sm hidden md:block">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-[#121216]/80 backdrop-blur-xl border-t border-gray-200 dark:border-white/10 z-50 flex justify-end items-center gap-4">
+                <span className="text-gray-500 dark:text-zinc-400 text-sm hidden md:block">
                     Não esqueça de salvar suas alterações
                 </span>
                 <button
