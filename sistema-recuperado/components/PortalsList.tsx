@@ -103,11 +103,10 @@ const PortalCard = ({ portal, onDelete }: { portal: Portal; onDelete: (portal: P
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          opacity: 0,
-          transition: 'opacity 0.2s',
+
           zIndex: 20
         }}
-        className="group-hover:opacity-100 shadow-sm hover:bg-white"
+        className="shadow-sm hover:bg-white/90"
         title="Excluir Portal"
       >
         <Trash2 size={16} />
