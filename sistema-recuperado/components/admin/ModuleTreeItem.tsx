@@ -48,9 +48,12 @@ export function ModuleTreeItem({
             {/* Module Header Row */}
             <div
                 className={cn(
-                    "group flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-zinc-900 transition-colors cursor-pointer select-none",
-                    isDragging && "opacity-50 bg-zinc-800",
-                    isOpen && "bg-zinc-900/30"
+                    "group flex items-center gap-2 px-2 py-2 rounded-lg transition-colors cursor-pointer select-none border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800",
+                    // Light mode: bg-white on hover or when open (if desired), or just transparent -> hover gray-100
+                    // Dark mode: bg-zinc-900 on hover
+                    "hover:bg-white dark:hover:bg-zinc-900",
+                    isDragging && "opacity-50 bg-gray-100 dark:bg-zinc-800",
+                    isOpen && "bg-gray-50 dark:bg-zinc-900/30"
                 )}
                 onClick={() => setIsOpen(!isOpen)}
             >
@@ -75,7 +78,7 @@ export function ModuleTreeItem({
                 </div>
 
                 {/* Title */}
-                <span className="flex-1 font-semibold text-zinc-300 group-hover:text-white transition-colors text-sm">
+                <span className="flex-1 font-semibold text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors text-sm">
                     {module.title}
                 </span>
 
@@ -84,7 +87,7 @@ export function ModuleTreeItem({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-zinc-400 hover:text-pink-500 hover:bg-pink-500/10"
+                        className="h-7 w-7 text-zinc-500 dark:text-zinc-400 hover:text-[#FF2D78] hover:bg-transparent"
                         title="Adicionar Aula"
                         onClick={(e) => { e.stopPropagation(); onAddLesson(module.id); }}
                     >
@@ -93,7 +96,7 @@ export function ModuleTreeItem({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        className="h-7 w-7 text-zinc-500 dark:text-zinc-400 hover:text-[#FF2D78] hover:bg-transparent"
                         title="Editar Módulo"
                         onClick={(e) => { e.stopPropagation(); onEdit(module); }}
                     >
@@ -102,7 +105,7 @@ export function ModuleTreeItem({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-zinc-400 hover:text-red-400 hover:bg-red-400/10"
+                        className="h-7 w-7 text-zinc-500 dark:text-zinc-400 hover:text-[#FF2D78] hover:bg-transparent"
                         title="Excluir Módulo"
                         onClick={(e) => { e.stopPropagation(); onDelete(module.id); }}
                     >
