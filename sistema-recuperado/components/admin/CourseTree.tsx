@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { DeleteConfirmationModal } from '@/components/admin/DeleteConfirmationModal';
 import {
     DndContext,
     closestCenter,
@@ -43,6 +44,15 @@ interface CourseTreeProps {
     portalId: string;
 }
 
+interface ConfirmModalState {
+    isOpen: boolean;
+    title: string;
+    description: string;
+    variant: 'danger' | 'default';
+    onConfirm: () => Promise<void>;
+    itemTitle?: string;
+}
+
 const dropAnimation: DropAnimation = {
     sideEffects: defaultDropAnimationSideEffects({
         styles: {
@@ -70,18 +80,12 @@ export function CourseTree({ portalId }: CourseTreeProps) {
     const [creatingLessonModuleId, setCreatingLessonModuleId] = useState<string | null>(null);
 
     // Confirm Modal State
-    const [confirmModal, setConfirmModal] = useState<{
-        isOpen: boolean;
-        title: string;
-        description: string;
-        onConfirm: () => void;
-        variant: 'danger' | 'default';
-    }>({
+    const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
         isOpen: false,
         title: '',
         description: '',
-        onConfirm: () => { },
-        variant: 'default'
+        variant: 'default',
+        onConfirm: async () => { }
     });
 
     const supabase = createClient();
@@ -313,11 +317,11 @@ export function CourseTree({ portalId }: CourseTreeProps) {
     };
 
     return (
-        <div className="flex flex-col h-full bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden shadow-2xl">
+        <div className="flex flex-col h-full bg-[#F8F9FB] dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm dark:shadow-2xl">
             {/* Toolbar */}
-            <div className="h-16 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-10">
+            <div className="h-16 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-6 bg-white dark:bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-10">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-zinc-100 font-bold text-lg tracking-tight">Estrutura do Curso</h2>
+                    <h2 className="text-zinc-900 dark:text-zinc-100 font-bold text-lg tracking-tight">Estrutura do Curso</h2>
                     {isLoading && <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />}
                 </div>
                 <div className="flex items-center gap-2">
@@ -346,7 +350,7 @@ export function CourseTree({ portalId }: CourseTreeProps) {
             </div>
 
             {/* Tree Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-2 relative bg-grid-zinc-900/50 [mask-image:linear-gradient(to_bottom,transparent,black)]">
+            <div className="flex-1 overflow-y-auto p-6 space-y-2 relative">
                 {/* Only visual grid pattern, maybe remove if too noisy */}
 
                 <DndContext
@@ -375,6 +379,7 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                                             title: 'Excluir Módulo',
                                             description: 'Tem certeza? Isso apagará todas as aulas e submódulos contidos aqui. Esta ação não pode ser desfeita.',
                                             variant: 'danger',
+                                            itemTitle: module.title,
                                             onConfirm: async () => {
                                                 await deleteModule(id);
                                                 fetchData();
@@ -388,11 +393,14 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                                         setIsLessonDrawerOpen(true);
                                     }}
                                     onDeleteLesson={(lessonId) => {
+                                        // find lesson title
+                                        const lesson = module.contents?.find(c => c.id === lessonId);
                                         setConfirmModal({
                                             isOpen: true,
                                             title: 'Excluir Aula',
                                             description: 'Excluir permanentemente esta aula? O progresso dos alunos será perdido.',
                                             variant: 'danger',
+                                            itemTitle: lesson?.title || 'Aula',
                                             onConfirm: async () => {
                                                 await deleteContent(lessonId);
                                                 fetchData();
@@ -431,6 +439,7 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                 isOpen={isModuleModalOpen}
                 onClose={() => setIsModuleModalOpen(false)}
                 onSave={handleCreateModuleSave}
+                portalId={portalId}
                 initialData={editingModule ? {
                     title: editingModule.title,
                     description: editingModule.description || '',
@@ -443,15 +452,15 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                 onClose={() => setIsLessonDrawerOpen(false)}
                 lesson={editingLesson || (creatingLessonModuleId ? { module_id: creatingLessonModuleId } as any : null)}
                 onSave={handleDrawerSave}
+                portalId={portalId}
             />
 
-            <ConfirmModal
+            <DeleteConfirmationModal
                 isOpen={confirmModal.isOpen}
                 onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
                 onConfirm={confirmModal.onConfirm}
-                title={confirmModal.title}
-                description={confirmModal.description}
-                variant={confirmModal.variant}
+                type={confirmModal.title?.includes('Módulo') ? 'module' : 'lesson'}
+                itemTitle={confirmModal.itemTitle || ''}
             />
         </div>
     );
