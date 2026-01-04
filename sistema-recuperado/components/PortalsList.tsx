@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { createPortal } from '@/app/(admin)/admin/actions';
+import { createPortal } from '@/app/(admin)/portals/actions';
 
 interface Portal {
   id: string;

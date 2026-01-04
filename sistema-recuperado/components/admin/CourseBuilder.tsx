@@ -447,9 +447,9 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
                         key={module.id}
                         module={module}
                         depth={0}
-                        onEdit={(id, title) => {
-                          setEditingModuleId(id);
-                          setEditTitle(title);
+                        onEdit={(module) => {
+                          setEditingModuleId(module.id);
+                          setEditTitle(module.title);
                         }}
                         onDelete={handleDeleteModule}
                         onAddChild={handleAddChildModule}

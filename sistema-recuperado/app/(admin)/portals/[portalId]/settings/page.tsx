@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Loader2, Settings, Palette, Headphones, Upload, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/UIComponents';
-import { getPortal, updatePortalSettings, getPresignedUrl } from '@/app/(admin)/admin/actions';
+import { getPortal, updatePortalSettings, getPresignedUrl } from '@/app/(admin)/portals/actions';
 import { toast } from 'sonner';
 
 type TabType = 'branding' | 'info' | 'support';

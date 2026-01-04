@@ -2,20 +2,12 @@
 
 import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-// import * as fs from 'fs';
-// import * as path from 'path';
 
 function logDebug(message: string, data?: any) {
-    // const logPath = path.join(process.cwd(), 'debug_portal_error.txt');
-    // const timestamp = new Date().toISOString();
-    // const logMessage = `[${timestamp}] ${message} ${data ? JSON.stringify(data, null, 2) : ''}\n`;
-    // fs.appendFileSync(logPath, logMessage);
     console.log(`[DEBUG] ${message}`, data || '');
 }
 
 export async function createPortal(data: {
-    // ... args
     name: string;
     description: string;
     support_email?: string;
@@ -104,7 +96,8 @@ export async function createPortal(data: {
             logDebug('Enrollment created successfully');
         }
 
-        revalidatePath('/admin');
+        revalidatePath('/portals');
+        revalidatePath('/dashboard');
         return { success: true, portal: newPortal };
     } catch (error: any) {
         logDebug('Catch Error in createPortal', error.message);

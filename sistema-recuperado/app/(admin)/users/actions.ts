@@ -38,8 +38,8 @@ export async function upsertEnrollment(
         return { error: error.message };
     }
 
-    revalidatePath(`/admin/users/${userId}/manage`);
-    revalidatePath('/admin/users');
+    revalidatePath(`/users/${userId}/manage`);
+    revalidatePath('/users');
 
     return { data };
 }
@@ -58,8 +58,8 @@ export async function deleteEnrollment(userId: string, portalId: string) {
         return { error: error.message };
     }
 
-    revalidatePath(`/admin/users/${userId}/manage`);
-    revalidatePath('/admin/users');
+    revalidatePath(`/users/${userId}/manage`);
+    revalidatePath('/users');
 
     return { success: true };
 }
@@ -113,7 +113,7 @@ export async function createUser(data: {
     }
 
     // 2. Revalidate to show new user in list
-    revalidatePath('/admin/users');
+    revalidatePath('/users');
 
     return { success: true, user: newUser.user };
 }
