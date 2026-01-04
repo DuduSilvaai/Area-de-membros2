@@ -446,15 +446,20 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
                       <ModuleTreeItem
                         key={module.id}
                         module={module}
-                        depth={0}
                         onEdit={(module) => {
                           setEditingModuleId(module.id);
                           setEditTitle(module.title);
                         }}
                         onDelete={handleDeleteModule}
-                        onAddChild={handleAddChildModule}
-                        onSelectModule={setSelectedModuleId}
-                        selectedModuleId={selectedModuleId}
+                        onAddLesson={(moduleId) => {
+                          setSelectedModuleId(moduleId);
+                          setShowContentForm(true);
+                        }}
+                        onEditLesson={(lesson) => {
+                          setEditingContentId(lesson.id);
+                          setEditTitle(lesson.title);
+                        }}
+                        onDeleteLesson={handleDeleteContent}
                       />
                     ))}
                   </div>

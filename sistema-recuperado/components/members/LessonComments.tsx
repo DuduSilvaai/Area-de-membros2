@@ -22,7 +22,7 @@ interface Comment {
     content_id: string;
     text: string;
     created_at: string;
-    parent_comment_id: string | null;
+    parent_id: string | null;
     profiles: {
         full_name: string | null;
         avatar_url: string | null;
@@ -91,7 +91,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     }
                 }
 
-                setComments(data as Comment[]);
+                const formattedComments = data.map((c: any) => ({
+                    ...c,
+                    profiles: c.profiles && c.profiles[0] ? c.profiles[0] : null
+                }));
+
+                setComments(formattedComments as Comment[]);
             } catch (error) {
                 console.error('Error fetching comments:', error);
             } finally {
@@ -132,7 +137,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     content_id: lessonId,
                     user_id: user.id,
                     text: newComment,
-                    parent_comment_id: null
+                    parent_id: null
                 });
 
             if (error) throw error;
@@ -156,7 +161,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     content_id: lessonId,
                     user_id: user.id,
                     text: replyText,
-                    parent_comment_id: parentId
+                    parent_id: parentId
                 });
 
             if (error) throw error;
@@ -242,10 +247,10 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     };
 
     // Filter root comments
-    const rootComments = comments.filter(c => !c.parent_comment_id);
+    const rootComments = comments.filter(c => !c.parent_id);
 
     // Group replies
-    const getReplies = (parentId: string) => comments.filter(c => c.parent_comment_id === parentId).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const getReplies = (parentId: string) => comments.filter(c => c.parent_id === parentId).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
