@@ -1,530 +1,342 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import LessonSidebar, { Module, Lesson } from '@/components/members/LessonSidebar';
 import VideoPlayer from '@/components/members/VideoPlayer';
-import LessonSidebar from '@/components/members/LessonSidebar';
-import LessonComments from '@/components/members/LessonComments';
-import { ComplementaryMaterialsTab } from '@/components/members/ComplementaryMaterialsTab';
-import { Confetti } from '@/components/ui/Confetti';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { MobileDrawer } from '@/components/members/MobileDrawer';
-import {
-    ChevronLeft,
-    ChevronRight,
-    CheckCircle2,
-    ArrowLeft,
-    FileText,
-    MessageSquare,
-    Download,
-    Loader2,
-    Menu,
-    X,
-    BookOpen,
-    PlayCircle,
-    ChevronDown,
-    Headphones,
-    MonitorPlay,
-    Lock
-} from 'lucide-react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle, Download, ChevronLeft, ChevronRight, Menu, X, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 
-// Types
-interface Content {
+interface LessonContent {
     id: string;
     title: string;
-    content_type: 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external';
+    description?: string | null;
     video_url: string | null;
-    content_url: string | null;
-    description: string | null;
-    duration_minutes: number | null;
-    order_index: number;
-    module_id: string;
+    duration_seconds: number | null;
+    attachments?: { name: string; url: string }[];
 }
 
-interface Module {
-    id: string;
-    title: string;
-    description: string | null;
-    order_index: number;
-    parent_module_id: string | null;
-    contents: Content[];
-    submodules: Module[];
-}
-
-interface Portal {
-    id: string;
-    name: string;
-    description: string | null;
-    image_url: string | null;
-}
-
-type TabType = 'description' | 'files' | 'comments' | 'support';
-
-export default function LessonPlayerPage() {
-    const params = useParams();
+export default function LessonPage({ params }: { params: { portalId: string; lessonId: string } }) {
+    const { portalId, lessonId } = params;
     const router = useRouter();
     const { user } = useAuth();
-    const portalId = params?.portalId as string;
-    const lessonId = params?.lessonId as string;
 
-    const [portal, setPortal] = useState<Portal | null>(null);
-    const [modules, setModules] = useState<Module[]>([]);
-    const [currentLesson, setCurrentLesson] = useState<Content | null>(null);
-    const [currentModuleId, setCurrentModuleId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<TabType>('description');
-    const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
-    const [sidebarOpen, setSidebarOpen] = useState(true);
-    // const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set()); // Moved to sidebar component
-    const [markingComplete, setMarkingComplete] = useState(false);
-    const [lastPosition, setLastPosition] = useState<number>(0);
-    const [accessDenied, setAccessDenied] = useState(false);
-    const [allowedModuleIds, setAllowedModuleIds] = useState<Set<string> | null>(null);
-    const [showConfetti, setShowConfetti] = useState(false);
+    const [modules, setModules] = useState<Module[]>([]);
+    const [currentLesson, setCurrentLesson] = useState<LessonContent | null>(null);
+    const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
+    const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+    const [nextLessonId, setNextLessonId] = useState<string | null>(null);
+    const [prevLessonId, setPrevLessonId] = useState<string | null>(null);
 
-    // Load data
+    // Fetch all data
     useEffect(() => {
-        const loadData = async () => {
-            if (!portalId || !lessonId || !user?.id) return;
+        const loadCourseData = async () => {
+            if (!user?.id) return;
 
             try {
                 setLoading(true);
 
-                // Check Enrollment
-                const { data: enrollmentData, error: enrollmentError } = await supabase
+                // 1. Verify Enrollment & Permissions
+                const { data: enrollment, error: enrollError } = await supabase
                     .from('enrollments')
                     .select('permissions')
-                    .eq('user_id', user.id)
                     .eq('portal_id', portalId)
+                    .eq('user_id', user.id)
                     .eq('is_active', true)
                     .single();
 
-                if (enrollmentError || !enrollmentData) {
-                    setAccessDenied(true);
-                    setLoading(false);
+                if (enrollError || !enrollment) {
+                    toast.error('Você não tem acesso a este curso.');
+                    router.push('/members');
                     return;
                 }
 
-                const permissions = enrollmentData.permissions as { access_all?: boolean; allowed_modules?: string[] };
-                if (permissions.access_all) {
-                    setAllowedModuleIds(null);
-                } else {
-                    setAllowedModuleIds(new Set(permissions.allowed_modules || []));
-                }
-
-                // Fetch Portal
-                const { data: portalData } = await supabase
-                    .from('portals')
-                    .select('*')
-                    .eq('id', portalId)
-                    .single();
-                setPortal(portalData);
-
-                // Fetch Modules
-                const { data: modulesData } = await supabase
+                // 2. Fetch Modules & Lessons (Flat fetch then restructure)
+                const { data: rawModules, error: modulesError } = await supabase
                     .from('modules')
                     .select(`
-                        id,
-                        title,
-                        description,
-                        order_index,
-                        parent_module_id,
-                        contents (
-                            id,
-                            title,
-                            content_type,
-                            video_url,
-                            content_url,
-                            duration_seconds,
-                            order_index,
-                            module_id,
-                            description
-                        )
-                    `)
+            id,
+            title,
+            parent_module_id,
+            contents (
+              id,
+              title,
+              duration_seconds,
+              order_index
+            )
+          `)
                     .eq('portal_id', portalId)
                     .eq('is_active', true)
-                    .order('order_index', { ascending: true });
+                    .order('order_index');
 
-                // Process Modules Tree
-                const moduleMap = new Map<string, Module>();
-                const rootModules: Module[] = [];
+                if (modulesError) throw modulesError;
 
-                (modulesData || []).forEach((mod: any) => {
-                    const mappedContents: Content[] = (mod.contents || []).map((c: any) => ({
-                        id: c.id,
-                        title: c.title,
-                        content_type: c.content_type,
-                        video_url: c.video_url,
-                        content_url: c.content_url,
-                        description: c.description,
-                        duration_minutes: c.duration_seconds ? Math.round(c.duration_seconds / 60) : null,
-                        order_index: c.order_index,
-                        module_id: c.module_id
-                    })).sort((a: Content, b: Content) => a.order_index - b.order_index);
+                // 3. Fetch current lesson details
+                const { data: lessonData, error: lessonError } = await supabase
+                    .from('contents')
+                    .select('*')
+                    .eq('id', lessonId)
+                    .single();
 
-                    const module: Module = {
-                        ...mod,
-                        contents: mappedContents,
-                        submodules: []
-                    };
-                    moduleMap.set(mod.id, module);
-                });
+                if (lessonError) throw lessonError;
+                setCurrentLesson(lessonData);
 
-                moduleMap.forEach((module) => {
-                    if (module.parent_module_id) {
-                        const parent = moduleMap.get(module.parent_module_id);
-                        if (parent) parent.submodules.push(module);
-                    } else {
-                        rootModules.push(module);
-                    }
-                });
-
-                const sortModules = (mods: Module[]) => {
-                    mods.sort((a, b) => a.order_index - b.order_index);
-                    mods.forEach(m => {
-                        if (m.submodules.length) sortModules(m.submodules);
-                    });
-                };
-                sortModules(rootModules);
-                setModules(rootModules);
-
-                // Find Current Lesson
-                let foundLesson: Content | null = null;
-                let foundModuleId: string | null = null;
-
-                const findLesson = (mods: Module[]) => {
-                    for (const mod of mods) {
-                        for (const content of mod.contents) {
-                            if (content.id === lessonId) {
-                                foundLesson = content;
-                                foundModuleId = mod.id;
-                                return true;
-                            }
-                        }
-                        if (findLesson(mod.submodules)) return true;
-                    }
-                    return false;
-                };
-
-                findLesson(rootModules);
-                setCurrentLesson(foundLesson);
-                setCurrentModuleId(foundModuleId);
-
-                // Fetch Progress
+                // 4. Fetch User Progress
                 const { data: progressData } = await supabase
                     .from('progress')
-                    .select('content_id, is_completed, last_position')
-                    .eq('user_id', user.id);
+                    .select('content_id')
+                    .eq('user_id', user.id)
+                    .eq('is_completed', true);
 
-                if (progressData) {
-                    setCompletedLessons(new Set(progressData.filter(p => p.is_completed).map(p => p.content_id)));
-                    const currentProgress = progressData.find(p => p.content_id === lessonId);
-                    if (currentProgress?.last_position) setLastPosition(currentProgress.last_position);
-                }
+                setCompletedLessonIds(new Set(progressData?.map(p => p.content_id) || []));
 
-            } catch (error) {
-                console.error("Error loading lesson:", error);
+                // Reconstruct Tree
+                const fullTree = buildModuleTree(rawModules);
+                setModules(fullTree);
+
+                // Determine Prev/Next
+                const flatLessons = flattenLessons(fullTree);
+                const currentIndex = flatLessons.findIndex(l => l.id === lessonId);
+
+                if (currentIndex > 0) setPrevLessonId(flatLessons[currentIndex - 1].id);
+                if (currentIndex < flatLessons.length - 1) setNextLessonId(flatLessons[currentIndex + 1].id);
+
+            } catch (error: any) {
+                console.error('Erro loading lesson:', error);
+                toast.error('Erro ao carregar aula.');
             } finally {
                 setLoading(false);
             }
         };
 
-        loadData();
-    }, [portalId, lessonId, user?.id]);
+        if (user) loadCourseData();
+    }, [user, portalId, lessonId, router]);
 
-    const getAllLessons = useCallback((): { lesson: Content; moduleId: string }[] => {
-        const lessons: { lesson: Content; moduleId: string }[] = [];
-        const collectLessons = (mods: Module[]) => {
-            mods.forEach(mod => {
-                mod.contents.forEach(content => lessons.push({ lesson: content, moduleId: mod.id }));
-                if (mod.submodules.length > 0) collectLessons(mod.submodules);
+
+    // Helper: Build Tree
+    const buildModuleTree = (flatModules: any[]): Module[] => {
+        const moduleMap = new Map<string, Module>();
+        const roots: Module[] = [];
+
+        // Initialize all modules
+        flatModules.forEach(m => {
+            moduleMap.set(m.id, {
+                id: m.id,
+                title: m.title,
+                lessons: (m.contents || []).sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0)).map((c: any) => ({
+                    id: c.id,
+                    title: c.title,
+                    duration_minutes: c.duration_seconds ? Math.round(c.duration_seconds / 60) : undefined
+                })),
+                subModules: []
             });
-        };
-        collectLessons(modules);
-        return lessons;
-    }, [modules]);
-
-    const navigateLesson = (direction: 'next' | 'prev') => {
-        const allLessons = getAllLessons();
-        const currentIndex = allLessons.findIndex(l => l.lesson.id === lessonId);
-
-        if (direction === 'next' && currentIndex < allLessons.length - 1) {
-            router.push(`/members/${portalId}/lesson/${allLessons[currentIndex + 1].lesson.id}`);
-        } else if (direction === 'prev' && currentIndex > 0) {
-            router.push(`/members/${portalId}/lesson/${allLessons[currentIndex - 1].lesson.id}`);
-        }
-    };
-
-    const toggleLessonCompletion = async () => {
-        if (!currentLesson || !user?.id || markingComplete) return;
-
-        setMarkingComplete(true);
-        const isCurrentlyCompleted = completedLessons.has(currentLesson.id);
-        const newCompletedState = !isCurrentlyCompleted;
-
-        // Optimistic UI
-        setCompletedLessons(prev => {
-            const newSet = new Set(prev);
-            if (newCompletedState) newSet.add(currentLesson.id);
-            else newSet.delete(currentLesson.id);
-            return newSet;
         });
 
-        // Trigger Confetti if completing
-        if (newCompletedState) {
-            setShowConfetti(true);
-            setTimeout(() => setShowConfetti(false), 3000);
-        }
+        // Build hierarchy
+        flatModules.forEach(m => {
+            const module = moduleMap.get(m.id)!;
+            if (m.parent_module_id && moduleMap.has(m.parent_module_id)) {
+                moduleMap.get(m.parent_module_id)!.subModules.push(module);
+            } else {
+                roots.push(module);
+            }
+        });
+
+        return roots;
+    };
+
+    // Helper: Flatten for Navigation
+    const flattenLessons = (modules: Module[]): Lesson[] => {
+        let result: Lesson[] = [];
+        modules.forEach(m => {
+            result.push(...flattenLessons(m.subModules));
+            result.push(...m.lessons);
+        });
+        return result;
+    };
+
+    // Action: Mark Complete
+    const handleLessonComplete = async () => {
+        if (!user || completedLessonIds.has(lessonId)) return;
 
         try {
-            const { error } = await supabase
-                .from('progress')
-                .upsert({
-                    user_id: user.id,
-                    content_id: currentLesson.id,
-                    is_completed: newCompletedState,
-                    completed_at: newCompletedState ? new Date().toISOString() : null,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id,content_id' });
+            const { error } = await supabase.from('progress').upsert({
+                user_id: user.id,
+                content_id: lessonId,
+                is_completed: true,
+                updated_at: new Date().toISOString()
+            });
 
             if (error) throw error;
-        } catch (error) {
-            console.error('Error saving progress:', error);
-            // Revert
-            setCompletedLessons(prev => {
-                const newSet = new Set(prev);
-                if (newCompletedState) {
-                    newSet.delete(currentLesson.id);
-                } else {
-                    newSet.add(currentLesson.id);
-                }
-                return newSet;
-            });
-            setShowConfetti(false);
-        } finally {
-            setMarkingComplete(false);
+
+            setCompletedLessonIds(prev => new Set(prev).add(lessonId));
+            toast.success('Aula concluída!');
+
+            // Auto-advance
+            if (nextLessonId) {
+                setTimeout(() => {
+                    router.push(`/members/${portalId}/lesson/${nextLessonId}`);
+                }, 3000);
+                toast.info('Próxima aula em 3 segundos...');
+            }
+
+        } catch (err) {
+            console.error('Error marking complete:', err);
         }
     };
 
     if (loading) {
-        return (
-            <div className="flex min-h-screen bg-[#0F0F12]">
-                <div className="flex-1 p-8 space-y-6">
-                    <Skeleton className="w-full aspect-video rounded-2xl bg-zinc-800" />
-                    <div className="max-w-4xl mx-auto space-y-4">
-                        <Skeleton className="h-10 w-3/4 bg-zinc-800" />
-                        <Skeleton className="h-6 w-1/4 bg-zinc-800" />
-                        <Skeleton className="h-32 w-full bg-zinc-800" />
-                    </div>
-                </div>
-                <div className="hidden lg:block w-96 p-4 border-l border-white/5 space-y-4">
-                    {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg bg-zinc-800" />)}
-                </div>
-            </div>
-        );
+        return <div className="min-h-screen bg-[#141414] flex items-center justify-center text-white">Carregando aula...</div>;
     }
 
-    if (accessDenied) {
-        return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-[#0F0F12] text-white">
-                <Lock className="w-16 h-16 text-pink-500 mb-4" />
-                <h1 className="text-2xl font-bold mb-2">Acesso Restrito</h1>
-                <p className="text-zinc-400 mb-6">Você não tem permissão para acessar esta aula.</p>
-                <Link href={`/members/${portalId}`} className="text-pink-500 hover:text-pink-400">
-                    Voltar para o Início
-                </Link>
-            </div>
-        );
-    }
-
-    if (!portal || !currentLesson) return null;
-
-    const allLessons = getAllLessons();
-    const currentIndex = allLessons.findIndex(l => l.lesson.id === lessonId);
-    const hasNext = currentIndex < allLessons.length - 1;
+    if (!currentLesson) return null;
 
     return (
-        <div className="min-h-screen flex flex-col bg-[#0F0F12] text-white overflow-hidden selection:bg-pink-500/30">
-            {/* Header */}
-            <header className="flex-shrink-0 h-16 bg-[#1A1A1E] border-b border-white/5 flex items-center justify-between px-4 z-20 shadow-md">
-                <div className="flex items-center gap-4">
-                    <Link
-                        href={`/members/${portalId}`}
-                        className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="hidden sm:inline">Voltar</span>
-                    </Link>
-                    <div className="w-px h-6 bg-white/10 hidden sm:block" />
-                    <span className="font-medium truncate max-w-[200px] text-zinc-200">
-                        {portal.name}
-                    </span>
-                </div>
+        <div className="flex bg-[#141414] min-h-screen text-white overflow-hidden">
 
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setSidebarOpen(!sidebarOpen)}
-                        className="lg:hidden p-2 rounded-lg bg-white/5 text-zinc-400"
-                    >
-                        <Menu className="w-5 h-5" />
+            {/* Mobile Sidebar Toggle Overlay */}
+            {mobileSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black/80 z-40 lg:hidden"
+                    onClick={() => setMobileSidebarOpen(false)}
+                />
+            )}
+
+            {/* Sidebar */}
+            <aside className={`
+        fixed inset-y-0 left-0 z-50 w-80 bg-[#141414] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 border-r border-white/5
+        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+                <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
+                    <span className="font-bold text-lg text-white">Conteúdo</span>
+                    <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-gray-400">
+                        <X size={20} />
                     </button>
                 </div>
-            </header>
+                <div className="h-[calc(100vh-64px)] overflow-hidden">
+                    <LessonSidebar
+                        portalId={portalId}
+                        modules={modules}
+                        currentLessonId={lessonId}
+                        completedLessonIds={completedLessonIds}
+                    />
+                </div>
+            </aside>
 
-            <div className="flex flex-1 overflow-hidden relative">
-                {/* Main Content (Theater Mode) */}
-                <main className="flex-1 flex flex-col overflow-y-auto bg-[#0F0F12]">
-                    <div className="w-full bg-black shadow-2xl relative group">
-                        <div className="max-w-[1600px] mx-auto aspect-video">
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto h-screen relative">
+
+                {/* Top Bar (Mobile) */}
+                <div className="lg:hidden h-16 flex items-center px-4 border-b border-white/5 sticky top-0 bg-[#141414] z-30">
+                    <button onClick={() => setMobileSidebarOpen(true)} className="p-2 -ml-2 text-gray-400">
+                        <Menu size={24} />
+                    </button>
+                    <span className="ml-4 font-semibold truncate">{currentLesson.title}</span>
+                </div>
+
+                <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+
+                    {/* Video Section */}
+                    <div className="mb-8">
+                        {currentLesson.video_url ? (
                             <VideoPlayer
-                                videoUrl={currentLesson.video_url}
-                                title={currentLesson.title}
-                                lessonId={currentLesson.id}
-                                userId={user?.id}
-                                initialPosition={lastPosition}
-                                hasNextLesson={hasNext}
-                                onNextLesson={() => navigateLesson('next')}
-                                onComplete={() => {
-                                    // VideoPlayer completed trigger
-                                    if (!completedLessons.has(currentLesson.id)) {
-                                        toggleLessonCompletion();
-                                    }
-                                }}
+                                url={currentLesson.video_url}
+                                autoPlay={false}
+                                onEnded={handleLessonComplete}
                             />
+                        ) : (
+                            <div className="aspect-video bg-[#1f1f1f] rounded-xl flex items-center justify-center border border-white/10">
+                                <p className="text-gray-500">Esta aula não possui vídeo.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Navigation & Actions */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 pb-8 border-b border-white/5">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => prevLessonId && router.push(`/members/${portalId}/lesson/${prevLessonId}`)}
+                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                disabled={!prevLessonId}
+                            >
+                                <ChevronLeft size={16} /> Anterior
+                            </button>
+                            <button
+                                onClick={() => nextLessonId && router.push(`/members/${portalId}/lesson/${nextLessonId}`)}
+                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                disabled={!nextLessonId}
+                            >
+                                Próxima <ChevronRight size={16} />
+                            </button>
                         </div>
+
+                        <button
+                            onClick={handleLessonComplete}
+                            disabled={completedLessonIds.has(lessonId)}
+                            className={`
+                  flex items-center gap-2 px-6 py-2 rounded-full font-semibold transition-all
+                  ${completedLessonIds.has(lessonId)
+                                    ? 'bg-green-500/20 text-green-500 cursor-default'
+                                    : 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-red-600/30'}
+                `}
+                        >
+                            {completedLessonIds.has(lessonId) ? (
+                                <>
+                                    <CheckCircle size={18} />
+                                    Concluída
+                                </>
+                            ) : (
+                                'Marcar como Concluída'
+                            )}
+                        </button>
                     </div>
 
                     {/* Lesson Info */}
-                    <div className="flex-1 bg-[#0F0F12]">
-                        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
-                            <div className="flex flex-col lg:flex-row gap-8 items-start justify-between mb-8">
-                                <div className="space-y-4 flex-1">
-                                    <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-                                        {currentLesson.title}
-                                    </h1>
-                                    <div className="flex items-center gap-4 text-sm text-zinc-400">
-                                        {currentLesson.duration_minutes && (
-                                            <span className="flex items-center gap-1.5">
-                                                <MonitorPlay className="w-4 h-4" />
-                                                {currentLesson.duration_minutes} min
-                                            </span>
-                                        )}
-                                        <span className="flex items-center gap-1.5">
-                                            <CheckCircle2 className={`w-4 h-4 ${completedLessons.has(currentLesson.id) ? 'text-green-500' : 'text-zinc-600'}`} />
-                                            {completedLessons.has(currentLesson.id) ? 'Concluído' : 'Pendente'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={toggleLessonCompletion}
-                                    className={`
-                                        relative overflow-hidden
-                                        flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all shadow-lg
-                                        ${completedLessons.has(currentLesson.id)
-                                            ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/20'
-                                            : 'bg-pink-600 hover:bg-pink-700 text-white shadow-pink-500/20'}
-                                    `}
-                                >
-                                    <AnimatePresence>
-                                        {showConfetti && <Confetti />}
-                                    </AnimatePresence>
-
-                                    {completedLessons.has(currentLesson.id) ? (
-                                        <>
-                                            <CheckCircle2 className="w-5 h-5" />
-                                            Aula Concluída
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle2 className="w-5 h-5" />
-                                            Concluir Aula
-                                        </>
-                                    )}
-                                </motion.button>
+                    <div className="space-y-6">
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-white mb-4">{currentLesson.title}</h1>
+                            <div className="prose prose-invert max-w-none text-gray-300">
+                                <p className="whitespace-pre-wrap">{currentLesson.description}</p>
                             </div>
+                        </div>
 
-                            {/* Tabs */}
-                            <div className="border-b border-white/5 mb-8">
-                                <div className="flex gap-6 overflow-x-auto pb-px">
-                                    {[
-                                        { id: 'description' as TabType, label: 'Descrição' },
-                                        { id: 'files' as TabType, label: 'Materiais' },
-                                        { id: 'comments' as TabType, label: 'Comentários' },
-                                        { id: 'support' as TabType, label: 'Suporte' },
-                                    ].map((tab) => (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={`
-                                                pb-4 text-sm font-medium transition-colors relative whitespace-nowrap
-                                                ${activeTab === tab.id ? 'text-pink-500' : 'text-zinc-400 hover:text-zinc-200'}
-                                            `}
+                        {/* Attachments */}
+                        {currentLesson.attachments && currentLesson.attachments.length > 0 && (
+                            <div className="mt-8 pt-8 border-t border-white/5">
+                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                    <Download size={20} className="text-red-500" />
+                                    Materiais de Apoio
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {currentLesson.attachments.map((attachment, idx) => (
+                                        <a
+                                            key={idx}
+                                            href={attachment.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-3 p-4 rounded-lg bg-[#1f1f1f] hover:bg-[#252525] border border-white/5 hover:border-white/10 transition-all group"
                                         >
-                                            {tab.label}
-                                            {activeTab === tab.id && (
-                                                <motion.div
-                                                    layoutId="activeTab"
-                                                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-pink-500"
-                                                />
-                                            )}
-                                        </button>
+                                            <div className="p-2 rounded bg-white/5 group-hover:bg-red-500/10 transition-colors">
+                                                <FileText size={20} className="text-gray-400 group-hover:text-red-500" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-sm text-gray-200 group-hover:text-white truncate">
+                                                    {attachment.name || `Arquivo ${idx + 1}`}
+                                                </p>
+                                                <p className="text-xs text-gray-500">Clique para baixar</p>
+                                            </div>
+                                            <Download size={16} className="text-gray-500 group-hover:text-white" />
+                                        </a>
                                     ))}
                                 </div>
                             </div>
-
-                            <div className="min-h-[200px] mb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                {activeTab === 'description' && (
-                                    <div className="prose prose-invert max-w-none prose-p:text-zinc-400 prose-headings:text-white prose-a:text-pink-500">
-                                        <p>{currentLesson.description || "Nenhuma descrição disponível para esta aula."}</p>
-                                    </div>
-                                )}
-
-                                {activeTab === 'files' && (
-                                    <ComplementaryMaterialsTab files={[]} />
-                                )}
-
-                                {activeTab === 'comments' && (
-                                    <LessonComments lessonId={currentLesson.id} />
-                                )}
-
-                                {activeTab === 'support' && (
-                                    <div className="bg-zinc-900/50 rounded-xl p-8 text-center border border-white/5">
-                                        <Headphones className="w-12 h-12 mx-auto text-zinc-600 mb-4" />
-                                        <h3 className="text-lg font-medium text-white mb-2">Precisa de ajuda?</h3>
-                                        <p className="text-zinc-400 mb-6 max-w-md mx-auto">
-                                            Se você tiver alguma dúvida sobre esta aula, nossa equipe de suporte está pronta para ajudar.
-                                        </p>
-                                        <button className="px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-medium transition-colors">
-                                            Abrir Chamado
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        )}
                     </div>
-                </main>
-
-                {/* Sidebar */}
-                <LessonSidebar
-                    modules={modules}
-                    currentLessonId={currentLesson.id}
-                    currentModuleId={currentModuleId}
-                    completedLessons={completedLessons}
-                    onSelectLesson={(lesson, moduleId) => {
-                        router.push(`/members/${portalId}/lesson/${lesson.id}`);
-                    }}
-                    isOpen={sidebarOpen}
-                    onToggle={() => setSidebarOpen(!sidebarOpen)}
-                    portalName={portal.name}
-                    allowedModuleIds={allowedModuleIds}
-                />
-            </div>
+                </div>
+            </main>
         </div>
     );
 }

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import EventCard from '@/components/members/EventCard';
+import { Play, Clock, Info, ChevronRight, Lock } from 'lucide-react';
 
 interface Portal {
   id: string;
@@ -13,6 +14,7 @@ interface Portal {
   image_url: string | null;
   progress: number;
   last_accessed?: string;
+  total_lessons?: number;
 }
 
 export default function MemberDashboard() {
@@ -20,9 +22,10 @@ export default function MemberDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastCourse, setLastCourse] = useState<Portal | null>(null);
   const { user } = useAuth();
+  const [hoveredPortal, setHoveredPortal] = useState<string | null>(null);
 
-  // Placeholder para a imagem do herói
-  const heroImage = 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80';
+  // Background premium (Netflix style)
+  const heroImage = 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?q=80&w=2070&auto=format&fit=crop'; // Abstract dark premium background
 
   useEffect(() => {
     const loadPortals = async () => {
@@ -31,7 +34,7 @@ export default function MemberDashboard() {
       try {
         setLoading(true);
 
-        // Fetch only portals where user has active enrollment
+        // Fetch user enrollments (permissions will be used later for module filtering)
         const { data: enrollmentData, error: enrollmentError } = await supabase
           .from('enrollments')
           .select(`
@@ -57,10 +60,11 @@ export default function MemberDashboard() {
           return;
         }
 
-        // Get all content IDs for these portals to calculate progress
+        // Get IDs for progress calculation
         const portalIds = enrollmentData.map((e: any) => e.portal_id);
 
-        // Fetch modules and contents for these portals
+        // Fetch total modules/contents counts per portal
+        // Note: For a real large-scale app, this should be a view or RPC, but here client-side agg is fine for < 50 courses
         const { data: modulesData } = await supabase
           .from('modules')
           .select(`
@@ -71,7 +75,7 @@ export default function MemberDashboard() {
           .in('portal_id', portalIds)
           .eq('is_active', true);
 
-        // Fetch user's completed progress
+        // Fetch user's completed items
         const { data: progressData } = await supabase
           .from('progress')
           .select('content_id')
@@ -80,26 +84,25 @@ export default function MemberDashboard() {
 
         const completedContentIds = new Set((progressData || []).map(p => p.content_id));
 
-        // Build content count per portal
-        const portalContentMap = new Map<string, { total: number; completed: number }>();
+        // Aggregate stats
+        const portalStats = new Map<string, { total: number; completed: number }>();
+
         (modulesData || []).forEach((mod: any) => {
-          const portalId = mod.portal_id;
-          if (!portalContentMap.has(portalId)) {
-            portalContentMap.set(portalId, { total: 0, completed: 0 });
-          }
-          const portalStats = portalContentMap.get(portalId)!;
-          (mod.contents || []).forEach((content: any) => {
-            portalStats.total++;
-            if (completedContentIds.has(content.id)) {
-              portalStats.completed++;
-            }
+          const pid = mod.portal_id;
+          if (!portalStats.has(pid)) portalStats.set(pid, { total: 0, completed: 0 });
+
+          const stats = portalStats.get(pid)!;
+          const contentCount = mod.contents?.length || 0;
+          stats.total += contentCount;
+
+          (mod.contents || []).forEach((c: any) => {
+            if (completedContentIds.has(c.id)) stats.completed++;
           });
         });
 
-        // Format portals with real progress
         const formattedPortals = enrollmentData.map((enrollment: any) => {
           const portal = enrollment.portals as any;
-          const stats = portalContentMap.get(portal.id) || { total: 0, completed: 0 };
+          const stats = portalStats.get(portal.id) || { total: 0, completed: 0 };
           const progress = stats.total > 0
             ? Math.round((stats.completed / stats.total) * 100)
             : 0;
@@ -110,16 +113,18 @@ export default function MemberDashboard() {
             description: portal.description,
             image_url: portal.image_url,
             progress,
+            total_lessons: stats.total,
             created_at: portal.created_at
           };
         });
 
         setPortals(formattedPortals);
 
-        // Define o primeiro curso como último acessado (se houver)
-        if (formattedPortals.length > 0) {
-          setLastCourse(formattedPortals[0]);
-        }
+        // Simple logic for "Continue Watching": select the first one with progress > 0 and < 100, 
+        // or just the first available if none match.
+        const inProgress = formattedPortals.find(p => p.progress > 0 && p.progress < 100);
+        setLastCourse(inProgress || formattedPortals[0] || null);
+
       } catch (error) {
         console.error('Erro ao buscar portais:', error);
       } finally {
@@ -127,142 +132,149 @@ export default function MemberDashboard() {
       }
     };
 
-    if (user) {
-      loadPortals();
-    }
+    if (user) loadPortals();
   }, [user]);
 
-  // Componente de loading
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-[#141414]">
+        <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16">
-      {/* Hero Section */}
-      <div
-        className="relative h-96 flex items-center justify-center bg-cover bg-center"
-        style={{
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${heroImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div className="text-center text-white max-w-4xl px-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Bem-vindo(a) de volta, {user?.email?.split('@')[0]}!
-          </h1>
-          <p className="text-xl mb-8">Continue aprendendo e aprimorando suas habilidades</p>
+    <div className="min-h-screen bg-[#141414] text-white selection:bg-red-900 selection:text-white pb-20">
 
-          {lastCourse && (
-            <Link
-              href={`/members/${lastCourse.id}`}
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-8 transition-colors"
-            >
-              Continuar {lastCourse.name}
-            </Link>
-          )}
+      {/* Hero / Highlight Section */}
+      <div className="relative w-full h-[60vh] md:h-[70vh]">
+        <div className="absolute inset-0">
+          <img
+            src={heroImage}
+            alt="Hero Background"
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#141414] via-[#141414]/40 to-transparent" />
+        </div>
+
+        <div className="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
+          <span className="text-red-500 font-bold tracking-widest text-sm mb-4 uppercase">
+            Área do Aluno
+          </span>
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight leading-tight max-w-3xl">
+            Bem-vindo de volta,<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+              {user?.email?.split('@')[0]}
+            </span>
+          </h1>
+          <p className="text-gray-300 text-lg md:text-xl max-w-2xl mb-8 line-clamp-3">
+            Continue sua jornada de aprendizado. Você tem {portals.length} curso(s) disponíveis para assistir agora mesmo.
+          </p>
+
+          <div className="flex flex-wrap gap-4">
+            {lastCourse && (
+              <Link
+                href={`/members/${lastCourse.id}`}
+                className="flex items-center space-x-3 bg-white text-black px-8 py-3 rounded hover:bg-gray-200 transition-colors font-semibold text-lg"
+              >
+                <Play className="w-6 h-6 fill-current" />
+                <span>
+                  {lastCourse.progress > 0 ? 'Continuar Assistindo' : 'Começar Agora'}
+                </span>
+              </Link>
+            )}
+
+            <button className="flex items-center space-x-3 bg-gray-600/60 backdrop-blur-sm text-white px-8 py-3 rounded hover:bg-gray-600/80 transition-colors font-semibold text-lg">
+              <Info className="w-6 h-6" />
+              <span>Mais Informações</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Cursos em Destaque */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <EventCard />
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Meus Cursos</h2>
+      {/* Content Section */}
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-20">
 
-          {portals.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100 px-4">
-              <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Nenhum curso disponível</h3>
-              <p className="text-gray-500 max-w-md mx-auto mb-6">
-                Você ainda não possui acesso a nenhum curso. Se você acabou de se matricular, aguarde a liberação ou entre em contato com o suporte.
-              </p>
-              <a
-                href="https://wa.me/5511999999999" // Replace with actual support link
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
-              >
-                Falar com o Suporte
-              </a>
+        {/* Optional Events/Banners Row */}
+        {/* <div className="mb-12">
+           <EventCard />
+        </div> */}
+
+        <h2 className="text-2xl font-bold text-white mb-6 pl-2 border-l-4 border-red-600">
+          Meus Cursos
+        </h2>
+
+        {portals.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center bg-[#1f1f1f] rounded-lg border border-white/5">
+            <div className="bg-white/5 p-6 rounded-full mb-6">
+              <Lock className="w-12 h-12 text-gray-400" />
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {portals.map((portal) => (
-                <div
-                  key={portal.id}
-                  className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col h-full"
-                >
-                  <Link href={`/members/${portal.id}`} className="block">
-                    <div className="h-40 bg-gray-200 relative">
-                      {portal.image_url ? (
-                        <img
-                          src={portal.image_url}
-                          alt={portal.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-                          <span className="text-gray-400">
-                            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                            </svg>
-                          </span>
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
-                        <span className="text-xs text-white font-medium">
-                          {portal.progress}% concluído
-                        </span>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                          <div
-                            className="bg-indigo-600 h-1.5 rounded-full"
-                            style={{ width: `${portal.progress}%` }}
-                          ></div>
-                        </div>
-                      </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Sem cursos disponíveis</h3>
+            <p className="text-gray-400 max-w-md mx-auto">
+              Você ainda não possui matrículas ativas. Entre em contato com seu administrador para liberar seu acesso.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {portals.map((portal) => (
+              <Link
+                key={portal.id}
+                href={`/members/${portal.id}`}
+                className="group relative flex flex-col transition-all duration-300 ease-in-out hover:z-10 hover:scale-105"
+                onMouseEnter={() => setHoveredPortal(portal.id)}
+                onMouseLeave={() => setHoveredPortal(null)}
+              >
+                {/* Image Card */}
+                <div className="relative aspect-video rounded-md overflow-hidden bg-[#242424] shadow-lg group-hover:shadow-2xl ring-1 ring-white/5 group-hover:ring-white/20">
+                  {portal.image_url ? (
+                    <img
+                      src={portal.image_url}
+                      alt={portal.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:saturate-150"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                      <Play className="w-12 h-12 text-white/20" />
                     </div>
-                  </Link>
+                  )}
 
-                  <div className="p-4 flex-1 flex flex-col">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                      <Link href={`/members/${portal.id}`} className="hover:text-indigo-600 transition-colors">
-                        {portal.name}
-                      </Link>
-                    </h3>
+                  {/* Progress Bar (Always visible at bottom) */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700/50">
+                    <div
+                      className="h-full bg-red-600"
+                      style={{ width: `${portal.progress}%` }}
+                    />
+                  </div>
 
-                    {portal.description && (
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">
-                        {portal.description}
-                      </p>
-                    )}
-
-                    <div className="mt-auto">
-                      <Link
-                        href={`/members/${portal.id}`}
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors inline-flex items-center"
-                      >
-                        {portal.progress > 0 ? 'Continuar Assistindo' : 'Acessar Curso'}
-                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
+                  {/* Overlay on hover */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="bg-white/20 backdrop-blur-sm p-3 rounded-full">
+                      <Play className="w-6 h-6 text-white fill-current" />
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+
+                {/* Info (Appears below) */}
+                <div className="mt-3 px-1">
+                  <h3 className="text-base font-semibold text-gray-100 group-hover:text-white line-clamp-1">
+                    {portal.name}
+                  </h3>
+                  <div className="flex items-center space-x-2 text-xs text-gray-400 mt-1">
+                    <span className="text-green-500 font-medium">{portal.progress}% Concluído</span>
+                    <span>•</span>
+                    <span>{portal.total_lessons} Aulas</span>
+                  </div>
+                  {portal.description && (
+                    <p className="text-xs text-gray-500 mt-2 line-clamp-2 h-8 hidden group-hover:block transition-all">
+                      {portal.description}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
