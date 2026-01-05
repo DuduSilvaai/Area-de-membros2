@@ -22,7 +22,7 @@ interface Comment {
     content_id: string;
     text: string;
     created_at: string;
-    parent_comment_id: string | null;
+    parent_id: string | null;
     profiles: {
         full_name: string | null;
         avatar_url: string | null;
@@ -91,7 +91,12 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     }
                 }
 
-                setComments(data as Comment[]);
+                const formattedComments = data.map((c: any) => ({
+                    ...c,
+                    profiles: Array.isArray(c.profiles) ? c.profiles[0] : c.profiles
+                }));
+
+                setComments(formattedComments as Comment[]);
             } catch (error) {
                 console.error('Error fetching comments:', error);
             } finally {
@@ -132,7 +137,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     content_id: lessonId,
                     user_id: user.id,
                     text: newComment,
-                    parent_comment_id: null
+                    parent_id: null
                 });
 
             if (error) throw error;
@@ -156,7 +161,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     content_id: lessonId,
                     user_id: user.id,
                     text: replyText,
-                    parent_comment_id: parentId
+                    parent_id: parentId
                 });
 
             if (error) throw error;
@@ -242,16 +247,16 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     };
 
     // Filter root comments
-    const rootComments = comments.filter(c => !c.parent_comment_id);
+    const rootComments = comments.filter(c => !c.parent_id);
 
     // Group replies
-    const getReplies = (parentId: string) => comments.filter(c => c.parent_comment_id === parentId).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const getReplies = (parentId: string) => comments.filter(c => c.parent_id === parentId).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* New Comment Form */}
             <form onSubmit={handleSubmit} className="mb-8">
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                <label className="block text-sm font-medium mb-2 text-gray-300">
                     Deixe sua dúvida ou comentário
                 </label>
                 <div className="flex gap-4">
@@ -266,19 +271,13 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             placeholder="Escreva algo..."
-                            className="w-full min-h-[100px] resize-y border-0 focus-visible:ring-1"
-                            style={{
-                                backgroundColor: 'var(--bg-canvas)',
-                                color: 'var(--text-primary)',
-                                borderColor: 'var(--border-color)'
-                            }}
+                            className="w-full min-h-[100px] resize-y border border-white/10 focus-visible:ring-1 bg-[#141417] text-white placeholder:text-gray-500"
                         />
                         <div className="flex justify-end">
                             <Button
                                 type="submit"
                                 disabled={submitting || !newComment.trim()}
-                                className="gap-2"
-                            // Using style to override button variants if needed, or rely on tailwind classes if they map to vars
+                                className="gap-2 bg-pink-600 hover:bg-pink-700 text-white"
                             >
                                 <Send className="w-4 h-4" />
                                 Enviar Comentário
@@ -291,12 +290,11 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
             {/* Comments List */}
             <div className="space-y-6">
                 {loading && comments.length === 0 ? (
-                    <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
+                    <div className="text-center py-8 text-gray-400">
                         Carregando comentários...
                     </div>
                 ) : rootComments.length === 0 ? (
-                    <div className="text-center py-8 border rounded-lg border-dashed"
-                        style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}>
+                    <div className="text-center py-8 border rounded-lg border-dashed border-white/10 text-gray-400">
                         <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
                         <p>Nenhum comentário ainda. Seja o primeiro a comentar!</p>
                     </div>
@@ -311,15 +309,15 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                 />
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                                        <span className="font-bold text-sm text-gray-200">
                                             {comment.profiles?.full_name || 'Usuário Desconhecido'}
                                         </span>
-                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                        <span className="text-xs text-gray-500">
                                             • {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
                                         </span>
                                     </div>
 
-                                    <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--text-secondary)' }}>
+                                    <p className="text-sm leading-relaxed mb-3 text-gray-300">
                                         {comment.text}
                                     </p>
 
@@ -352,21 +350,21 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
                                     {/* Reply Form */}
                                     {replyingTo === comment.id && (
-                                        <div className="mt-4 pl-4 border-l-2" style={{ borderColor: 'var(--border-color)' }}>
+                                        <div className="mt-4 pl-4 border-l-2 border-white/10">
                                             <div className="flex gap-3">
                                                 <Textarea
                                                     value={replyText}
                                                     onChange={(e) => setReplyText(e.target.value)}
                                                     placeholder="Escreva sua resposta..."
-                                                    className="min-h-[80px] text-sm bg-transparent"
+                                                    className="min-h-[80px] text-sm bg-[#141417] text-white border-white/10"
                                                     autoFocus
-                                                    style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-canvas)' }}
                                                 />
                                                 <div className="flex flex-col gap-2">
                                                     <Button
                                                         size="sm"
                                                         onClick={() => handleReply(comment.id)}
                                                         disabled={submitting || !replyText.trim()}
+                                                        className="bg-pink-600 hover:bg-pink-700 text-white"
                                                     >
                                                         Responder
                                                     </Button>
@@ -374,6 +372,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                                         size="sm"
                                                         variant="ghost"
                                                         onClick={() => setReplyingTo(null)}
+                                                        className="text-gray-400 hover:text-white"
                                                     >
                                                         Cancelar
                                                     </Button>
@@ -384,7 +383,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
                                     {/* Replies */}
                                     {getReplies(comment.id).length > 0 && (
-                                        <div className="mt-4 pl-4 space-y-4 border-l-2" style={{ borderColor: 'var(--border-subtle)' }}>
+                                        <div className="mt-4 pl-4 space-y-4 border-l-2 border-white/5">
                                             {getReplies(comment.id).map(reply => (
                                                 <div key={reply.id} className="flex gap-3">
                                                     <div className="w-8 h-8">
@@ -395,14 +394,14 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <span className="font-semibold text-xs" style={{ color: 'var(--text-primary)' }}>
+                                                            <span className="font-bold text-xs text-gray-200">
                                                                 {reply.profiles?.full_name || 'Usuário Desconhecido'}
                                                             </span>
-                                                            <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+                                                            <span className="text-[10px] text-gray-500">
                                                                 • {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: ptBR })}
                                                             </span>
                                                         </div>
-                                                        <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                                                        <p className="text-sm mb-2 text-gray-300">
                                                             {reply.text}
                                                         </p>
                                                         <div className="flex items-center gap-4 text-xs">

@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import LessonSidebar, { Module, Lesson } from '@/components/members/LessonSidebar';
 import VideoPlayer from '@/components/members/VideoPlayer';
-import { CheckCircle, Download, ChevronLeft, ChevronRight, Menu, X, FileText } from 'lucide-react';
+import LessonComments from '@/components/members/LessonComments';
+import { CheckCircle, Download, ChevronLeft, ChevronRight, Menu, X, FileText, Home } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 interface LessonContent {
     id: string;
@@ -22,9 +24,11 @@ export default function LessonPage({ params }: { params: { portalId: string; les
     const { portalId, lessonId } = params;
     const router = useRouter();
     const { user } = useAuth();
+    const topRef = useRef<HTMLDivElement>(null);
 
     const [loading, setLoading] = useState(true);
     const [modules, setModules] = useState<Module[]>([]);
+    const [courseTitle, setCourseTitle] = useState('');
     const [currentLesson, setCurrentLesson] = useState<LessonContent | null>(null);
     const [completedLessonIds, setCompletedLessonIds] = useState<Set<string>>(new Set());
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -42,7 +46,7 @@ export default function LessonPage({ params }: { params: { portalId: string; les
                 // 1. Verify Enrollment & Permissions
                 const { data: enrollment, error: enrollError } = await supabase
                     .from('enrollments')
-                    .select('permissions')
+                    .select('permissions, portals(name)')
                     .eq('portal_id', portalId)
                     .eq('user_id', user.id)
                     .eq('is_active', true)
@@ -52,6 +56,10 @@ export default function LessonPage({ params }: { params: { portalId: string; les
                     toast.error('Você não tem acesso a este curso.');
                     router.push('/members');
                     return;
+                }
+
+                if (enrollment.portals && !Array.isArray(enrollment.portals)) {
+                    setCourseTitle(enrollment.portals.name);
                 }
 
                 // 2. Fetch Modules & Lessons (Flat fetch then restructure)
@@ -114,6 +122,13 @@ export default function LessonPage({ params }: { params: { portalId: string; les
 
         if (user) loadCourseData();
     }, [user, portalId, lessonId, router]);
+
+    // Scroll to top on lesson change
+    useEffect(() => {
+        if (!loading && currentLesson) {
+            topRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [lessonId, loading, currentLesson]);
 
 
     // Helper: Build Tree
@@ -181,6 +196,8 @@ export default function LessonPage({ params }: { params: { portalId: string; les
                     router.push(`/members/${portalId}/lesson/${nextLessonId}`);
                 }, 3000);
                 toast.info('Próxima aula em 3 segundos...');
+            } else {
+                toast.success('Curso finalizado! Parabéns!');
             }
 
         } catch (err) {
@@ -189,154 +206,205 @@ export default function LessonPage({ params }: { params: { portalId: string; les
     };
 
     if (loading) {
-        return <div className="min-h-screen bg-[#141414] flex items-center justify-center text-white">Carregando aula...</div>;
+        return <div className="min-h-screen bg-[#0F0F12] flex items-center justify-center text-white">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-gray-400">Carregando aula...</p>
+            </div>
+        </div>;
     }
 
     if (!currentLesson) return null;
 
     return (
-        <div className="flex bg-[#141414] min-h-screen text-white overflow-hidden">
+        <div className="flex flex-col h-screen bg-[#0F0F12] text-white overflow-hidden">
 
-            {/* Mobile Sidebar Toggle Overlay */}
-            {mobileSidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/80 z-40 lg:hidden"
-                    onClick={() => setMobileSidebarOpen(false)}
-                />
-            )}
-
-            {/* Sidebar */}
-            <aside className={`
-        fixed inset-y-0 left-0 z-50 w-80 bg-[#141414] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 border-r border-white/5
-        ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-                <div className="h-16 flex items-center justify-between px-4 border-b border-white/5">
-                    <span className="font-bold text-lg text-white">Conteúdo</span>
-                    <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-gray-400">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="h-[calc(100vh-64px)] overflow-hidden">
-                    <LessonSidebar
-                        portalId={portalId}
-                        modules={modules}
-                        currentLessonId={lessonId}
-                        completedLessonIds={completedLessonIds}
-                    />
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="flex-1 overflow-y-auto h-screen relative">
-
-                {/* Top Bar (Mobile) */}
-                <div className="lg:hidden h-16 flex items-center px-4 border-b border-white/5 sticky top-0 bg-[#141414] z-30">
-                    <button onClick={() => setMobileSidebarOpen(true)} className="p-2 -ml-2 text-gray-400">
-                        <Menu size={24} />
-                    </button>
-                    <span className="ml-4 font-semibold truncate">{currentLesson.title}</span>
+            {/* Header / Breadcrumb */}
+            <header className="h-16 flex-shrink-0 border-b border-white/5 bg-[#0F0F12] flex items-center justify-between px-4 lg:px-8 z-20">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Link href="/members" className="hover:text-white transition-colors flex items-center gap-1">
+                        <Home size={16} /> Meus Cursos
+                    </Link>
+                    <ChevronRight size={14} />
+                    <span className="text-gray-200 font-medium truncate max-w-[150px] sm:max-w-none">{courseTitle}</span>
+                    <ChevronRight size={14} />
+                    <span className="text-white font-medium truncate hidden sm:inline-block">{currentLesson.title}</span>
                 </div>
 
-                <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                <button
+                    onClick={() => setMobileSidebarOpen(true)}
+                    className="lg:hidden p-2 text-gray-400 hover:text-white"
+                >
+                    <Menu size={24} />
+                </button>
+            </header>
 
-                    {/* Video Section */}
-                    <div className="mb-8">
-                        {currentLesson.video_url ? (
-                            <VideoPlayer
-                                url={currentLesson.video_url}
-                                autoPlay={false}
-                                onEnded={handleLessonComplete}
-                            />
-                        ) : (
-                            <div className="aspect-video bg-[#1f1f1f] rounded-xl flex items-center justify-center border border-white/10">
-                                <p className="text-gray-500">Esta aula não possui vídeo.</p>
-                            </div>
-                        )}
-                    </div>
+            <div className="flex flex-1 overflow-hidden relative">
 
-                    {/* Navigation & Actions */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 pb-8 border-b border-white/5">
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => prevLessonId && router.push(`/members/${portalId}/lesson/${prevLessonId}`)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                                disabled={!prevLessonId}
-                            >
-                                <ChevronLeft size={16} /> Anterior
-                            </button>
-                            <button
-                                onClick={() => nextLessonId && router.push(`/members/${portalId}/lesson/${nextLessonId}`)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                                disabled={!nextLessonId}
-                            >
-                                Próxima <ChevronRight size={16} />
-                            </button>
-                        </div>
+                {/* Main Content Area */}
+                <main className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#0F0F12]" ref={topRef}>
+                    <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
 
-                        <button
-                            onClick={handleLessonComplete}
-                            disabled={completedLessonIds.has(lessonId)}
-                            className={`
-                  flex items-center gap-2 px-6 py-2 rounded-full font-semibold transition-all
-                  ${completedLessonIds.has(lessonId)
-                                    ? 'bg-green-500/20 text-green-500 cursor-default'
-                                    : 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-red-600/30'}
-                `}
-                        >
-                            {completedLessonIds.has(lessonId) ? (
-                                <>
-                                    <CheckCircle size={18} />
-                                    Concluída
-                                </>
+                        {/* Video Player Container */}
+                        <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/5 mb-8 relative group">
+                            {currentLesson.video_url ? (
+                                <VideoPlayer
+                                    url={currentLesson.video_url}
+                                    autoPlay={false} // Requirement said manual start usually, but "Proxima aula" suggests auto. respecting previous default false.
+                                    onEnded={handleLessonComplete}
+                                />
                             ) : (
-                                'Marcar como Concluída'
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <p className="text-gray-500">Esta aula não possui vídeo.</p>
+                                </div>
                             )}
-                        </button>
-                    </div>
-
-                    {/* Lesson Info */}
-                    <div className="space-y-6">
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-white mb-4">{currentLesson.title}</h1>
-                            <div className="prose prose-invert max-w-none text-gray-300">
-                                <p className="whitespace-pre-wrap">{currentLesson.description}</p>
-                            </div>
                         </div>
 
-                        {/* Attachments */}
-                        {currentLesson.attachments && currentLesson.attachments.length > 0 && (
-                            <div className="mt-8 pt-8 border-t border-white/5">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                    <Download size={20} className="text-red-500" />
-                                    Materiais de Apoio
-                                </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {currentLesson.attachments.map((attachment, idx) => (
-                                        <a
-                                            key={idx}
-                                            href={attachment.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-3 p-4 rounded-lg bg-[#1f1f1f] hover:bg-[#252525] border border-white/5 hover:border-white/10 transition-all group"
-                                        >
-                                            <div className="p-2 rounded bg-white/5 group-hover:bg-red-500/10 transition-colors">
-                                                <FileText size={20} className="text-gray-400 group-hover:text-red-500" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-sm text-gray-200 group-hover:text-white truncate">
-                                                    {attachment.name || `Arquivo ${idx + 1}`}
-                                                </p>
-                                                <p className="text-xs text-gray-500">Clique para baixar</p>
-                                            </div>
-                                            <Download size={16} className="text-gray-500 group-hover:text-white" />
-                                        </a>
-                                    ))}
+                        {/* Title & Actions Row */}
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 border-b border-white/5 pb-8">
+                            <div className="flex-1">
+                                <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{currentLesson.title}</h1>
+                                {/* Optional: Add module name here if available */}
+                            </div>
+
+                            <div className="flex flex-col gap-3 flex-shrink-0 w-full md:w-auto">
+                                <button
+                                    onClick={handleLessonComplete}
+                                    disabled={completedLessonIds.has(lessonId)}
+                                    className={`
+                                      flex items-center justify-center gap-2 px-8 py-3 rounded-full font-bold transition-all text-sm uppercase tracking-wide
+                                      ${completedLessonIds.has(lessonId)
+                                            ? 'bg-green-500/10 text-green-500 cursor-default border border-green-500/20'
+                                            : 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-red-600/20'}
+                                    `}
+                                >
+                                    {completedLessonIds.has(lessonId) ? (
+                                        <>
+                                            <CheckCircle size={18} />
+                                            Aula Concluída
+                                        </>
+                                    ) : (
+                                        'Marcar como Concluída'
+                                    )}
+                                </button>
+
+                                <div className="flex items-center justify-center gap-2">
+                                    <button
+                                        onClick={() => prevLessonId && router.push(`/members/${portalId}/lesson/${prevLessonId}`)}
+                                        className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+                                        disabled={!prevLessonId}
+                                        title="Aula Anterior"
+                                    >
+                                        <ChevronLeft size={24} />
+                                    </button>
+                                    <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Navegar</span>
+                                    <button
+                                        onClick={() => nextLessonId && router.push(`/members/${portalId}/lesson/${nextLessonId}`)}
+                                        className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+                                        disabled={!nextLessonId}
+                                        title="Próxima Aula"
+                                    >
+                                        <ChevronRight size={24} />
+                                    </button>
                                 </div>
                             </div>
-                        )}
+                        </div>
+
+                        {/* Description & Materials Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                            {/* Description */}
+                            <div className="lg:col-span-2 space-y-6">
+                                <h3 className="text-lg font-semibold text-white">Sobre a aula</h3>
+                                <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
+                                    {currentLesson.description ? (
+                                        <p className="whitespace-pre-wrap">{currentLesson.description}</p>
+                                    ) : (
+                                        <p className="text-gray-500 italic">Sem descrição.</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Materials */}
+                            <div className="lg:col-span-1">
+                                <div className="bg-[#141417] rounded-xl border border-white/5 p-6 sticky top-6">
+                                    <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                                        <Download size={18} className="text-red-500" />
+                                        Materiais Complementares
+                                    </h3>
+
+                                    {currentLesson.attachments && currentLesson.attachments.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {currentLesson.attachments.map((attachment, idx) => (
+                                                <a
+                                                    key={idx}
+                                                    href={attachment.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all group"
+                                                >
+                                                    <div className="p-2 rounded bg-[#0F0F12] text-gray-400 group-hover:text-red-500 transition-colors">
+                                                        <FileText size={18} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-sm text-gray-200 group-hover:text-white truncate">
+                                                            {attachment.name || `Arquivo ${idx + 1}`}
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-500 uppercase tracking-wide">Download</p>
+                                                    </div>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-6">
+                                            <p className="text-sm text-gray-600">Nenhum material disponível.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Comments Section */}
+                        <div className="border-t border-white/5 pt-8">
+                            <h3 className="text-xl font-bold text-white mb-6">Comentários e Dúvidas</h3>
+                            <LessonComments lessonId={lessonId} />
+                        </div>
+
                     </div>
-                </div>
-            </main>
+                </main>
+
+                {/* Right Sidebar */}
+                <aside className={`
+                    fixed inset-y-0 right-0 z-40 w-80 bg-[#111114] border-l border-white/5 
+                    transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
+                    ${mobileSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
+                `}>
+                    <div className="h-full flex flex-col">
+                        <div className="h-16 flex-shrink-0 flex items-center justify-between px-4 border-b border-white/5 bg-[#111114]">
+                            <span className="font-bold text-sm uppercase tracking-wider text-gray-400">Conteúdo do Curso</span>
+                            <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-gray-400">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden">
+                            <LessonSidebar
+                                portalId={portalId}
+                                modules={modules}
+                                currentLessonId={lessonId}
+                                completedLessonIds={completedLessonIds}
+                            />
+                        </div>
+                    </div>
+                </aside>
+
+                {/* Mobile Sidebar Overlay */}
+                {mobileSidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black/80 z-30 lg:hidden backdrop-blur-sm"
+                        onClick={() => setMobileSidebarOpen(false)}
+                    />
+                )}
+            </div>
         </div>
     );
 }

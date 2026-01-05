@@ -137,7 +137,7 @@ export default function LessonSidebar({
     onMobileClose
 }: LessonSidebarProps) {
     return (
-        <div className="h-full flex flex-col bg-[#141414] border-r border-white/5 w-full">
+        <div className="h-full flex flex-col bg-[#111114] w-full">
             <div className="p-4 border-b border-white/5">
                 <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Conteúdo do Curso</h2>
             </div>

@@ -16,7 +16,9 @@ interface AccessManagerProps {
 
 interface UserAccessItem {
     userId: string;
-    email: string; // or name/identifier
+    displayEmail: string;
+    fullName: string;
+    avatarUrl?: string;
     hasAccess: boolean;
     enrollmentId?: string;
     permissions?: any; // The full permission json
@@ -84,7 +86,9 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
                     const enrollment = enrollmentsMap.get(p.id);
                     return {
                         userId: p.id,
-                        email: p.full_name || p.email || `User ${p.id.substring(0, 6)}`,
+                        displayEmail: p.email,
+                        fullName: p.full_name || '',
+                        avatarUrl: p.avatar_url,
                         hasAccess: !!enrollment,
                         enrollmentId: enrollment?.id,
                         permissions: enrollment?.permissions || {
@@ -116,7 +120,9 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
 
                     return {
                         userId: e.user_id,
-                        email: profile?.full_name || profile?.email || `Alun@ ${e.user_id.substring(0, 6)}`,
+                        displayEmail: profile?.email || 'Sem email',
+                        fullName: profile?.full_name || '',
+                        avatarUrl: profile?.avatar_url,
                         hasAccess: hasAccess,
                         enrollmentId: e.id,
                         permissions: perms
@@ -283,10 +289,24 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
     };
 
     const filteredUsers = users.filter(u =>
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        u.displayEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.fullName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const activeCount = users.filter(u => u.hasAccess).length;
+
+    // Helper to get initials
+    const getInitials = (name: string, email: string) => {
+        if (name) {
+            return name
+                .split(' ')
+                .map(n => n[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase();
+        }
+        return email.substring(0, 2).toUpperCase();
+    };
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-[#1A1A1E] rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm transition-colors">
@@ -295,7 +315,7 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
                 <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-zinc-500" />
                     <Input
-                        placeholder="Buscar usuário..."
+                        placeholder="Buscar por nome ou email..."
                         className="pl-9 bg-gray-50 dark:bg-zinc-900 border-gray-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-pink-500/20"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
@@ -360,8 +380,9 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
                             onClick={() => toggleUser(user.userId)}
                         >
                             <div className="flex items-center gap-3">
+                                {/* Checkbox Indicator */}
                                 <div className={`
-                                    w-5 h-5 rounded border flex items-center justify-center transition-colors
+                                    w-5 h-5 rounded border flex items-center justify-center transition-colors shrink-0
                                     ${user.hasAccess
                                         ? 'bg-pink-500 border-pink-500 text-white'
                                         : 'border-gray-300 dark:border-zinc-600 bg-white dark:bg-transparent group-hover:border-gray-400'
@@ -369,16 +390,33 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
                                 `}>
                                     {user.hasAccess && <CheckCircle2 className="w-3.5 h-3.5" />}
                                 </div>
-                                <div>
-                                    <p className={`text-sm font-medium ${user.hasAccess ? 'text-pink-700 dark:text-pink-100' : 'text-zinc-900 dark:text-white'}`}>
-                                        {user.email}
-                                    </p>
-                                    <p className="text-xs text-gray-400 dark:text-zinc-500 font-mono">ID: {user.userId.substring(0, 8)}...</p>
+
+                                {/* User Info */}
+                                <div className="flex items-center gap-3">
+                                    {/* Avatar */}
+                                    <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-zinc-700 overflow-hidden flex items-center justify-center shrink-0 border border-gray-100 dark:border-white/5">
+                                        {user.avatarUrl ? (
+                                            <img src={user.avatarUrl} alt={user.fullName || 'User'} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                                                {getInitials(user.fullName, user.displayEmail)}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <p className={`text-sm font-semibold capitalize ${user.hasAccess ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                                            {user.fullName || (user.displayEmail.split('@')[0])}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-zinc-500">
+                                            {user.displayEmail}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
                             {user.permissions?.access_all_modules && context !== 'portal' && (
-                                <span className="text-xs bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-500 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-500/20">
+                                <span className="text-xs bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-500 px-2 py-1 rounded border border-emerald-200 dark:border-emerald-500/20 shrink-0">
                                     Acesso Total
                                 </span>
                             )}
