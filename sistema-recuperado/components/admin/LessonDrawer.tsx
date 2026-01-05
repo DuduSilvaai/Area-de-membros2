@@ -366,8 +366,14 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
                                         />
 
                                         <div
-                                            className="bg-white dark:bg-transparent border border-gray-200 dark:border-zinc-700 rounded-xl p-6 flex flex-col items-center justify-center min-h-[200px] border-dashed group hover:border-pink-500/50 transition-colors cursor-pointer"
+                                            className={`bg-white dark:bg-transparent border border-gray-200 dark:border-zinc-700 rounded-xl p-6 flex flex-col items-center justify-center min-h-[200px] border-dashed transition-colors ${!formData.video_url
+                                                ? 'group hover:border-pink-500/50 cursor-pointer'
+                                                : ''
+                                                }`}
                                             onClick={(e) => {
+                                                // Prevent upload if video exists
+                                                if (formData.video_url) return;
+
                                                 // Only trigger if clicking container, not children buttons
                                                 if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.upload-trigger')) {
                                                     triggerFileUpload();
@@ -382,20 +388,49 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
                                             ) : formData.video_url ? (
                                                 <div className="w-full space-y-4 cursor-default" onClick={(e) => e.stopPropagation()}>
                                                     <div className="aspect-video bg-black rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 relative group/video">
-                                                        {formData.content_type === 'external_video' || formData.video_url.includes('youtube') || formData.video_url.includes('vimeo') ? (
-                                                            <iframe
-                                                                src={formData.video_url.replace('watch?v=', 'embed/')}
-                                                                className="w-full h-full"
-                                                                frameBorder="0"
-                                                                allowFullScreen
-                                                            />
-                                                        ) : (
-                                                            <video
-                                                                src={formData.video_url}
-                                                                controls
-                                                                className="w-full h-full object-contain bg-black"
-                                                            />
-                                                        )}
+                                                        {(() => {
+                                                            const getEmbedUrl = (url: string) => {
+                                                                if (!url) return '';
+
+                                                                // Handle YouTube
+                                                                const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+                                                                if (ytMatch && ytMatch[1]) {
+                                                                    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+                                                                }
+
+                                                                // Handle Vimeo
+                                                                const vimeoMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
+                                                                if (vimeoMatch && vimeoMatch[1]) {
+                                                                    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+                                                                }
+
+                                                                // Return original if likely an embed link already or unknown
+                                                                return url;
+                                                            };
+
+                                                            const embedUrl = getEmbedUrl(formData.video_url || '');
+                                                            const isEmbeddable = embedUrl.includes('youtube.com/embed') || embedUrl.includes('player.vimeo.com');
+
+                                                            if (formData.content_type === 'external_video' || isEmbeddable) {
+                                                                return (
+                                                                    <iframe
+                                                                        src={embedUrl}
+                                                                        className="w-full h-full"
+                                                                        frameBorder="0"
+                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                                        allowFullScreen
+                                                                    />
+                                                                );
+                                                            } else {
+                                                                return (
+                                                                    <video
+                                                                        src={formData.video_url || ''}
+                                                                        controls
+                                                                        className="w-full h-full object-contain bg-black"
+                                                                    />
+                                                                );
+                                                            }
+                                                        })()}
 
                                                         <div className="absolute top-2 right-2 bg-black/80 text-xs px-2 py-1 rounded text-white overflow-hidden max-w-[200px] truncate">
                                                             {formData.video_url}
