@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, Settings, Palette, Headphones, Upload, X, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Settings, Palette, Headphones, Upload, X, Sparkles, AlertTriangle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/UIComponents';
 import { getPortal, updatePortalSettings, getPresignedUrl } from '@/app/(admin)/portals/actions';
 import { toast } from 'sonner';
+import { DeleteConfirmationModal } from '@/components/admin/DeleteConfirmationModal';
+import { createClient } from '@/lib/supabase/client';
 
-type TabType = 'branding' | 'info' | 'support';
+type TabType = 'branding' | 'info' | 'support' | 'danger';
 
 interface PortalSettings {
     primary_color?: string;
@@ -28,115 +30,7 @@ interface Portal {
     settings: PortalSettings | null;
 }
 
-// Helper Components
-const ImageUploader = ({
-    label,
-    helpText,
-    imageUrl,
-    setImageUrl,
-    uploading,
-    setUploading,
-    aspectRatio = 'auto',
-    previewHeight = 'h-24',
-}: {
-    label: string;
-    helpText?: string;
-    imageUrl: string;
-    setImageUrl: (url: string) => void;
-    uploading: boolean;
-    setUploading: (val: boolean) => void;
-    aspectRatio?: string;
-    previewHeight?: string;
-}) => (
-    <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            {label}
-        </label>
-        <div className="flex items-start gap-4">
-            {imageUrl ? (
-                <div className="relative group">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                        src={imageUrl}
-                        alt={label}
-                        className={`${previewHeight} w-auto max-w-xs object-contain rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 p-2`}
-                    />
-                    <button
-                        onClick={() => setImageUrl('')}
-                        className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-lg transition-transform hover:scale-110"
-                    >
-                        <X className="w-3 h-3" />
-                    </button>
-                </div>
-            ) : (
-                <label className={`flex flex-col items-center justify-center ${previewHeight} w-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-200`}>
-                    {uploading ? (
-                        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-                    ) : (
-                        <>
-                            <Upload className="w-6 h-6 text-gray-400 mb-1" />
-                            <span className="text-xs text-gray-500 text-center px-2">Clique para enviar</span>
-                        </>
-                    )}
-                    <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                                const handleUpload = async () => {
-                                    if (!file || !file.type.startsWith('image/')) {
-                                        return toast.error('Selecione apenas imagens');
-                                    }
-                                    if (file.size > 5 * 1024 * 1024) {
-                                        return toast.error('Imagem deve ter no máximo 5MB');
-                                    }
-
-                                    try {
-                                        setUploading(true);
-                                        const result = await getPresignedUrl(file.name, file.type);
-
-                                        if (result.error || !result.signedUrl) {
-                                            throw new Error(result.error || 'Erro ao gerar URL de upload');
-                                        }
-
-                                        const uploadResponse = await fetch(result.signedUrl, {
-                                            method: 'PUT',
-                                            body: file,
-                                            headers: { 'Content-Type': file.type },
-                                        });
-
-                                        if (!uploadResponse.ok) {
-                                            throw new Error(`Erro no upload: ${uploadResponse.statusText}`);
-                                        }
-
-                                        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-                                        const publicUrl = `${supabaseUrl}/storage/v1/object/public/course-content/${result.path}`;
-
-                                        setImageUrl(publicUrl);
-                                        toast.success('Imagem enviada com sucesso!');
-                                    } catch (error: any) {
-                                        toast.error(`Erro no upload: ${error.message}`);
-                                    } finally {
-                                        setUploading(false);
-                                    }
-                                };
-                                handleUpload();
-                            }
-                        }}
-                        disabled={uploading}
-                    />
-                </label>
-            )}
-            {helpText && (
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                    <p>{helpText}</p>
-                </div>
-            )}
-        </div>
-    </div>
-);
+import { ImageUploader } from '@/components/admin/ImageUploader';
 
 const ColorPicker = ({
     label,
@@ -175,10 +69,12 @@ export default function PortalSettingsPage() {
     const params = useParams();
     const router = useRouter();
     const portalId = params.portalId as string;
+    const supabase = createClient();
 
     const [activeTab, setActiveTab] = useState<TabType>('branding');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     // Upload states
     const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -269,6 +165,20 @@ export default function PortalSettingsPage() {
         }
     };
 
+    const handleDeletePortal = async () => {
+        try {
+            const { error } = await supabase.from('portals').delete().eq('id', portalId);
+            if (error) throw error;
+
+            toast.success('Portal excluído com sucesso.');
+            router.push('/portals');
+            router.refresh();
+        } catch (error: any) {
+            console.error('Error deleting portal:', error);
+            toast.error('Erro ao excluir portal: ' + error.message);
+        }
+    };
+
     const tabs = [
         { id: 'branding' as TabType, label: 'Identidade Visual', icon: Palette },
         { id: 'info' as TabType, label: 'Informações Básicas', icon: Settings },
@@ -336,7 +246,7 @@ export default function PortalSettingsPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-xl transition-all duration-200 ${activeTab === tab.id
-                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
+                                ? (tab.id === 'danger' ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 shadow-sm' : 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30')
                                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                                 }`}
                         >
@@ -610,6 +520,8 @@ export default function PortalSettingsPage() {
                             </div>
                         </div>
                     )}
+
+                    {/* ABA 4: ZONA DE PERIGO - REMOVIDA */}
                 </div>
 
                 {/* Sticky Save Button for Mobile */}
@@ -627,6 +539,14 @@ export default function PortalSettingsPage() {
                         )}
                     </Button>
                 </div>
+
+                <DeleteConfirmationModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setIsDeleteModalOpen(false)}
+                    onConfirm={handleDeletePortal}
+                    type="portal"
+                    itemTitle={name}
+                />
             </div>
         </div>
     );

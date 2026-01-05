@@ -159,10 +159,11 @@ export async function updatePortalSettings(
         name: string;
         description?: string;
         slug?: string;
+        image_url?: string;
         settings: {
             primary_color?: string;
             secondary_color?: string;
-            banner_url?: string;
+            banner_url?: string; // This is the same as image_url usually, or specific to internal banner
             logo_url?: string;
             logo_dark_url?: string;
             favicon_url?: string;
@@ -207,6 +208,7 @@ export async function updatePortalSettings(
             .update({
                 name: data.name,
                 description: data.description || '',
+                image_url: data.settings.banner_url || data.image_url || null, // Update image_url with banner_url
                 settings: mergedSettings,
             })
             .eq('id', portalId);

@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: "Versão recuperada via engenharia reversa",
 };
 
+import { Toaster } from 'sonner';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,6 +35,7 @@ export default function RootLayout({
                 </main>
               </div>
             </div>
+            <Toaster richColors position="top-right" />
           </AuthProvider>
         </ThemeProvider>
       </body>

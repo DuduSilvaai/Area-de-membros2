@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Video, Link, FileText, Settings, Upload, CheckCircle, Trash2, Plus, File as FileIcon, ExternalLink } from 'lucide-react';
+import { X, Save, Video, Link, FileText, Settings, Upload, CheckCircle, Trash2, Plus, File as FileIcon, ExternalLink, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
+import { AccessManager } from '@/components/admin/AccessManager';
 
 // Mock content type for now
 interface Content {
@@ -27,13 +28,15 @@ interface Content {
 interface LessonDrawerProps {
     isOpen: boolean;
     onClose: () => void;
+
     lesson: Content | null;
     onSave: (lessonId: string, updates: Partial<Content>) => Promise<void>;
+    portalId: string;
 }
 
-type TabType = 'content' | 'materials' | 'settings';
+type TabType = 'content' | 'materials' | 'settings' | 'access';
 
-export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerProps) {
+export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: LessonDrawerProps) {
     const [activeTab, setActiveTab] = useState<TabType>('content');
     const [formData, setFormData] = useState<Partial<Content>>({});
     const [isSaving, setIsSaving] = useState(false);
@@ -279,17 +282,17 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed inset-y-0 right-0 w-full lg:w-1/2 bg-zinc-950 border-l border-zinc-800 shadow-2xl z-[70] flex flex-col"
+                        className="fixed inset-y-0 right-0 w-full lg:w-1/2 bg-white dark:bg-[#121216] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl z-[70] flex flex-col"
                     >
                         {/* Header */}
-                        <div className="h-16 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-950/50 backdrop-blur-md z-10">
+                        <div className="h-16 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-6 bg-white/50 dark:bg-[#121216]/50 backdrop-blur-md z-10">
                             <div className="flex items-center gap-3 flex-1 mr-4">
                                 <div className="flex-1 mr-4">
                                     <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1 block">Título da Aula <span className="text-red-500">*</span></label>
                                     <Input
                                         value={formData.title || ''}
                                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        className="bg-zinc-900 border-zinc-700 text-lg font-bold text-white placeholder:text-zinc-600 w-full shadow-sm focus:ring-2 focus:ring-pink-500/20"
+                                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-lg font-bold text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 w-full shadow-sm focus:ring-2 focus:ring-pink-500/20"
                                         placeholder="Ex: Introdução ao React"
                                         autoFocus
                                     />
@@ -335,6 +338,14 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                     icon={<Settings className="w-4 h-4" />}
                                     label="Configurações"
                                 />
+                                {lesson?.id && lesson.id !== 'new' && (
+                                    <TabButton
+                                        active={activeTab === 'access'}
+                                        onClick={() => { console.log('Tab: Access'); setActiveTab('access'); }}
+                                        icon={<Lock className="w-4 h-4" />}
+                                        label="Acesso"
+                                    />
+                                )}
                             </div>
                         </div>
 
@@ -343,7 +354,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                             {activeTab === 'content' && (
                                 <div className="space-y-6 max-w-2xl mx-auto">
                                     <div className="space-y-4">
-                                        <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Vídeo da Aula</h3>
+                                        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Vídeo da Aula</h3>
 
                                         {/* Hidden Input */}
                                         <input
@@ -355,7 +366,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                         />
 
                                         <div
-                                            className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 flex flex-col items-center justify-center min-h-[200px] border-dashed group hover:border-zinc-700 transition-colors cursor-pointer"
+                                            className="bg-white dark:bg-transparent border border-gray-200 dark:border-zinc-700 rounded-xl p-6 flex flex-col items-center justify-center min-h-[200px] border-dashed group hover:border-pink-500/50 transition-colors cursor-pointer"
                                             onClick={(e) => {
                                                 // Only trigger if clicking container, not children buttons
                                                 if (e.target === e.currentTarget || (e.target as HTMLElement).closest('.upload-trigger')) {
@@ -366,11 +377,11 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                             {isUploading ? (
                                                 <div className="text-center">
                                                     <div className="animate-spin text-pink-500 mb-2">⏳</div>
-                                                    <p className="text-zinc-400">Fazendo upload...</p>
+                                                    <p className="text-zinc-500 dark:text-zinc-400">Fazendo upload...</p>
                                                 </div>
                                             ) : formData.video_url ? (
                                                 <div className="w-full space-y-4 cursor-default" onClick={(e) => e.stopPropagation()}>
-                                                    <div className="aspect-video bg-black rounded-lg overflow-hidden border border-zinc-800 relative group/video">
+                                                    <div className="aspect-video bg-black rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 relative group/video">
                                                         {formData.content_type === 'external_video' || formData.video_url.includes('youtube') || formData.video_url.includes('vimeo') ? (
                                                             <iframe
                                                                 src={formData.video_url.replace('watch?v=', 'embed/')}
@@ -391,9 +402,9 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                                         </div>
                                                     </div>
                                                     <Button
-                                                        variant="destructive"
+                                                        variant="ghost"
                                                         size="sm"
-                                                        className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 border border-red-500/20"
+                                                        className="w-full bg-red-600 hover:bg-red-700 text-white border-0 rounded-lg shadow-sm transition-all"
                                                         onClick={() => setFormData({ ...formData, video_url: null })}
                                                     >
                                                         Remover Vídeo
@@ -401,21 +412,21 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                                 </div>
                                             ) : (
                                                 <div className="text-center space-y-4 upload-trigger">
-                                                    <div className="w-16 h-16 rounded-full bg-zinc-800/50 flex items-center justify-center mx-auto group-hover:bg-zinc-800 transition-colors pointer-events-none">
-                                                        <Upload className="w-8 h-8 text-zinc-500 group-hover:text-zinc-400" />
+                                                    <div className="w-16 h-16 rounded-full bg-gray-50 dark:bg-zinc-800/50 flex items-center justify-center mx-auto group-hover:bg-gray-100 dark:group-hover:bg-zinc-800 transition-colors pointer-events-none">
+                                                        <Upload className="w-8 h-8 text-gray-400 dark:text-zinc-500 group-hover:text-gray-500 dark:group-hover:text-zinc-400" />
                                                     </div>
                                                     <div className="pointer-events-none">
-                                                        <p className="text-zinc-200 font-medium">Arraste seu arquivo de vídeo aqui</p>
+                                                        <p className="text-zinc-700 dark:text-zinc-200 font-medium">Arraste seu arquivo de vídeo aqui</p>
                                                         <p className="text-zinc-500 text-sm mt-1">MP4, MOV (Máx 500MB)</p>
                                                     </div>
                                                     <div className="flex items-center gap-2 pointer-events-none">
-                                                        <div className="h-[1px] bg-zinc-800 flex-1"></div>
-                                                        <span className="text-xs text-zinc-600 font-medium uppercase">OU</span>
-                                                        <div className="h-[1px] bg-zinc-800 flex-1"></div>
+                                                        <div className="h-[1px] bg-gray-200 dark:bg-zinc-800 flex-1"></div>
+                                                        <span className="text-xs text-zinc-400 font-medium uppercase">OU</span>
+                                                        <div className="h-[1px] bg-gray-200 dark:bg-zinc-800 flex-1"></div>
                                                     </div>
                                                     <Input
                                                         placeholder="Cole uma URL do YouTube/Vimeo..."
-                                                        className="bg-zinc-950 border-zinc-800 text-sm"
+                                                        className="bg-white dark:bg-zinc-950 border-gray-300 dark:border-zinc-800 text-sm text-zinc-900 dark:text-white"
                                                         value={formData.video_url || ''}
                                                         onClick={(e) => e.stopPropagation()} // Prevent triggering upload
                                                         onChange={handleVideoUrlChange}
@@ -426,12 +437,12 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                     </div>
 
                                     <div className="space-y-4">
-                                        <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Descrição</h3>
+                                        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</h3>
                                         <Textarea
                                             value={formData.description || ''}
                                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                            placeholder="Detalhes sobre esta aula..."
-                                            className="min-h-[150px] bg-zinc-900/30 border-zinc-800 focus:border-pink-500/50 resize-none font-light"
+                                            placeholder="Ex: Nesta aula vamos aprender sobre..."
+                                            className="min-h-[150px] bg-white dark:bg-[#27272A] border-gray-300 dark:border-zinc-600 text-zinc-900 dark:text-white focus:border-[#FF2D78]/50 resize-none font-light placeholder:text-gray-400"
                                         />
                                     </div>
                                 </div>
@@ -441,24 +452,24 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                 <div className="space-y-6 max-w-2xl mx-auto">
                                     {/* Add Material Form */}
                                     {isAddingMaterial ? (
-                                        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
                                             <div className="flex justify-between items-center">
-                                                <h4 className="font-medium text-zinc-200">Novo Material</h4>
-                                                <Button variant="ghost" size="sm" onClick={() => setIsAddingMaterial(false)}><X className="w-4 h-4" /></Button>
+                                                <h4 className="font-medium text-zinc-900 dark:text-zinc-200">Novo Material</h4>
+                                                <Button variant="ghost" size="sm" onClick={() => setIsAddingMaterial(false)}><X className="w-4 h-4 text-zinc-500" /></Button>
                                             </div>
 
                                             <div className="space-y-3">
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <Button
                                                         variant={newMaterial.type === 'link' ? 'default' : 'outline'}
-                                                        className={newMaterial.type === 'link' ? 'bg-pink-600 hover:bg-pink-700' : 'border-zinc-700 text-zinc-400'}
+                                                        className={newMaterial.type === 'link' ? 'bg-[#FF2D78] hover:bg-[#FF2D78]/90 text-white' : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400'}
                                                         onClick={() => setNewMaterial({ ...newMaterial, type: 'link' })}
                                                     >
                                                         <Link className="w-4 h-4 mr-2" /> Link Externo
                                                     </Button>
                                                     <Button
                                                         variant={newMaterial.type === 'file' ? 'default' : 'outline'}
-                                                        className={newMaterial.type === 'file' ? 'bg-pink-600 hover:bg-pink-700' : 'border-zinc-700 text-zinc-400'}
+                                                        className={newMaterial.type === 'file' ? 'bg-[#FF2D78] hover:bg-[#FF2D78]/90 text-white' : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400'}
                                                         onClick={() => setNewMaterial({ ...newMaterial, type: 'file' })}
                                                     >
                                                         <Upload className="w-4 h-4 mr-2" /> Arquivo
@@ -469,7 +480,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                                     placeholder="Nome do Material (ex: Slide da Aula)"
                                                     value={newMaterial.title}
                                                     onChange={(e) => setNewMaterial({ ...newMaterial, title: e.target.value })}
-                                                    className="bg-zinc-950 border-zinc-700"
+                                                    className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white"
                                                 />
 
                                                 {newMaterial.type === 'link' ? (
@@ -477,10 +488,10 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                                         placeholder="URL (https://...)"
                                                         value={newMaterial.url}
                                                         onChange={(e) => setNewMaterial({ ...newMaterial, url: e.target.value })}
-                                                        className="bg-zinc-950 border-zinc-700"
+                                                        className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white"
                                                     />
                                                 ) : (
-                                                    <div className="border border-dashed border-zinc-700 rounded-lg p-4 text-center hover:bg-zinc-800/50 transition-colors">
+                                                    <div className="border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-4 text-center hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                                                         {newMaterial.url ? (
                                                             <div className="flex items-center justify-center gap-2 text-green-500">
                                                                 <CheckCircle className="w-4 h-4" />
@@ -489,7 +500,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                                         ) : (
                                                             <>
                                                                 <label className="cursor-pointer">
-                                                                    <span className="text-pink-500 text-sm font-medium hover:underline">Clique para selecionar</span>
+                                                                    <span className="text-[#FF2D78] text-sm font-medium hover:underline">Clique para selecionar</span>
                                                                     <input type="file" className="hidden" onChange={handleMaterialUpload} />
                                                                 </label>
                                                                 {isUploadingMaterial && <span className="text-zinc-500 text-sm ml-2">Enviando...</span>}
@@ -498,18 +509,18 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                                     </div>
                                                 )}
 
-                                                <Button className="w-full bg-zinc-100 text-zinc-900 hover:bg-zinc-200" onClick={confirmAddMaterial} disabled={isUploadingMaterial}>
+                                                <Button className="w-full bg-zinc-100 dark:bg-zinc-100 text-zinc-900 hover:bg-zinc-200" onClick={confirmAddMaterial} disabled={isUploadingMaterial}>
                                                     Adicionar a Lista
                                                 </Button>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex justify-between items-center bg-zinc-900/30 p-4 rounded-xl border border-zinc-800">
+                                        <div className="flex justify-between items-center bg-white dark:bg-zinc-900/30 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
                                             <div>
-                                                <h3 className="font-medium text-zinc-200">Arquivos e Links</h3>
+                                                <h3 className="font-medium text-zinc-900 dark:text-zinc-200">Arquivos e Links</h3>
                                                 <p className="text-sm text-zinc-500">Adicione PDFs, Docs ou Links úteis</p>
                                             </div>
-                                            <Button onClick={() => setIsAddingMaterial(true)} variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+                                            <Button onClick={() => setIsAddingMaterial(true)} variant="outline" className="border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                                                 <Plus className="w-4 h-4 mr-2" /> Adicionar
                                             </Button>
                                         </div>
@@ -547,10 +558,10 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
 
                             {activeTab === 'settings' && (
                                 <div className="space-y-6 max-w-2xl mx-auto">
-                                    <div className="bg-zinc-900/30 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
+                                    <div className="bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 rounded-xl divide-y divide-zinc-200 dark:divide-zinc-800">
                                         <div className="p-4 flex items-center justify-between">
                                             <div>
-                                                <h4 className="text-zinc-200 font-medium">Prévia Gratuita</h4>
+                                                <h4 className="text-zinc-900 dark:text-zinc-200 font-medium">Prévia Gratuita</h4>
                                                 <p className="text-zinc-500 text-sm">Permitir que não-alunos assistam a esta aula</p>
                                             </div>
                                             <div className="flex items-center">
@@ -563,14 +574,14 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                                             setFormData({ ...formData, is_preview: e.target.checked });
                                                         }}
                                                     />
-                                                    <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                                                    <div className="w-11 h-6 bg-zinc-200 dark:bg-zinc-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#FF2D78]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF2D78]"></div>
                                                 </label>
                                             </div>
                                         </div>
 
                                         <div className="p-4 flex items-center justify-between">
                                             <div>
-                                                <h4 className="text-zinc-200 font-medium">Publicado</h4>
+                                                <h4 className="text-zinc-900 dark:text-zinc-200 font-medium">Publicado</h4>
                                                 <p className="text-zinc-500 text-sm">Aula visível para os alunos</p>
                                             </div>
                                             <div className="flex items-center">
@@ -583,19 +594,35 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                                                             setFormData({ ...formData, is_published: e.target.checked });
                                                         }}
                                                     />
-                                                    <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-pink-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                                                    <div className="w-11 h-6 bg-zinc-200 dark:bg-zinc-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#FF2D78]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF2D78]"></div>
                                                 </label>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="space-y-4 pt-4">
-                                        <label className="text-sm font-medium text-zinc-300">Duração (segundos)</label>
+                                        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Duração (segundos)</label>
                                         <Input
                                             type="number"
                                             value={formData.duration || 0}
                                             onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                                            className="bg-zinc-900/50 border-zinc-800"
+                                            className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'access' && lesson?.id && (
+                                <div className="space-y-6 max-w-2xl mx-auto h-full">
+                                    <div className="h-full">
+                                        <div className="mb-4 px-1">
+                                            <h3 className="font-medium text-zinc-900 dark:text-zinc-200">Controle de Acesso da Aula</h3>
+                                            <p className="text-sm text-zinc-500">Defina quais alunos podem acessar esta aula (exceções).</p>
+                                        </div>
+                                        <AccessManager
+                                            context="content"
+                                            portalId={portalId}
+                                            resourceId={lesson.id}
                                         />
                                     </div>
                                 </div>
@@ -603,8 +630,9 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave }: LessonDrawerPr
                         </div>
                     </motion.div>
                 </>
-            )}
-        </AnimatePresence>
+            )
+            }
+        </AnimatePresence >
     );
 }
 
