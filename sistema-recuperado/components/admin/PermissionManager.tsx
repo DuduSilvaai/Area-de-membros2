@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Portal, ModuleWithChildren, EnrollmentPermissions } from '@/types/enrollment';
-import { upsertEnrollment, deleteEnrollment } from '@/app/(admin)/admin/users/actions';
+import { upsertEnrollment, deleteEnrollment } from '@/app/(admin)/users/actions';
 
 interface PermissionState {
     [portalId: string]: {

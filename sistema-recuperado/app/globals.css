@@ -25,7 +25,7 @@
   /* #F8F9FB */
   --color-bg-surface: oklch(100% 0 0);
   /* #FFFFFF */
-  --color-bg-sidebar: oklch(100% 0 0 / 70%);
+  --color-bg-sidebar: oklch(100% 0 0);
   /* Glass */
   --color-bg-sidebar-border: oklch(100% 0 0 / 80%);
 

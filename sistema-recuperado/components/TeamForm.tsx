@@ -6,7 +6,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Save, Settings, Users, Shield, MessageSquare } from 'lucide-react';
 import { Button, Input, Select, Switch, FileUpload } from './UIComponents';
-import { createPortal } from '@/app/(admin)/admin/actions';
+import { createPortal } from '@/app/(admin)/portals/actions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 

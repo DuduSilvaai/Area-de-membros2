@@ -1,7 +1,7 @@
 import React from 'react';
 import { Loader2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { getPresignedUrl } from '@/app/(admin)/admin/actions';
+import { getPresignedUrl } from '@/app/(admin)/portals/actions';
 
 interface ImageUploaderProps {
     label: string;
