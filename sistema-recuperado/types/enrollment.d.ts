@@ -56,6 +56,7 @@ export interface ModuleWithChildren {
     parent_module_id: string | null;
     order_index: number;
     is_active: boolean;
+    image_url: string | null;
     is_released: boolean;
     release_date: string | null;
     created_at: string;
