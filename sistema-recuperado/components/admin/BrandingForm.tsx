@@ -61,55 +61,7 @@ export function BrandingForm({ portal }: BrandingFormProps) {
         }
     };
 
-    const InputField = ({ label, value, onChange, icon: Icon, placeholder, type = "text" }: any) => (
-        <div className="flex flex-col gap-2">
-            <label className="text-gray-500 dark:text-[#A1A1AA] text-sm font-medium ml-1">
-                {label}
-            </label>
-            <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500 group-focus-within:text-[#FF2D78] transition-colors">
-                    {Icon && <Icon className="w-5 h-5" />}
-                </div>
-                <input
-                    type={type}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={placeholder}
-                    className={`w-full h-[52px] bg-white dark:bg-[#27272A] border border-gray-200 dark:border-[#52525B] text-zinc-900 dark:text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 ${Icon ? 'pl-12' : 'pl-4'} pr-4`}
-                />
-            </div>
-        </div>
-    );
 
-    const ColorPicker = ({ label, value, onChange }: any) => (
-        <div className="flex flex-col gap-2">
-            <label className="text-gray-500 dark:text-[#A1A1AA] text-sm font-medium ml-1">
-                {label}
-            </label>
-            <div className="flex items-center gap-3">
-                <div
-                    className="w-[52px] h-[52px] rounded-xl border border-gray-200 dark:border-[#52525B] shadow-sm flex-shrink-0 relative overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
-                    style={{ backgroundColor: value }}
-                >
-                    <input
-                        type="color"
-                        value={value}
-                        onChange={(e) => onChange(e.target.value)}
-                        className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 opacity-0"
-                    />
-                </div>
-                <div className="flex-1 relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500">#</span>
-                    <input
-                        type="text"
-                        value={value.replace('#', '')}
-                        onChange={(e) => onChange(`#${e.target.value.replace('#', '')}`)}
-                        className="w-full h-[52px] bg-white dark:bg-[#27272A] border border-gray-200 dark:border-[#52525B] text-zinc-900 dark:text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none transition-all pl-8 uppercase font-mono"
-                    />
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <div className="relative">
@@ -151,7 +103,7 @@ export function BrandingForm({ portal }: BrandingFormProps) {
                                 uploading={uploadingFavicon}
                                 setUploading={setUploadingFavicon}
                                 helpText="Ícone do navegador (32x32px)"
-                                previewHeight="h-16"
+                                previewHeight="h-32"
                             />
                         </div>
                     </div>
@@ -184,14 +136,23 @@ export function BrandingForm({ portal }: BrandingFormProps) {
                             Suporte
                         </h3>
 
-                        <InputField
-                            label="Email de Suporte"
-                            value={settings.support_email}
-                            onChange={(v: string) => handleChange('support_email', v)}
-                            icon={Mail}
-                            type="email"
-                            placeholder="suporte@seucurso.com"
-                        />
+                        <div className="flex flex-col gap-2">
+                            <label className="text-gray-500 dark:text-[#A1A1AA] text-sm font-medium ml-1">
+                                Email de Suporte
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500 group-focus-within:text-[#FF2D78] transition-colors">
+                                    <Mail className="w-5 h-5" />
+                                </div>
+                                <input
+                                    type="email"
+                                    value={settings.support_email}
+                                    onChange={(e) => handleChange('support_email', e.target.value)}
+                                    placeholder="suporte@seucurso.com"
+                                    className="w-full h-[52px] bg-white dark:bg-[#27272A] border border-gray-200 dark:border-[#52525B] text-zinc-900 dark:text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 pl-12 pr-4"
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -213,7 +174,17 @@ export function BrandingForm({ portal }: BrandingFormProps) {
                                 <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
                                 <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
                                 <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-                                <div className="ml-4 flex-1 h-5 bg-zinc-800 rounded-md opacity-50" />
+
+                                {/* Address Bar with Favicon */}
+                                <div className="ml-4 flex-1 h-5 bg-zinc-800 rounded-md opacity-50 flex items-center px-2 gap-2">
+                                    {settings.favicon_url && (
+                                        <img
+                                            src={settings.favicon_url}
+                                            alt="Favicon"
+                                            className="w-3 h-3 object-contain"
+                                        />
+                                    )}
+                                </div>
                             </div>
 
                             {/* Viewport Content */}
@@ -221,8 +192,8 @@ export function BrandingForm({ portal }: BrandingFormProps) {
 
                                 {/* Hero Section Mock */}
                                 <div className="h-44 bg-zinc-200 relative overflow-hidden shrink-0">
-                                    {portal.image_url ? (
-                                        <img src={portal.image_url} className="w-full h-full object-cover" alt="" />
+                                    {settings.banner_url ? (
+                                        <img src={settings.banner_url} className="w-full h-full object-cover" alt="" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-zinc-300">
                                             <ImageIcon className="w-10 h-10" />
@@ -234,11 +205,11 @@ export function BrandingForm({ portal }: BrandingFormProps) {
                                 {/* Floating Logo + Action */}
                                 <div className="px-8 -mt-10 flex justify-between items-end relative z-10 mb-6">
                                     <div
-                                        className="w-20 h-20 rounded-xl shadow-lg border-2 border-white bg-white flex items-center justify-center overflow-hidden"
+                                        className="w-20 h-20 rounded-xl shadow-lg border-2 border-white bg-white flex items-center justify-center overflow-hidden p-1"
                                         style={{ backgroundColor: settings.secondary_color }}
                                     >
                                         {settings.logo_url ? (
-                                            <img src={settings.logo_url} className="w-12 h-12 object-contain" alt="" />
+                                            <img src={settings.logo_url} className="w-full h-full object-contain" alt="Logo" />
                                         ) : (
                                             <span className="text-[10px] text-white/80 font-bold">LOGO</span>
                                         )}
@@ -291,3 +262,35 @@ export function BrandingForm({ portal }: BrandingFormProps) {
         </div>
     );
 }
+
+
+
+const ColorPicker = ({ label, value, onChange }: any) => (
+    <div className="flex flex-col gap-2">
+        <label className="text-gray-500 dark:text-[#A1A1AA] text-sm font-medium ml-1">
+            {label}
+        </label>
+        <div className="flex items-center gap-3">
+            <div
+                className="w-[52px] h-[52px] rounded-xl border border-gray-200 dark:border-[#52525B] shadow-sm flex-shrink-0 relative overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
+                style={{ backgroundColor: value }}
+            >
+                <input
+                    type="color"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 opacity-0"
+                />
+            </div>
+            <div className="flex-1 relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500">#</span>
+                <input
+                    type="text"
+                    value={value.replace('#', '')}
+                    onChange={(e) => onChange(`#${e.target.value.replace('#', '')}`)}
+                    className="w-full h-[52px] bg-white dark:bg-[#27272A] border border-gray-200 dark:border-[#52525B] text-zinc-900 dark:text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none transition-all pl-8 uppercase font-mono"
+                />
+            </div>
+        </div>
+    </div>
+);

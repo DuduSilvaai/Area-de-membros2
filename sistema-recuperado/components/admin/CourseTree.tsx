@@ -32,6 +32,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { ModuleWithChildren, ModuleWithContents, Content } from '@/types/enrollment';
 import {
     createModule,
+    updateModule,
     deleteModule,
     reorderModules,
     reorderContents,
@@ -188,21 +189,22 @@ export function CourseTree({ portalId }: CourseTreeProps) {
     const handleCreateModuleSave = async (data: any) => {
         // If we have an ID, it's an update
         if (editingModule && editingModule.id) {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from('modules')
-                .update({
-                    title: data.title,
-                    description: data.description,
-                    // Handle other fields if necessary
-                })
-                .eq('id', editingModule.id);
+            console.log('Updating module with ID:', editingModule.id);
 
-            if (error) {
-                toast.error('Erro ao atualizar módulo');
+            const res = await updateModule(editingModule.id, {
+                title: data.title,
+                description: data.description,
+                image_url: data.image_url,
+                is_released: data.is_released,
+                release_date: data.release_date
+            });
+
+            if (res.error) {
+                console.error('❌ [CourseTree] Module update error:', res.error);
+                toast.error(`Erro ao atualizar módulo: ${res.error}`);
             } else {
                 toast.success('Módulo atualizado!');
-                fetchData();
+                await fetchData();
             }
         } else {
             // Create
@@ -441,9 +443,12 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                 onSave={handleCreateModuleSave}
                 portalId={portalId}
                 initialData={editingModule ? {
+                    id: editingModule.id,
                     title: editingModule.title,
                     description: editingModule.description || '',
-                    id: editingModule.id
+                    image_url: (editingModule as any).image_url || '',
+                    is_released: editingModule.is_released,
+                    release_date: editingModule.release_date || ''
                 } : null}
             />
 

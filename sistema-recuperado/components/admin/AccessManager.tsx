@@ -41,7 +41,6 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
         setLoading(true);
         try {
             // 1. Fetch Enrollments for this Portal
-            // Remove the join 'profiles:user_id' as it might cause errors if FK is missing
             const { data: enrollmentsData, error: enrollmentsError } = await supabase
                 .from('enrollments')
                 .select('*')
@@ -53,19 +52,19 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
             }
 
             // 2. Fetch Profiles to get names/emails
-            // We need to fetch profiles for the users we found in enrollments (or ALL if context is portal)
             let profilesQuery = supabase.from('profiles').select('*');
 
-            // If NOT portal context, only fetch profiles for enrolled users
+            // For module/content context: fetch profiles for enrolled users
+            // For portal context: fetch ALL profiles (to allow enrolling new users)
             if (context !== 'portal' && enrollmentsData) {
                 const userIds = enrollmentsData.map((e: any) => e.user_id);
-                if (userIds.length > 0) {
-                    profilesQuery = profilesQuery.in('id', userIds);
-                } else {
+                if (userIds.length === 0) {
+                    // No enrollments yet - show empty state for module/content
                     setUsers([]);
                     setLoading(false);
                     return;
                 }
+                profilesQuery = profilesQuery.in('id', userIds);
             }
 
             const { data: profilesData, error: profilesError } = await profilesQuery;
@@ -80,13 +79,12 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
 
             // Context-specific Logic
             if (context === 'portal') {
-                // List ALL profiles
-                // Map to UserAccessItem
+                // List ALL profiles for portal context
                 const items: UserAccessItem[] = (profilesData as any[]).map(p => {
                     const enrollment = enrollmentsMap.get(p.id);
                     return {
                         userId: p.id,
-                        email: p.full_name || p.email || `User ${p.id.substring(0, 6)}`, // Fallback
+                        email: p.full_name || p.email || `User ${p.id.substring(0, 6)}`,
                         hasAccess: !!enrollment,
                         enrollmentId: enrollment?.id,
                         permissions: enrollment?.permissions || {
@@ -99,7 +97,8 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
                 setUsers(items);
 
             } else {
-                // List ONLY enrolled users
+                // For module/content context: List ENROLLED users only
+                // Show them all, but mark hasAccess based on their permissions for this specific resource
                 const items: UserAccessItem[] = (enrollmentsData as any[]).map(e => {
                     const profile = profilesMap.get(e.user_id);
                     const perms = e.permissions || {};

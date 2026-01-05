@@ -156,6 +156,7 @@ export async function createModule(data: {
     order_index?: number;
     is_released?: boolean;
     release_date?: string | null;
+    image_url?: string | null;
 }) {
     // DEBUGGING: Log dos dados recebidos
     console.log('🟡 [SERVER] createModule - Dados recebidos:', JSON.stringify(data, null, 2));
@@ -175,7 +176,8 @@ export async function createModule(data: {
         order_index: data.order_index ?? 0,
         is_active: true,
         is_released: data.is_released ?? true,
-        release_date: data.release_date || null
+        release_date: data.release_date || null,
+        image_url: data.image_url || null
     };
 
     console.log('🔵 [SERVER] createModule - Dados a inserir:', JSON.stringify(insertData, null, 2));
@@ -198,11 +200,56 @@ export async function createModule(data: {
         }
 
         console.log('✅ [SERVER] Módulo criado com sucesso:', newModule);
-        revalidatePath('/admin/contents');
+        revalidatePath('/', 'layout');
         return { data: newModule, success: true };
     } catch (error: any) {
         console.error('❌ [SERVER] Exception em createModule:', error);
         return { error: error?.message || 'Erro desconhecido ao criar módulo' };
+    }
+}
+
+/**
+ * Update a module's details
+ */
+export async function updateModule(id: string, data: {
+    title?: string;
+    description?: string;
+    image_url?: string | null;
+    is_released?: boolean;
+    release_date?: string | null;
+}) {
+
+    const adminSupabase = await createAdminClient();
+
+    try {
+        const { error } = await adminSupabase
+            .from('modules')
+            .update({
+                title: data.title?.trim(),
+                description: data.description?.trim() || null,
+                image_url: data.image_url || null,
+                is_released: data.is_released ?? true,
+                release_date: data.release_date || null
+            })
+            .eq('id', id);
+
+        if (error) {
+            console.error('❌ [SERVER] Erro ao atualizar módulo:', error);
+            return { error: error.message };
+        }
+
+        // Verify update
+        const { data: updatedModule } = await adminSupabase
+            .from('modules')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        revalidatePath('/', 'layout'); // Revalidates everything
+        return { success: true };
+    } catch (error: any) {
+        console.error('❌ [SERVER] Exception em updateModule:', error);
+        return { error: error?.message || 'Erro ao atualizar módulo' };
     }
 }
 
