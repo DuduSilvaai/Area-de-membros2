@@ -156,90 +156,37 @@ export function BrandingForm({ portal }: BrandingFormProps) {
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN: PREVIEW (Mockup) */}
+                {/* RIGHT COLUMN: PREVIEW (Live Component) */}
                 <div className="lg:col-span-3">
-                    <div className="lg:sticky lg:top-8">
+                    <div className="lg:sticky lg:top-8 text-center">
 
-                        <div className="mb-4 flex items-center justify-between">
+                        <div className="mb-4 flex items-center justify-center">
                             <div className="text-[#A1A1AA] text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                                 <Laptop className="w-4 h-4" />
-                                Visualização do Aluno
+                                Preview: Card do Aluno
                             </div>
                         </div>
 
-                        {/* DEVICE MOCKUP */}
-                        <div className="relative rounded-2xl bg-zinc-950 shadow-2xl shadow-black overflow-hidden border-[8px] border-zinc-900 ring-1 ring-white/10">
-                            {/* Browser Bar */}
-                            <div className="h-9 bg-[#18181B] flex items-center px-4 gap-2 border-b border-white/5">
-                                <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
-                                <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
-                                <div className="w-3 h-3 rounded-full bg-[#28C840]" />
-
-                                {/* Address Bar with Favicon */}
-                                <div className="ml-4 flex-1 h-5 bg-zinc-800 rounded-md opacity-50 flex items-center px-2 gap-2">
-                                    {settings.favicon_url && (
-                                        <img
-                                            src={settings.favicon_url}
-                                            alt="Favicon"
-                                            className="w-3 h-3 object-contain"
-                                        />
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Viewport Content */}
-                            <div className="bg-zinc-50 relative min-h-[500px] flex flex-col">
-
-                                {/* Hero Section Mock */}
-                                <div className="h-44 bg-zinc-200 relative overflow-hidden shrink-0">
-                                    {settings.banner_url ? (
-                                        <img src={settings.banner_url} className="w-full h-full object-cover" alt="" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-zinc-300">
-                                            <ImageIcon className="w-10 h-10" />
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                                </div>
-
-                                {/* Floating Logo + Action */}
-                                <div className="px-8 -mt-10 flex justify-between items-end relative z-10 mb-6">
-                                    <div
-                                        className="w-20 h-20 rounded-xl shadow-lg border-2 border-white bg-white flex items-center justify-center overflow-hidden p-1"
-                                        style={{ backgroundColor: settings.secondary_color }}
-                                    >
-                                        {settings.logo_url ? (
-                                            <img src={settings.logo_url} className="w-full h-full object-contain" alt="Logo" />
-                                        ) : (
-                                            <span className="text-[10px] text-white/80 font-bold">LOGO</span>
-                                        )}
-                                    </div>
-                                    <button
-                                        className="px-6 py-2.5 text-xs font-bold text-white rounded-full shadow-lg transform translate-y-4 hover:scale-105 transition"
-                                        style={{ backgroundColor: settings.primary_color }}
-                                    >
-                                        ACESSAR AULAS
-                                    </button>
-                                </div>
-
-                                {/* Mock Body */}
-                                <div className="px-8 space-y-6">
-                                    <div className="space-y-2">
-                                        <div className="h-6 w-1/3 bg-zinc-200 rounded animate-pulse" />
-                                        <div className="h-4 w-2/3 bg-zinc-100 rounded animate-pulse" />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {[1, 2, 3, 4].map(i => (
-                                            <div key={i} className="aspect-video bg-white rounded-lg shadow-sm border border-zinc-100 p-3 space-y-2">
-                                                <div className="w-full h-2/3 bg-zinc-100 rounded-md" />
-                                                <div className="h-2 w-1/2 bg-zinc-100 rounded" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                        {/* LIVE PREVIEW */}
+                        <div className="w-full max-w-sm mx-auto p-8 rounded-3xl bg-zinc-900 border border-zinc-800 flex justify-center">
+                            <div className="pointer-events-none transform scale-110">
+                                {/* Using the real CourseCard Component */}
+                                {/* We import CourseCard from members/CourseCard but since this is admin we can use the same code */}
+                                <FakeCourseCard
+                                    course={{
+                                        id: 'preview',
+                                        title: portal.name || 'Nome do Portal',
+                                        thumbnail: settings.banner_url || null,
+                                        progress: 45,
+                                        author: 'Sua Escola',
+                                        total_lessons: 12
+                                    }}
+                                />
                             </div>
                         </div>
+                        <p className="mt-4 text-xs text-zinc-500">
+                            É assim que o portal aparecerá na biblioteca do aluno.
+                        </p>
                     </div>
                 </div>
 
@@ -294,3 +241,48 @@ const ColorPicker = ({ label, value, onChange }: any) => (
         </div>
     </div>
 );
+
+// DUPLICATED from members/CourseCard.tsx to ensure perfect preview without import issues across app/routes
+// Ideally, this should be a shared component in @/components/shared
+import { PlayCircle } from 'lucide-react';
+const FakeCourseCard = ({ course }: { course: any }) => {
+    return (
+        <div className="group relative flex-shrink-0 w-full sm:w-[300px] md:w-[350px] cursor-default select-none">
+            <div className="relative aspect-video rounded-xl overflow-hidden bg-white/40 dark:bg-black/40 backdrop-blur-md border border-white/20 dark:border-white/5 shadow-md">
+                {/* Image */}
+                {course.thumbnail ? (
+                    <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        className="w-full h-full object-cover opacity-90"
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                        <PlayCircle className="w-12 h-12 text-white/20" />
+                    </div>
+                )}
+                {/* Progress Bar (Always visible) */}
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
+                    <div
+                        className="h-full bg-[#FF0080] shadow-[0_0_10px_#FF0080]"
+                        style={{ width: `${course.progress}%` }}
+                    ></div>
+                </div>
+            </div>
+
+            <div className="mt-4 px-1">
+                <h3 className="text-zinc-900 dark:text-white font-serif font-bold text-lg truncate drop-shadow-sm">
+                    {course.title}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-bold text-zinc-500 dark:text-gray-300 uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded border border-white/10">
+                        {course.progress}% Concluído
+                    </span>
+                    {course.total_lessons && (
+                        <p className="text-zinc-500 dark:text-gray-400 text-sm font-light">• {course.total_lessons} aulas</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};

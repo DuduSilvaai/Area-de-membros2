@@ -1,6 +1,6 @@
 'use client';
 
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
 import { AuthProvider } from "@/context/AuthContext";
@@ -9,6 +9,7 @@ import { Toaster } from 'sonner';
 import { usePathname } from 'next/navigation';
 
 const inter = Inter({ subsets: ["latin"] });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: '--font-playfair' });
 
 export default function RootLayout({
   children,
@@ -26,7 +27,7 @@ export default function RootLayout({
 
   return (
     <html lang="pt-BR">
-      <body className={inter.className}>
+      <body className={`${inter.className} ${playfair.variable}`}>
         <ThemeProvider>
           <AuthProvider>
             <div className="flex min-h-screen w-full">

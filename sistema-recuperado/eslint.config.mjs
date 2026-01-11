@@ -1,12 +1,12 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import tailwind from "eslint-plugin-tailwindcss";
+// import tailwind from "eslint-plugin-tailwindcss";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  ...tailwind.configs["recommended"],
+  // ...tailwind.configs["recommended"],
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -20,7 +20,7 @@ const eslintConfig = defineConfig([
   ]),
   {
     rules: {
-      "tailwindcss/no-custom-classname": "off", // Disabled due to dynamic classes or external libs
+      // "tailwindcss/no-custom-classname": "off", // Disabled due to dynamic classes or external libs
     }
   }
 ]);

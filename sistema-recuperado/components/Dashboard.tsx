@@ -32,7 +32,17 @@ interface DashboardProps {
     accessesToday: number;
     monthlyGrowth: { name: string; students: number }[];
     popularLessons: { name: string; accesses: number }[];
-    recentActivity: any[];
+    recentActivity: ActivityItem[];
+  };
+}
+
+interface ActivityItem {
+  id: string;
+  action: string;
+  created_at: string;
+  profile?: {
+    full_name: string | null;
+    email: string | null;
   };
 }
 
@@ -75,7 +85,7 @@ const StatCard = ({
 );
 
 // Componente de Tabela Recente Atualizada
-const RecentActivity = ({ activities }: { activities: any[] }) => {
+const RecentActivity = ({ activities }: { activities: ActivityItem[] }) => {
   if (!activities || activities.length === 0) {
     return (
       <div className="bg-[var(--bg-surface)] p-8 rounded-xl border-transparent dark:border-white/5 shadow-card dark:shadow-none">

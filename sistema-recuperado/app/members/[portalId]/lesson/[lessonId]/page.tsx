@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -20,8 +20,8 @@ interface LessonContent {
     attachments?: { name: string; url: string }[];
 }
 
-export default function LessonPage({ params }: { params: { portalId: string; lessonId: string } }) {
-    const { portalId, lessonId } = params;
+export default function LessonPage({ params }: { params: Promise<{ portalId: string; lessonId: string }> }) {
+    const { portalId, lessonId } = React.use(params);
     const router = useRouter();
     const { user } = useAuth();
     const topRef = useRef<HTMLDivElement>(null);
@@ -112,7 +112,7 @@ export default function LessonPage({ params }: { params: { portalId: string; les
                 if (currentIndex > 0) setPrevLessonId(flatLessons[currentIndex - 1].id);
                 if (currentIndex < flatLessons.length - 1) setNextLessonId(flatLessons[currentIndex + 1].id);
 
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error('Erro loading lesson:', error);
                 toast.error('Erro ao carregar aula.');
             } finally {
@@ -132,7 +132,19 @@ export default function LessonPage({ params }: { params: { portalId: string; les
 
 
     // Helper: Build Tree
-    const buildModuleTree = (flatModules: any[]): Module[] => {
+    interface FlatModule {
+        id: string;
+        title: string;
+        parent_module_id: string | null;
+        contents: {
+            id: string;
+            title: string;
+            duration_seconds: number | null;
+            order_index: number;
+        }[];
+    }
+
+    const buildModuleTree = (flatModules: FlatModule[]): Module[] => {
         const moduleMap = new Map<string, Module>();
         const roots: Module[] = [];
 
@@ -141,7 +153,7 @@ export default function LessonPage({ params }: { params: { portalId: string; les
             moduleMap.set(m.id, {
                 id: m.id,
                 title: m.title,
-                lessons: (m.contents || []).sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0)).map((c: any) => ({
+                lessons: (m.contents || []).sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).map(c => ({
                     id: c.id,
                     title: c.title,
                     duration_minutes: c.duration_seconds ? Math.round(c.duration_seconds / 60) : undefined
