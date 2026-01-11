@@ -1,36 +1,48 @@
-'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Bell, ChevronDown, LogOut, User as UserIcon, Sun, Moon, Check, X, Home } from 'lucide-react';
-import { useTheme } from '@/context/ThemeContext';
-import { useAuth } from '@/context/AuthContext';
-import { MemberNotification } from '@/types/members';
+import { Bell, ChevronDown, LogOut, User as UserIcon, Sun, Moon, Check, X } from 'lucide-react';
+import { User } from '../types';
+import { Link } from 'react-router-dom';
+import { BRAND_LOGO } from '../constants';
+import { useTheme } from '../ThemeContext';
 
-const BRAND_LOGO = "https://cdn-icons-png.flaticon.com/512/2964/2964063.png";
+interface NavbarProps {
+  user: User;
+}
 
-const StudentNavbar: React.FC = () => {
-  const router = useRouter();
-  const { user, signOut } = useAuth();
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  time: string;
+  isUnread: boolean;
+  type: 'info' | 'success' | 'alert';
+}
+
+const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
-
+  
+  // Ref for closing dropdowns when clicking outside
   const navRef = useRef<HTMLDivElement>(null);
 
-  const [notifications, setNotifications] = useState<MemberNotification[]>([
-    { id: 1, title: 'Nova aula disponível', message: 'O módulo avançado está liberado.', time: '2m atrás', isUnread: true, type: 'success' },
-    { id: 2, title: 'Resposta do instrutor', message: 'O instrutor respondeu sua dúvida.', time: '1h atrás', isUnread: true, type: 'info' },
-    { id: 3, title: 'Manutenção', message: 'Manutenção programada para esta noite.', time: '5h atrás', isUnread: false, type: 'alert' },
+  // Mock Notifications State
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { id: 1, title: 'New Lesson Unlocked', message: 'Advanced Hooks module is now available.', time: '2m ago', isUnread: true, type: 'success' },
+    { id: 2, title: 'Instructor Reply', message: 'Mike replied to your comment on "Virtual DOM".', time: '1h ago', isUnread: true, type: 'info' },
+    { id: 3, title: 'System Maintenance', message: 'Scheduled maintenance tonight at 2 AM.', time: '5h ago', isUnread: false, type: 'alert' },
   ]);
 
   const unreadCount = notifications.filter(n => n.isUnread).length;
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      if (window.scrollY > 20) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
     };
 
     const handleClickOutside = (event: MouseEvent) => {
@@ -42,7 +54,7 @@ const StudentNavbar: React.FC = () => {
 
     window.addEventListener('scroll', handleScroll);
     document.addEventListener('mousedown', handleClickOutside);
-
+    
     return () => {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mousedown', handleClickOutside);
@@ -63,29 +75,22 @@ const StudentNavbar: React.FC = () => {
     setIsNotificationsOpen(false);
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    router.push('/login');
-  };
-
-  const userName = user?.email?.split('@')[0] || 'Aluno';
-  const userAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${userName}`;
-
   return (
     <nav
       ref={navRef}
-      className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out px-4 md:px-12 py-4 ${isScrolled
-          ? 'bg-white/70 dark:bg-black/40 backdrop-blur-xl shadow-lg border-b border-white/20 dark:border-white/5'
+      className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out px-4 md:px-12 py-4 ${
+        isScrolled 
+          ? 'bg-white/70 dark:bg-black/40 backdrop-blur-xl shadow-lg border-b border-white/20 dark:border-white/5' 
           : 'bg-transparent'
-        }`}
+      }`}
     >
       <div className="flex items-center justify-between">
         {/* Logo */}
-        <Link href="/members" className="flex items-center gap-3 group cursor-pointer">
-          <img
-            src={BRAND_LOGO}
-            alt="Mozart Logo"
-            className={`w-8 h-8 object-contain transition-all duration-300 ${theme === 'dark' ? 'filter brightness-0 invert' : 'filter brightness-0 opacity-80'}`}
+        <Link to="/lobby" className="flex items-center gap-3 group cursor-pointer">
+          <img 
+            src={BRAND_LOGO} 
+            alt="Mozart Logo" 
+            className={`w-8 h-8 object-contain transition-all duration-300 ${theme === 'dark' ? 'filter brightness-0 invert' : 'filter brightness-0 opacity-80'}`} 
           />
           <span className="text-gray-900 dark:text-white font-serif font-bold text-xl tracking-wide hidden sm:block opacity-90 group-hover:opacity-100 transition-opacity">
             Mozart<span className="font-sans font-light text-mozart-pink">Academy</span>
@@ -94,17 +99,9 @@ const StudentNavbar: React.FC = () => {
 
         {/* Right Actions */}
         <div className="flex items-center gap-6">
-
-          {/* Home Link */}
-          <Link
-            href="/members"
-            className="p-2 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-white/20 dark:bg-white/5 backdrop-blur-md transition-all hover:scale-110 active:scale-95 border border-white/10 shadow-sm"
-          >
-            <Home size={18} />
-          </Link>
-
+          
           {/* Theme Toggle */}
-          <button
+          <button 
             onClick={toggleTheme}
             className="p-2 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-white/20 dark:bg-white/5 backdrop-blur-md transition-all hover:scale-110 active:scale-95 border border-white/10 shadow-sm"
             aria-label="Toggle Theme"
@@ -114,7 +111,7 @@ const StudentNavbar: React.FC = () => {
 
           {/* Notifications */}
           <div className="relative">
-            <button
+            <button 
               onClick={handleNotificationClick}
               className={`relative text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors focus:outline-none ${isNotificationsOpen ? 'text-mozart-pink dark:text-mozart-pink' : ''}`}
             >
@@ -128,48 +125,48 @@ const StudentNavbar: React.FC = () => {
             {isNotificationsOpen && (
               <div className="absolute right-0 mt-4 w-80 sm:w-96 bg-white/90 dark:bg-[#121212]/95 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 ring-1 ring-black/5 origin-top-right">
                 <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Notificações</h3>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Notifications</h3>
                   {unreadCount > 0 && (
-                    <button
+                    <button 
                       onClick={markAllAsRead}
                       className="text-[10px] font-bold text-mozart-pink hover:text-mozart-pink-dark uppercase tracking-wider flex items-center gap-1 transition-colors"
                     >
-                      <Check size={12} /> Marcar como lidas
+                      <Check size={12} /> Mark all read
                     </button>
                   )}
                 </div>
-
+                
                 <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
                   {notifications.length > 0 ? (
                     notifications.map((notification) => (
-                      <div
-                        key={notification.id}
+                      <div 
+                        key={notification.id} 
                         className={`px-5 py-4 border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group ${notification.isUnread ? 'bg-mozart-pink/[0.03]' : ''}`}
                       >
-                        <div className="flex gap-3 items-start">
-                          <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${notification.isUnread ? 'bg-mozart-pink shadow-[0_0_5px_#FF0080]' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
-                          <div className="flex-1">
-                            <p className={`text-sm mb-1 ${notification.isUnread ? 'font-semibold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}>
-                              {notification.title}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-1.5">
-                              {notification.message}
-                            </p>
-                            <span className="text-[10px] text-gray-400 dark:text-gray-600 font-medium">
-                              {notification.time}
-                            </span>
-                          </div>
-                        </div>
+                         <div className="flex gap-3 items-start">
+                            <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${notification.isUnread ? 'bg-mozart-pink shadow-[0_0_5px_#FF0080]' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+                            <div className="flex-1">
+                               <p className={`text-sm mb-1 ${notification.isUnread ? 'font-semibold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-gray-300'}`}>
+                                 {notification.title}
+                               </p>
+                               <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-1.5">
+                                 {notification.message}
+                               </p>
+                               <span className="text-[10px] text-gray-400 dark:text-gray-600 font-medium">
+                                 {notification.time}
+                               </span>
+                            </div>
+                         </div>
                       </div>
                     ))
                   ) : (
                     <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                      <p className="text-sm">Sem notificações novas</p>
+                      <p className="text-sm">No new notifications</p>
                     </div>
                   )}
                 </div>
                 <div className="bg-gray-50 dark:bg-white/[0.02] p-2 text-center border-t border-gray-100 dark:border-white/5">
-                  <button className="text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">Ver todas</button>
+                   <button className="text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors">View All Activity</button>
                 </div>
               </div>
             )}
@@ -177,39 +174,40 @@ const StudentNavbar: React.FC = () => {
 
           {/* User Profile */}
           <div className="relative">
-            <button
+            <button 
               onClick={handleProfileClick}
               className="flex items-center gap-3 focus:outline-none group"
             >
               <img
-                src={userAvatar}
-                alt={userName}
+                src={user.avatar}
+                alt={user.name}
                 className={`w-9 h-9 rounded-full object-cover border-2 transition-all shadow-md ${isDropdownOpen ? 'border-mozart-pink' : 'border-transparent group-hover:border-mozart-pink'}`}
               />
               <ChevronDown size={14} className={`text-gray-500 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Profile Dropdown */}
+            {/* Glass Profile Dropdown */}
             {isDropdownOpen && (
               <div className="absolute right-0 mt-4 w-56 bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 overflow-hidden ring-1 ring-black/5 origin-top-right">
                 <div className="px-5 py-3 border-b border-gray-100/10 dark:border-white/5 bg-white/10 dark:bg-white/5">
-                  <p className="text-sm text-gray-900 dark:text-white font-medium">{userName}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Conta de Aluno</p>
+                  <p className="text-sm text-gray-900 dark:text-white font-medium">{user.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Student Account</p>
                 </div>
                 <div className="p-1">
-                  <Link
-                    href="/members/profile"
+                  <Link 
+                    to="/profile" 
                     className="flex items-center gap-3 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors group/item"
                     onClick={() => setIsDropdownOpen(false)}
                   >
-                    <UserIcon size={16} className="group-hover/item:text-mozart-pink transition-colors" /> Perfil
+                    <UserIcon size={16} className="group-hover/item:text-mozart-pink transition-colors" /> Profile
                   </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors group/item"
+                  <Link 
+                    to="/" 
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/10 rounded-lg transition-colors group/item"
+                    onClick={() => setIsDropdownOpen(false)}
                   >
-                    <LogOut size={16} className="group-hover/item:text-mozart-pink transition-colors" /> Sair
-                  </button>
+                    <LogOut size={16} className="group-hover/item:text-mozart-pink transition-colors" /> Switch Portal
+                  </Link>
                 </div>
               </div>
             )}
@@ -220,4 +218,4 @@ const StudentNavbar: React.FC = () => {
   );
 };
 
-export default StudentNavbar;
+export default Navbar;

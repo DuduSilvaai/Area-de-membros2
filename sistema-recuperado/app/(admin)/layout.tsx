@@ -1,24 +1,19 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "../globals.css";
-import Sidebar from "@/components/Sidebar";
-import { AuthProvider } from "@/context/AuthContext";
+'use client';
 
-const inter = Inter({ subsets: ["latin"] });
+import AdminGuard from "@/components/AdminGuard";
 
-export const metadata: Metadata = {
-  title: "Admin - Sistema Mozart",
-  description: "Painel Administrativo",
-};
-
+/**
+ * Layout para rotas administrativas.
+ * Todas as rotas dentro de (admin) são protegidas pelo AdminGuard.
+ */
 export default function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <>
+    <AdminGuard>
       {children}
-    </>
+    </AdminGuard>
   );
 }

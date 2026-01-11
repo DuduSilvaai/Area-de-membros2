@@ -39,6 +39,26 @@ export async function middleware(request: NextRequest) {
     const publicPaths = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/confirm'];
     const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path));
 
+    // ============================================================
+    // PROTEÇÃO POR ROLE - Rotas administrativas
+    // ============================================================
+    const adminPaths = ['/dashboard', '/portals', '/users', '/settings', '/chat', '/reports', '/contents', '/events', '/admin'];
+    const isAdminPath = adminPaths.some(path => request.nextUrl.pathname.startsWith(path));
+
+    // Verificar role do usuário para rotas admin
+    if (user && isAdminPath) {
+        // Buscar role do user_metadata
+        const userRole = user.user_metadata?.role;
+
+        // BLOQUEIO: Se não é admin, redirecionar para /members
+        if (userRole !== 'admin') {
+            console.log('[Middleware] Acesso admin negado para role:', userRole);
+            const url = request.nextUrl.clone();
+            url.pathname = '/members';
+            return NextResponse.redirect(url);
+        }
+    }
+
     // If user is NOT authenticated and trying to access a protected route
     if (!user && !isPublicPath) {
         const url = request.nextUrl.clone();
@@ -49,7 +69,9 @@ export async function middleware(request: NextRequest) {
     // If user IS authenticated and trying to access login/signup pages
     if (user && isPublicPath && request.nextUrl.pathname !== '/auth/callback') {
         const url = request.nextUrl.clone();
-        url.pathname = '/'; // Redirect to dashboard or home
+        // Redireciona baseado no role do usuário
+        const userRole = user.user_metadata?.role;
+        url.pathname = userRole === 'admin' ? '/dashboard' : '/members';
         return NextResponse.redirect(url);
     }
 

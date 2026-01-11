@@ -238,20 +238,26 @@ export interface Database {
       profiles: {
         Row: {
           id: string
+          email: string | null
           full_name: string | null
           avatar_url: string | null
+          role: 'admin' | 'member' | null
           updated_at: string | null
         }
         Insert: {
           id: string
+          email?: string | null
           full_name?: string | null
           avatar_url?: string | null
+          role?: 'admin' | 'member' | null
           updated_at?: string | null
         }
         Update: {
           id?: string
+          email?: string | null
           full_name?: string | null
           avatar_url?: string | null
+          role?: 'admin' | 'member' | null
           updated_at?: string | null
         }
         Relationships: []

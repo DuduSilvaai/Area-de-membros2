@@ -38,8 +38,25 @@ export default function LoginPage() {
           });
       }
 
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // 2. Busca o perfil do usuário para saber a role
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user!.id)
+        .single();
+
+      // 3. Redirecionamento inteligente baseado na role
+      if (profileError || !profile) {
+        // Fallback para /members se não conseguir buscar o perfil
+        console.warn('Não foi possível buscar o perfil do usuário:', profileError?.message);
+        router.push('/members');
+      } else if (profile.role === 'admin') {
+        router.push('/dashboard');
+      } else {
+        // member ou qualquer outra role vai para /members
+        router.push('/members');
+      }
+
       router.refresh();
     } catch (err: any) {
       setError('Credenciais inválidas. Verifique seu email e senha.');

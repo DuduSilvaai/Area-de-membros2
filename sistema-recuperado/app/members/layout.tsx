@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import ProtectedRoute from "@/components/ProtectedRoute";
-import StudentNavbar from "@/components/members/StudentNavbar";
 import { ChatWidget } from "@/components/members/ChatWidget";
 
 export default function MembersLayout({ children }: { children: React.ReactNode }) {
@@ -15,19 +14,15 @@ export default function MembersLayout({ children }: { children: React.ReactNode 
   return (
     <ProtectedRoute>
       {isClassroom ? (
-        // Classroom Layout: Full screen, no global navbar, no padding
-        <div className="min-h-screen bg-[#0F0F12] text-white">
+        // Classroom Layout: Full screen, no global navbar, minimal chrome
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white transition-colors duration-500">
           {children}
           <ChatWidget portalId={portalId} />
         </div>
       ) : (
-        // Dashboard Layout: Navbar + Padding
-        <div className="min-h-screen bg-gray-900 text-white">
-          <StudentNavbar />
-          <main className="p-6">
-            {children}
-          </main>
-          <ChatWidget />
+        // Dashboard Layout: Aurora Background, Navbar handled by page itself
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-white transition-colors duration-500">
+          {children}
         </div>
       )}
     </ProtectedRoute>
