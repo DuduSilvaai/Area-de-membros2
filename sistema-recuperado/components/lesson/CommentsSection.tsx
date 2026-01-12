@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { MessageSquare, MoreVertical, Pin, Trash2, CornerDownRight, Send } from 'lucide-react';
-import { useAuth } from '@/lib/authContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface Comment {
     id: string;

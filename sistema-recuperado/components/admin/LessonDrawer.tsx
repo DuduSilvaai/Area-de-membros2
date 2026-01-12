@@ -10,7 +10,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
 import { AccessManager } from '@/components/admin/AccessManager';
 
-// Mock content type for now
+interface Attachment {
+    type: 'link' | 'file';
+    title: string;
+    url: string;
+}
+
+interface LessonConfig {
+    description?: string;
+    is_preview?: boolean;
+    attachments?: Attachment[];
+    [key: string]: any; // Allow extensibility
+}
+
 interface Content {
     id: string;
     title: string;
@@ -21,8 +33,8 @@ interface Content {
     duration?: number;
     module_id: string;
     content_type?: 'video' | 'text' | 'external_video';
-    config?: any;
-    attachments?: any[];
+    config?: LessonConfig;
+    attachments?: Attachment[];
 }
 
 interface LessonDrawerProps {
@@ -46,9 +58,9 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Materials State
-    const [attachments, setAttachments] = useState<any[]>([]);
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
     const [isAddingMaterial, setIsAddingMaterial] = useState(false);
-    const [newMaterial, setNewMaterial] = useState({ type: 'link', title: '', url: '' });
+    const [newMaterial, setNewMaterial] = useState<Attachment>({ type: 'link', title: '', url: '' });
     const [isUploadingMaterial, setIsUploadingMaterial] = useState(false);
 
     useEffect(() => {
@@ -89,7 +101,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
         try {
             // Prepare payload for Supabase
             // Mapping fields to DB schema
-            const dbPayload: any = {
+            const dbPayload: Record<string, any> = {
                 title: formData.title,
                 module_id: formData.module_id || lesson?.module_id,
 
@@ -123,7 +135,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
             // Perform UPSERT directly to ensure persistence
             const { data, error } = await supabase
                 .from('contents')
-                .upsert(dbPayload)
+                .upsert(dbPayload as any)
                 .select()
                 .single();
 
@@ -135,14 +147,19 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
             console.log('Saved successfully:', data);
 
             // Notify parent to refresh
-            await onSave(data.id, data as any);
+            await onSave(data.id, data as Content);
 
             toast.success('Aula salva com sucesso');
             onClose();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Save error detailed:', error);
             // Fallback error handling
-            const msg = error.message || error.details || error.hint || 'Erro desconhecido';
+            let msg = 'Erro desconhecido';
+            if (error instanceof Error) {
+                msg = error.message;
+            } else if (typeof error === 'object' && error !== null) {
+                msg = (error as any).details || (error as any).hint || (error as any).message || JSON.stringify(error);
+            }
             toast.error(`Erro ao salvar: ${msg}`);
         } finally {
             setIsSaving(false);
@@ -190,9 +207,10 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
             }));
             toast.success('Upload de vídeo concluído!');
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Upload Error:', error);
-            toast.error(`Erro no upload: ${error.message}`);
+            const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+            toast.error(`Erro no upload: ${msg}`);
         } finally {
             setIsUploading(false);
             // Reset input
@@ -229,7 +247,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
 
             setNewMaterial(prev => ({ ...prev, url: publicUrl, title: prev.title || file.name }));
             toast.success('Material enviado!');
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.error('Erro no upload do material');
         } finally {
             setIsUploadingMaterial(false);

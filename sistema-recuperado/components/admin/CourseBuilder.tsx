@@ -76,7 +76,7 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
   );
 
   // Build hierarchical tree from flat modules array
-  const buildModuleTree = (flatModules: any[]): ModuleWithChildren[] => {
+  const buildModuleTree = (flatModules: ModuleWithChildren[]): ModuleWithChildren[] => {
     const moduleMap = new Map<string, ModuleWithChildren>();
     const rootModules: ModuleWithChildren[] = [];
 
@@ -127,7 +127,14 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
 
       if (error) throw error;
 
-      const tree = buildModuleTree(data || []);
+      // Map to ensure all required fields exist (DB might be missing new fields)
+      const mappedModules: ModuleWithChildren[] = (data || []).map((m: any) => ({
+        ...m,
+        is_released: m.is_released ?? true, // Default to released if missing
+        release_date: m.release_date || null
+      }));
+
+      const tree = buildModuleTree(mappedModules);
       setModules(tree);
     } catch (error) {
       console.error('Error fetching modules:', error);
@@ -446,15 +453,20 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
                       <ModuleTreeItem
                         key={module.id}
                         module={module}
-                        depth={0}
-                        onEdit={(id, title) => {
-                          setEditingModuleId(id);
-                          setEditTitle(title);
+                        onEdit={(module) => {
+                          setEditingModuleId(module.id);
+                          setEditTitle(module.title);
                         }}
                         onDelete={handleDeleteModule}
-                        onAddChild={handleAddChildModule}
-                        onSelectModule={setSelectedModuleId}
-                        selectedModuleId={selectedModuleId}
+                        onAddLesson={(moduleId) => {
+                          setSelectedModuleId(moduleId);
+                          setShowContentForm(true);
+                        }}
+                        onEditLesson={(lesson) => {
+                          setEditingContentId(lesson.id);
+                          setEditTitle(lesson.title);
+                        }}
+                        onDeleteLesson={handleDeleteContent}
                       />
                     ))}
                   </div>
@@ -572,7 +584,7 @@ export function CourseBuilder({ portalId, onBack }: CourseBuilderProps) {
                     <div className="grid grid-cols-2 gap-3">
                       <select
                         value={newContentForm.type}
-                        onChange={(e) => setNewContentForm({ ...newContentForm, type: e.target.value as any })}
+                        onChange={(e) => setNewContentForm({ ...newContentForm, type: e.target.value as 'video' | 'text' | 'quiz' | 'file' | 'pdf' | 'external' })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="video">Vídeo</option>

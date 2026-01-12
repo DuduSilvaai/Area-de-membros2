@@ -19,14 +19,16 @@ import { ptBR } from 'date-fns/locale';
 interface Comment {
     id: string;
     user_id: string;
-    content_id: string;
+    content_id: string | null;
     text: string;
     created_at: string;
     parent_id: string | null;
+    is_pinned?: boolean;
+    updated_at?: string;
     profiles: {
         full_name: string | null;
         avatar_url: string | null;
-    } | null;
+    }[] | null;
     likes_count?: number;
     user_liked?: boolean;
 }
@@ -77,7 +79,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                         .in('comment_id', commentIds);
 
                     if (!likesError && likesData) {
-                        const updatedComments = data.map((comment: any) => {
+                        const updatedComments = data.map((comment) => {
                             const likes = likesData.filter(l => l.comment_id === comment.id);
                             return {
                                 ...comment,
@@ -91,12 +93,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                     }
                 }
 
-                const formattedComments = data.map((c: any) => ({
-                    ...c,
-                    profiles: Array.isArray(c.profiles) ? c.profiles[0] : c.profiles
-                }));
-
-                setComments(formattedComments as Comment[]);
+                setComments(data);
             } catch (error) {
                 console.error('Error fetching comments:', error);
             } finally {
@@ -304,13 +301,13 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                             {/* Root Comment */}
                             <div className="flex gap-4">
                                 <UserAvatar
-                                    name={comment.profiles?.full_name || 'Desconhecido'}
-                                    url={comment.profiles?.avatar_url || null}
+                                    name={comment.profiles?.[0]?.full_name || 'Desconhecido'}
+                                    url={comment.profiles?.[0]?.avatar_url || null}
                                 />
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="font-bold text-sm text-gray-200">
-                                            {comment.profiles?.full_name || 'Usuário Desconhecido'}
+                                            {comment.profiles?.[0]?.full_name || 'Usuário Desconhecido'}
                                         </span>
                                         <span className="text-xs text-gray-500">
                                             • {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
@@ -388,14 +385,14 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                                 <div key={reply.id} className="flex gap-3">
                                                     <div className="w-8 h-8">
                                                         <UserAvatar
-                                                            name={reply.profiles?.full_name || 'Desconhecido'}
-                                                            url={reply.profiles?.avatar_url || null}
+                                                            name={reply.profiles?.[0]?.full_name || 'Desconhecido'}
+                                                            url={reply.profiles?.[0]?.avatar_url || null}
                                                         />
                                                     </div>
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <span className="font-bold text-xs text-gray-200">
-                                                                {reply.profiles?.full_name || 'Usuário Desconhecido'}
+                                                                {reply.profiles?.[0]?.full_name || 'Usuário Desconhecido'}
                                                             </span>
                                                             <span className="text-[10px] text-gray-500">
                                                                 • {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: ptBR })}

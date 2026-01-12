@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, KeyboardEvent, ChangeEvent } from 'react';
 import { MessageContent, MessageType } from '@/types/chat';
-import { ScheduleMeetingModal } from './ScheduleMeetingModal';
 import { supabase } from '@/lib/supabaseClient';
 
 interface MessageInputProps {
@@ -14,7 +13,6 @@ interface MessageInputProps {
 export function MessageInput({ onSendMessage, isSending = false, conversationId }: MessageInputProps) {
     const [text, setText] = useState('');
     const [showAttachMenu, setShowAttachMenu] = useState(false);
-    const [showMeetingModal, setShowMeetingModal] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -118,16 +116,7 @@ export function MessageInput({ onSendMessage, isSending = false, conversationId 
         }
     };
 
-    // Handle meeting save
-    const handleSaveMeeting = async (meetingData: {
-        title: string;
-        description: string;
-        date: string;
-        link: string;
-    }) => {
-        await onSendMessage(meetingData, 'meeting');
-        setShowMeetingModal(false);
-    };
+
 
     return (
         <div className="border-t border-zinc-800 p-4 bg-zinc-900/80 backdrop-blur-sm">
@@ -194,16 +183,7 @@ export function MessageInput({ onSendMessage, isSending = false, conversationId 
                     )}
                 </div>
 
-                {/* Meeting Button */}
-                <button
-                    onClick={() => setShowMeetingModal(true)}
-                    className="p-2.5 rounded-xl bg-gradient-to-r from-pink-500/20 to-purple-500/20 hover:from-pink-500/30 hover:to-purple-500/30 text-pink-400 hover:text-pink-300 transition-colors border border-pink-500/30"
-                    title="Agendar reunião"
-                >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                </button>
+
 
                 {/* Text Input */}
                 <div className="flex-1 relative">
@@ -235,12 +215,7 @@ export function MessageInput({ onSendMessage, isSending = false, conversationId 
                 </button>
             </div>
 
-            {/* Meeting Modal */}
-            <ScheduleMeetingModal
-                isOpen={showMeetingModal}
-                onClose={() => setShowMeetingModal(false)}
-                onSave={handleSaveMeeting}
-            />
+
 
             {/* Hidden file input */}
             <input

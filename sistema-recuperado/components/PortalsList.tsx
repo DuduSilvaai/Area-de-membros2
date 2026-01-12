@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { createPortal } from '@/app/(admin)/admin/actions';
+import { createPortal } from '@/app/(admin)/portals/actions';
 import { DeleteConfirmationModal } from '@/components/admin/DeleteConfirmationModal';
 
 interface Portal {
@@ -166,15 +166,16 @@ export default function PortalsList() {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as { data: Portal[] | null, error: any };
       const { data, error } = result;
 
       if (error) throw error;
       console.log(`✅ ${data?.length || 0} portais carregados`);
       setPortals(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Erro fetchPortals:', error);
-      toast.error(`Erro ao carregar: ${error.message || 'Desconhecido'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Desconhecido';
+      toast.error(`Erro ao carregar: ${errorMessage}`);
       setPortals([]);
     } finally {
       setIsLoading(false);
@@ -212,9 +213,10 @@ export default function PortalsList() {
         router.refresh();
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Erro ao criar portal:', error);
-      toast.error(`Erro ao criar portal: ${error.message || 'Erro desconhecido'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao criar portal: ${errorMessage}`);
     }
   };
 
@@ -226,9 +228,10 @@ export default function PortalsList() {
       if (error) throw error;
       toast.success('Portal excluído com sucesso.');
       setPortals(prev => prev.filter(p => p.id !== portalToDelete.id));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error deleting portal:", err);
-      toast.error('Erro ao excluir portal: ' + err.message);
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      toast.error('Erro ao excluir portal: ' + errorMessage);
     }
   };
 

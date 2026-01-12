@@ -18,7 +18,7 @@ import {
 import Link from 'next/link';
 import { Input, Button } from '@/components/UIComponents';
 import { UserWithEnrollments, EnrollmentPermissions } from '@/types/enrollment';
-import { createUser } from '@/app/(admin)/admin/users/actions';
+import { createUser } from '@/app/(admin)/users/actions';
 import { toast } from 'sonner';
 
 interface FilterState {

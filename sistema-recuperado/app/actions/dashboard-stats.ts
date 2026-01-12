@@ -63,11 +63,16 @@ export async function getDashboardStats() {
 
     let popularLessons: { name: string; accesses: number }[] = [];
 
+    interface AccessLog {
+      content_id: string;
+      [key: string]: any;
+    }
+
     if (popularLogs && popularLogs.length > 0) {
       const contentCounts: Record<string, number> = {};
       const contentIds = new Set<string>();
 
-      popularLogs.forEach((log: any) => {
+      popularLogs.forEach((log: AccessLog) => {
         if (log.content_id) {
           contentCounts[log.content_id] = (contentCounts[log.content_id] || 0) + 1;
           contentIds.add(log.content_id);
@@ -106,7 +111,19 @@ export async function getDashboardStats() {
 
     if (activityError) console.error('Error fetching recent activity:', JSON.stringify(activityError, null, 2));
 
-    let recentActivityWithProfiles: any[] = [];
+    interface ActivityItem {
+      id: string;
+      action: string;
+      created_at: string;
+      details?: any;
+      user_id?: string;
+      profile: {
+        email: string;
+        full_name?: string | null;
+      };
+    }
+
+    let recentActivityWithProfiles: ActivityItem[] = [];
 
     if (recentLogs && recentLogs.length > 0) {
       // Fetch profiles manually
@@ -148,7 +165,13 @@ export async function getDashboardStats() {
   }
 }
 
-function processMonthlyGrowth(enrollments: any[]) {
+interface MonthlyGrowthEnrollment {
+  created_at?: string;
+  enrolled_at?: string;
+  [key: string]: any;
+}
+
+function processMonthlyGrowth(enrollments: MonthlyGrowthEnrollment[]) {
   const months: Record<string, number> = {};
   const now = new Date();
 

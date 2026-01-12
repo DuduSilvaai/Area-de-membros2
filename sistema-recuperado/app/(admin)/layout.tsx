@@ -1,6 +1,7 @@
 'use client';
 
 import AdminGuard from "@/components/AdminGuard";
+import Sidebar from "@/components/Sidebar";
 
 /**
  * Layout para rotas administrativas.
@@ -13,7 +14,12 @@ export default function AdminLayout({
 }>) {
   return (
     <AdminGuard>
-      {children}
+      <div className="flex min-h-screen bg-[var(--bg-canvas)]">
+        <Sidebar />
+        <main className="flex-1 ml-[280px] p-8 transition-all duration-300">
+          {children}
+        </main>
+      </div>
     </AdminGuard>
   );
 }

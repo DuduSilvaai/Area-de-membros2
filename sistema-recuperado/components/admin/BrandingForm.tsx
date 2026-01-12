@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Portal } from '@/types/enrollment';
 import { Loader2, Save, Image as ImageIcon, Palette, Mail, Layout, Type, Laptop, Smartphone, Check } from 'lucide-react';
-import { updatePortalSettings } from '@/app/(admin)/admin/actions';
+import { updatePortalSettings } from '@/app/(admin)/portals/actions';
 import { useRouter } from 'next/navigation';
 import { ImageUploader } from '@/components/admin/ImageUploader';
 

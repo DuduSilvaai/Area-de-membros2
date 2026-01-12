@@ -63,9 +63,9 @@ const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
                     {course.author && (
                         <p className="text-gray-500 dark:text-gray-400 text-sm font-light">• {course.author}</p>
                     )}
-                    {course.total_lessons && (
+                    {course.total_lessons ? (
                         <p className="text-gray-500 dark:text-gray-400 text-sm font-light">• {course.total_lessons} aulas</p>
-                    )}
+                    ) : null}
                 </div>
             </div>
         </Link>

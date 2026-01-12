@@ -115,19 +115,19 @@ export default function PortalLobbyPage() {
                 if (modulesError) throw modulesError;
 
                 // Security Filter: Filter modules based on permissions
-                const filteredModulesRaw = (modulesData || []).filter((m: Module) => {
+                const filteredModulesRaw = (modulesData || []).filter((m) => {
                     if (permissions.access_all) return true;
                     // Check if module ID is in allowed_modules array
                     return permissions.allowed_modules?.includes(m.id);
                 });
 
                 // Process modules to verify content ordering
-                const processedModules = filteredModulesRaw.map((m: Module) => ({
+                const processedModules = filteredModulesRaw.map((m) => ({
                     ...m,
-                    contents: (m.contents || []).sort((a: Content, b: Content) => a.order_index - b.order_index)
+                    contents: (m.contents || []).sort((a, b) => a.order_index - b.order_index)
                 }));
                 // Sort modules by order_index
-                processedModules.sort((a: Module, b: Module) => a.order_index - b.order_index);
+                processedModules.sort((a, b) => a.order_index - b.order_index);
 
                 setModules(processedModules);
 
@@ -151,11 +151,9 @@ export default function PortalLobbyPage() {
 
                 if (progressData && progressData.length > 0) {
                     // Find the latest touched lesson that exists in our modules
-                    for (const_prog of progressData) {
-                        // Type assertion for loop
-                        const prog = const_prog as { content_id: string; is_completed: boolean };
+                    for (const prog of progressData) {
                         for (const mod of processedModules) {
-                            const lesson = mod.contents.find((c: Content) => c.id === prog.content_id);
+                            const lesson = mod.contents.find((c) => c.id === prog.content_id);
                             if (lesson) {
                                 targetLesson = {
                                     lessonId: lesson.id,
