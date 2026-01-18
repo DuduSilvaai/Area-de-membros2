@@ -20,7 +20,7 @@ export default async function UserManagePage({ params }: Props) {
   }
 
   // Get user enrollments
-  const { data: enrollments, error: enrollmentsError } = await adminSupabase
+  const { data: enrollments, error: enrollError } = await adminSupabase
     .from('enrollments')
     .select(`
       *,
@@ -30,8 +30,7 @@ export default async function UserManagePage({ params }: Props) {
         image_url
       )
     `)
-    .eq('user_id', userId)
-    .eq('is_active', true);
+    .eq('user_id', userId);
 
   // Get all portals for permission management
   const { data: portals, error: portalsError } = await adminSupabase
@@ -56,7 +55,7 @@ export default async function UserManagePage({ params }: Props) {
     .limit(10);
 
   const userData = user.user;
-  const isDisabled = false; // We'll implement this properly later
+  const isDisabled = user.user.banned_until && new Date(user.user.banned_until) > new Date();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

@@ -22,9 +22,10 @@ interface MessageBubbleProps {
     message: MessageWithSender;
     isOwn: boolean;
     showSender?: boolean;
+    senderName?: string;
 }
 
-export function MessageBubble({ message, isOwn, showSender = false }: MessageBubbleProps) {
+export function MessageBubble({ message, isOwn, showSender = false, senderName }: MessageBubbleProps) {
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewUrl, setPreviewUrl] = useState('');
 
@@ -69,9 +70,11 @@ export function MessageBubble({ message, isOwn, showSender = false }: MessageBub
         <>
             <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
                 <div className={`max-w-[70%] ${isOwn ? 'order-2' : 'order-1'}`}>
-                    {showSender && !isOwn && message.sender && (
+                    {showSender && !isOwn && (
                         <span className="text-xs text-zinc-400 ml-2 mb-1 block">
-                            {message.sender.full_name || 'Usuário'}
+                            {senderName || ((message.content as any)?.meta?.role === 'admin'
+                                ? 'Equipe de Suporte'
+                                : message.sender?.full_name || 'Usuário')}
                         </span>
                     )}
                     <div

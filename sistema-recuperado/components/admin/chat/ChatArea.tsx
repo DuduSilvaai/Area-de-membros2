@@ -151,11 +151,25 @@ export function ChatArea({
 
                 {/* Messages list */}
                 {messages.map((message, index) => {
-                    const isOwn = message.sender_id === currentUserId;
+                    const role = (message.content as any)?.meta?.role;
+                    // For Admin View, 'admin' role is Own.
+                    // Fallback to sender_id check.
+                    const isOwn = role
+                        ? role === 'admin'
+                        : message.sender_id === currentUserId;
+
                     const showSender = !isOwn && (
                         index === 0 ||
                         messages[index - 1]?.sender_id !== message.sender_id
                     );
+
+                    let senderName = message.sender?.full_name || 'Usuário';
+
+                    if (role === 'admin') {
+                        senderName = 'Equipe de Suporte';
+                    } else if (message.sender_id === conversation.student_id) {
+                        senderName = conversation.student?.full_name || message.sender?.full_name || 'Aluno';
+                    }
 
                     return (
                         <div key={message.id}>
@@ -176,6 +190,7 @@ export function ChatArea({
                                 message={message}
                                 isOwn={isOwn}
                                 showSender={showSender}
+                                senderName={senderName}
                             />
                         </div>
                     );

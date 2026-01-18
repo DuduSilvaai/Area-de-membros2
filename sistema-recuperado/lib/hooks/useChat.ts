@@ -15,6 +15,7 @@ interface UseChatOptions {
     conversationId?: string;
     isAdmin?: boolean;
     autoSubscribe?: boolean;
+    initialConversations?: ConversationWithStudent[];
 }
 
 interface UseChatReturn {
@@ -41,15 +42,16 @@ interface UseChatReturn {
 
     // Realtime
     subscribeToMessages: (conversationId: string) => void;
+    subscribeToConversationsList: () => void;
     unsubscribe: () => void;
 }
 
 const PAGE_SIZE = 30;
 
 export function useChat(options: UseChatOptions = {}): UseChatReturn {
-    const { conversationId, isAdmin = false, autoSubscribe = true } = options;
+    const { conversationId, isAdmin = false, autoSubscribe = true, initialConversations = [] } = options;
 
-    const [conversations, setConversations] = useState<ConversationWithStudent[]>([]);
+    const [conversations, setConversations] = useState<ConversationWithStudent[]>(initialConversations);
     const [messages, setMessages] = useState<MessageWithSender[]>([]);
     const [loadingConversations, setLoadingConversations] = useState(false);
     const [loadingMessages, setLoadingMessages] = useState(false);
@@ -57,8 +59,20 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     const [hasMore, setHasMore] = useState(true);
     const [unreadCount, setUnreadCount] = useState(0);
 
+    // Initialize unread count from initial data
+    useEffect(() => {
+        if (initialConversations.length > 0) {
+            const total = initialConversations.reduce((acc, c) =>
+                acc + (isAdmin ? c.unread_count_admin : c.unread_count_student), 0
+            );
+            setUnreadCount(total);
+        }
+    }, []); // Run once on mount
+
     const channelRef = useRef<RealtimeChannel | null>(null);
+    const listChannelRef = useRef<RealtimeChannel | null>(null);
     const currentConversationRef = useRef<string | null>(null);
+
     const offsetRef = useRef(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -198,13 +212,22 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         setMessages(prev => [...prev, optimisticMessage]);
 
         try {
+            // Inject sender role into content
+            const contentWithMeta = {
+                ...content,
+                meta: {
+                    ...content.meta,
+                    role: isAdmin ? 'admin' : 'student'
+                }
+            };
+
             const { data, error } = await supabase
                 .from('messages')
                 .insert({
                     conversation_id: currentConversationRef.current,
                     sender_id: user.id,
                     type,
-                    content: content as unknown as Json,
+                    content: contentWithMeta as unknown as Json,
                     context: context || null,
                     attachments: attachments || null
                 })
@@ -367,11 +390,82 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
     }, [playNotificationSound]);
 
+    // Subscribe to conversations list (for admin)
+    const subscribeToConversationsList = useCallback(() => {
+        if (!isAdmin || listChannelRef.current) return;
+
+        listChannelRef.current = supabase
+            .channel('conversations-list')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'conversations'
+                },
+                async (payload) => {
+                    if (payload.eventType === 'INSERT') {
+                        // Fetch the full conversation with student details
+                        const { data, error } = await supabase
+                            .from('conversations')
+                            .select(`
+                                *,
+                                student:profiles!conversations_student_id_profiles_fkey(id, full_name, avatar_url)
+                            `)
+                            .eq('id', payload.new.id)
+                            .single();
+
+                        if (!error && data) {
+                            const newConv: ConversationWithStudent = {
+                                ...data,
+                                student: Array.isArray(data.student) ? data.student[0] : data.student
+                            };
+
+                            setConversations(prev => {
+                                // Prevent duplicates
+                                if (prev.some(c => c.id === newConv.id)) return prev;
+                                return [newConv, ...prev];
+                            });
+                            playNotificationSound();
+                        }
+                    } else if (payload.eventType === 'UPDATE') {
+                        setConversations(prev => {
+                            return prev.map(c => {
+                                if (c.id === (payload.new as any).id) {
+                                    // Merge updates
+                                    return { ...c, ...payload.new };
+                                }
+                                return c;
+                            }).sort((a, b) => {
+                                // Re-sort by date
+                                const dateA = new Date(a.last_message_at || 0).getTime();
+                                const dateB = new Date(b.last_message_at || 0).getTime();
+                                return dateB - dateA;
+                            });
+                        });
+
+                        // Update unread count total
+                        // We need to recalculate. This is tricky with simple state updates.
+                        // Best effort:
+                        if ((payload.new as any).unread_count_admin > (payload.old as any).unread_count_admin) {
+                            playNotificationSound();
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+    }, [isAdmin, playNotificationSound]);
+
     // Unsubscribe from realtime
     const unsubscribe = useCallback(() => {
         if (channelRef.current) {
             channelRef.current.unsubscribe();
             channelRef.current = null;
+        }
+        if (listChannelRef.current) {
+            listChannelRef.current.unsubscribe();
+            listChannelRef.current = null;
         }
     }, []);
 
@@ -401,6 +495,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         isSending,
         unreadCount,
         subscribeToMessages,
+        subscribeToConversationsList,
         unsubscribe
     };
 }

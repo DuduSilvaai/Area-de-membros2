@@ -1,8 +1,23 @@
 'use server';
 
-import { createClient, createAdminClient } from '../../../lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { EnrollmentPermissions } from '@/types/enrollment';
 import { revalidatePath } from 'next/cache';
+
+// Helper to get admin client with service role
+function getAdminClient() {
+    return createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    );
+}
 
 export async function upsertEnrollment(
     userId: string,
@@ -10,7 +25,7 @@ export async function upsertEnrollment(
     permissions: EnrollmentPermissions
 ) {
     const supabase = await createClient();
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
 
     console.log('Upserting enrollment for user:', userId, 'portal:', portalId, 'permissions:', permissions);
 
@@ -25,7 +40,7 @@ export async function upsertEnrollment(
     console.log('Current user:', currentUser.id);
 
     const now = new Date().toISOString();
-    
+
     // Temporarily remove enrolled_by until migration is run
     const enrollmentData = {
         user_id: userId,
@@ -57,7 +72,7 @@ export async function upsertEnrollment(
     revalidatePath(`/users/${userId}/manage`);
     revalidatePath('/users');
     revalidatePath('/members'); // Also invalidate members page
-    
+
     // Additional cache busting - trigger a notification to realtime subscribers
     // This helps ensure immediate updates across all connected clients
     try {
@@ -75,7 +90,7 @@ export async function upsertEnrollment(
 }
 
 export async function deleteEnrollment(userId: string, portalId: string) {
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
 
     console.log('Soft-deleting enrollment for user:', userId, 'portal:', portalId);
 
@@ -83,7 +98,7 @@ export async function deleteEnrollment(userId: string, portalId: string) {
     // and ensure realtime subscriptions work properly
     const { data, error } = await adminSupabase
         .from('enrollments')
-        .update({ 
+        .update({
             is_active: false
         } as any) // Type assertion to handle updated_at field
         .eq('user_id', userId)
@@ -97,7 +112,7 @@ export async function deleteEnrollment(userId: string, portalId: string) {
     }
 
     console.log('Enrollment soft-deleted successfully:', data);
-    
+
     // Force cache invalidation with multiple strategies
     revalidatePath(`/users/${userId}/manage`);
     revalidatePath('/users');
@@ -118,7 +133,7 @@ export async function deleteEnrollment(userId: string, portalId: string) {
 }
 
 export async function getUserEnrollments(userId: string) {
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
 
     const { data, error } = await adminSupabase
         .from('enrollments')
@@ -147,7 +162,7 @@ export async function createUser(data: {
     password?: string;
     role: string;
 }) {
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
 
     // 1. Create user in Supabase Auth
     const { data: newUser, error } = await adminSupabase.auth.admin.createUser({
@@ -165,10 +180,28 @@ export async function createUser(data: {
         return { error: error.message };
     }
 
+    // 1.5. Explicitly update profile to ensure full_name is set
+    // This addresses the user requirement to use the `full_name` column
+    if (newUser.user) {
+        const { error: profileError } = await adminSupabase
+            .from('profiles')
+            .upsert({
+                id: newUser.user.id,
+                email: data.email,
+                full_name: data.name,
+                role: data.role === 'admin' ? 'admin' : 'member'
+            });
+
+        if (profileError) {
+            console.error('Error updating profile:', profileError);
+            // We don't fail the whole request, but we log it
+        }
+    }
+
     // 2. Log the action
     const supabase = await createClient();
     const { data: { user: currentUser } } = await supabase.auth.getUser();
-    
+
     if (currentUser) {
         await adminSupabase.from('access_logs').insert({
             user_id: currentUser.id,
@@ -187,7 +220,7 @@ export async function createUser(data: {
 
 // New function to reset user password
 export async function resetUserPassword(userId: string, newPassword: string) {
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
 
     const { data, error } = await adminSupabase.auth.admin.updateUserById(userId, {
         password: newPassword
@@ -201,7 +234,7 @@ export async function resetUserPassword(userId: string, newPassword: string) {
     // Log the action
     const supabase = await createClient();
     const { data: { user: currentUser } } = await supabase.auth.getUser();
-    
+
     if (currentUser) {
         await adminSupabase.from('access_logs').insert({
             user_id: currentUser.id,
@@ -217,7 +250,7 @@ export async function resetUserPassword(userId: string, newPassword: string) {
 
 // New function to deactivate/activate user
 export async function toggleUserStatus(userId: string, disabled: boolean) {
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
 
     const { data, error } = await adminSupabase.auth.admin.updateUserById(userId, {
         ban_duration: disabled ? '876000h' : 'none' // ~100 years or none
@@ -231,7 +264,7 @@ export async function toggleUserStatus(userId: string, disabled: boolean) {
     // Log the action
     const supabase = await createClient();
     const { data: { user: currentUser } } = await supabase.auth.getUser();
-    
+
     if (currentUser) {
         await adminSupabase.from('access_logs').insert({
             user_id: currentUser.id,
@@ -248,9 +281,9 @@ export async function toggleUserStatus(userId: string, disabled: boolean) {
 
 // New function for bulk enrollment
 export async function bulkEnrollUsers(userIds: string[], portalId: string, permissions: EnrollmentPermissions) {
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
     const supabase = await createClient();
-    
+
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!currentUser) {
         return { error: 'Não autenticado' };
@@ -293,18 +326,18 @@ export async function bulkEnrollUsers(userIds: string[], portalId: string, permi
 
 // Debug user access function
 export async function debugUserAccess(userEmail: string) {
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
 
     try {
         // Find user by email
         const { data: { users }, error: usersError } = await adminSupabase.auth.admin.listUsers();
-        
+
         if (usersError) {
             return { error: `Error listing users: ${usersError.message}` };
         }
 
         const targetUser = users?.find(u => u.email === userEmail);
-        
+
         if (!targetUser) {
             return { error: `User with email ${userEmail} not found` };
         }
@@ -357,13 +390,13 @@ export async function debugUserAccess(userEmail: string) {
 
 // Fix missing enrollments function
 export async function fixMissingEnrollments(userEmail: string) {
-    const adminSupabase = await createAdminClient();
+    const adminSupabase = getAdminClient();
 
     try {
         // Find user by email
         const { data: { users }, error: usersError } = await adminSupabase.auth.admin.listUsers();
         const targetUser = users?.find(u => u.email === userEmail);
-        
+
         if (!targetUser) {
             return { error: `User with email ${userEmail} not found` };
         }
@@ -390,13 +423,13 @@ export async function fixMissingEnrollments(userEmail: string) {
 
         // Also check for inactive enrollments that can be reactivated
         const inactiveEnrollments = existingEnrollments?.filter(e => !e.is_active) || [];
-        const reactivatePortals = allPortals?.filter(p => 
+        const reactivatePortals = allPortals?.filter(p =>
             inactiveEnrollments.some(e => e.portal_id === p.id)
         ) || [];
 
         if (missingPortals.length === 0 && reactivatePortals.length === 0) {
-            return { 
-                success: true, 
+            return {
+                success: true,
                 message: 'No missing enrollments found',
                 data: { createdCount: 0, reactivatedCount: 0 }
             };
@@ -410,7 +443,7 @@ export async function fixMissingEnrollments(userEmail: string) {
             const reactivateIds = reactivatePortals.map(p => p.id);
             const { error: reactivateError } = await adminSupabase
                 .from('enrollments')
-                .update({ 
+                .update({
                     is_active: true,
                     permissions: {
                         access_all: true,
@@ -424,7 +457,7 @@ export async function fixMissingEnrollments(userEmail: string) {
             if (reactivateError) {
                 return { error: `Error reactivating enrollments: ${reactivateError.message}` };
             }
-            
+
             reactivatedCount = reactivatePortals.length;
         }
 
@@ -459,7 +492,7 @@ export async function fixMissingEnrollments(userEmail: string) {
 
         const totalActions = createdCount + reactivatedCount;
         const actionMessages = [];
-        
+
         if (createdCount > 0) {
             actionMessages.push(`${createdCount} novos enrollments criados`);
         }
@@ -469,10 +502,10 @@ export async function fixMissingEnrollments(userEmail: string) {
 
         return {
             success: true,
-            message: actionMessages.length > 0 
-                ? actionMessages.join(' e ') 
+            message: actionMessages.length > 0
+                ? actionMessages.join(' e ')
                 : 'Nenhuma ação necessária',
-            data: { 
+            data: {
                 createdCount: createdCount,
                 reactivatedCount: reactivatedCount,
                 totalActions: totalActions,
@@ -483,5 +516,71 @@ export async function fixMissingEnrollments(userEmail: string) {
 
     } catch (error) {
         return { error: `Unexpected error: ${error}` };
+    }
+}
+
+// New function to synchronization for legacy users
+export async function syncUsersProfiles() {
+    const adminSupabase = getAdminClient();
+
+    try {
+        let allUsers: any[] = [];
+        let page = 1;
+        const perPage = 50;
+        let hasMore = true;
+
+        // Fetch all users with pagination
+        while (hasMore) {
+            const { data: { users }, error } = await adminSupabase.auth.admin.listUsers({
+                page: page,
+                perPage: perPage
+            });
+
+            if (error) throw error;
+
+            if (users.length > 0) {
+                allUsers = [...allUsers, ...users];
+                page++;
+            } else {
+                hasMore = false;
+            }
+
+            // Safety break just in case
+            if (users.length < perPage) hasMore = false;
+        }
+
+        console.log(`Syncing profiles for ${allUsers.length} total users...`);
+
+        let updatedCount = 0;
+        // Process in batches to avoid overwhelming the DB
+        const batchSize = 20;
+        for (let i = 0; i < allUsers.length; i += batchSize) {
+            const batch = allUsers.slice(i, i + batchSize);
+            const updates = batch.map(async (user) => {
+                if (user.user_metadata?.name) {
+                    const { error } = await adminSupabase
+                        .from('profiles')
+                        .upsert({
+                            id: user.id,
+                            email: user.email,
+                            full_name: user.user_metadata.name,
+                            role: user.user_metadata.role === 'admin' ? 'admin' : 'member'
+                        });
+
+                    if (!error) updatedCount++;
+                }
+            });
+            await Promise.all(updates);
+        }
+
+        console.log(`Profiles synced successfully. Updated: ${updatedCount}`);
+
+        revalidatePath('/users');
+        revalidatePath('/chat');
+        return { success: true, count: updatedCount };
+
+    } catch (error: any) {
+        console.error('Error syncing profiles:', error);
+        return { error: error.message };
     }
 }

@@ -263,8 +263,7 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
                         id: u.enrollmentId,
                         user_id: u.userId, // Include for safety
                         portal_id: portalId, // Include for safety
-                        permissions: currentPerms,
-                        updated_at: new Date().toISOString()
+                        permissions: currentPerms
                     });
                 }
 

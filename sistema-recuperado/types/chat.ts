@@ -10,6 +10,9 @@ export type Message = Tables<'messages'>;
 // Message content types (JSONB structure)
 export interface TextContent {
     text: string;
+    meta?: {
+        role?: 'admin' | 'student';
+    };
 }
 
 export interface ImageContent {
@@ -17,12 +20,18 @@ export interface ImageContent {
     caption?: string;
     width?: number;
     height?: number;
+    meta?: {
+        role?: 'admin' | 'student';
+    };
 }
 
 export interface VideoContent {
     url: string;
     thumbnail?: string;
     duration?: number;
+    meta?: {
+        role?: 'admin' | 'student';
+    };
 }
 
 export interface FileContent {
@@ -30,6 +39,9 @@ export interface FileContent {
     name: string;
     size: number;
     mimeType: string;
+    meta?: {
+        role?: 'admin' | 'student';
+    };
 }
 
 export interface MeetingContent {
@@ -37,6 +49,9 @@ export interface MeetingContent {
     description?: string;
     date: string; // ISO 8601 format
     link: string;
+    meta?: {
+        role?: 'admin' | 'student';
+    };
 }
 
 // Union type for message content

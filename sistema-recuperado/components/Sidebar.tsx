@@ -14,7 +14,8 @@ import {
   Globe,
   Sun,
   Moon,
-  MessageCircle
+  MessageCircle,
+  MessageSquareText
 } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -22,6 +23,7 @@ const MENU_ITEMS = [
   { name: 'Meus Portais', href: '/portals', icon: Globe },
   { name: 'Usuários', href: '/users', icon: Users },
   { name: 'Chat & Mentoria', href: '/chat', icon: MessageCircle },
+  { name: 'Comentários', href: '/comments', icon: MessageSquareText },
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
