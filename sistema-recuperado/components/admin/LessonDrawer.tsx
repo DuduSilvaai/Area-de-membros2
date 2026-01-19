@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Save, Video, Link, FileText, Settings, Upload, CheckCircle, Trash2, Plus, File as FileIcon, ExternalLink, Lock } from 'lucide-react';
+import { X, Save, Video, Link, FileText, Settings, Upload, CheckCircle, Trash2, Plus, File as FileIcon, ExternalLink, Lock, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -486,6 +486,100 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
                                                     />
                                                 </div>
                                             )}
+                                        </div>
+                                    </div>
+
+                                    {/* Capa da Aula (Cover Image) */}
+                                    <div className="space-y-4">
+                                        <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Capa da Aula (Thumbnail)</h3>
+                                        <div className="flex items-start gap-4">
+                                            <div
+                                                className={`
+                                                    relative w-40 h-24 bg-zinc-100 dark:bg-zinc-900 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 flex-shrink-0
+                                                    ${!formData.config?.cover_url ? 'border-dashed cursor-pointer hover:border-pink-500/50' : ''}
+                                                `}
+                                                onClick={() => {
+                                                    if (!formData.config?.cover_url) {
+                                                        document.getElementById('cover-upload')?.click();
+                                                    }
+                                                }}
+                                            >
+                                                {formData.config?.cover_url ? (
+                                                    <div className="group relative w-full h-full">
+                                                        <img
+                                                            src={formData.config.cover_url}
+                                                            alt="Capa"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-white hover:text-red-500"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setFormData(prev => ({
+                                                                        ...prev,
+                                                                        config: { ...prev.config, cover_url: null }
+                                                                    }));
+                                                                }}
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400">
+                                                        <ImageIcon className="w-6 h-6 mb-1" />
+                                                        <span className="text-[10px]">Upload Capa</span>
+                                                    </div>
+                                                )}
+
+                                                <input
+                                                    id="cover-upload"
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+
+                                                        try {
+                                                            const fileName = `cover-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+                                                            const filePath = `covers/${fileName}`;
+
+                                                            const toastId = toast.loading('Enviando capa...');
+
+                                                            const { error: uploadError } = await supabase.storage
+                                                                .from('course-content')
+                                                                .upload(filePath, file);
+
+                                                            if (uploadError) throw uploadError;
+
+                                                            const { data: { publicUrl } } = supabase.storage
+                                                                .from('course-content')
+                                                                .getPublicUrl(filePath);
+
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                config: { ...prev.config, cover_url: publicUrl }
+                                                            }));
+
+                                                            toast.dismiss(toastId);
+                                                            toast.success('Capa atualizada!');
+                                                        } catch (error) {
+                                                            console.error('Error uploading cover:', error);
+                                                            toast.error('Erro ao enviar capa');
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex-1 space-y-2">
+                                                <p className="text-sm text-zinc-500">
+                                                    Escolha uma imagem de capa para aparecer antes do vídeo iniciar.
+                                                    Recomendado: 1280x720px (16:9).
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
 
