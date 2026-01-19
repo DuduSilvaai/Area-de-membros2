@@ -32,25 +32,25 @@ export function StudentManagementDashboard({ stats }: Props) {
 
     const statCards = [
         {
-            title: 'Total de Alunos',
+            title: 'Total de Franqueados',
             value: stats.totalStudents,
             icon: Users,
             color: 'blue',
-            description: 'Alunos cadastrados na plataforma'
+            description: 'Franqueados cadastrados na plataforma'
         },
         {
-            title: 'Alunos Ativos',
+            title: 'Franqueados Ativos',
             value: stats.activeStudents,
             icon: UserCheck,
             color: 'green',
-            description: 'Alunos com contas ativas'
+            description: 'Franqueados com contas ativas'
         },
         {
-            title: 'Alunos Inativos',
+            title: 'Franqueados Inativos',
             value: stats.inactiveStudents,
             icon: UserX,
             color: 'red',
-            description: 'Alunos com contas desativadas'
+            description: 'Franqueados com contas desativadas'
         },
         {
             title: 'Total de Matrículas',
@@ -64,14 +64,14 @@ export function StudentManagementDashboard({ stats }: Props) {
             value: stats.studentsWithAccess,
             icon: BookOpen,
             color: 'pink',
-            description: 'Alunos com pelo menos 1 matrícula'
+            description: 'Franqueados com pelo menos 1 matrícula'
         },
         {
             title: 'Sem Acesso',
             value: stats.studentsWithoutAccess,
             icon: UserX,
             color: 'orange',
-            description: 'Alunos sem nenhuma matrícula'
+            description: 'Franqueados sem nenhuma matrícula'
         },
         {
             title: 'Novas Matrículas',
@@ -108,12 +108,12 @@ export function StudentManagementDashboard({ stats }: Props) {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard de Alunos</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard de Franqueados</h2>
                     <p className="text-gray-600 dark:text-gray-400 mt-1">
-                        Visão geral do gerenciamento de alunos e matrículas
+                        Visão geral do gerenciamento de franqueados e matrículas
                     </p>
                 </div>
-                
+
                 <select
                     value={selectedPeriod}
                     onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -145,7 +145,7 @@ export function StudentManagementDashboard({ stats }: Props) {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
                                     {stat.title}
@@ -162,15 +162,15 @@ export function StudentManagementDashboard({ stats }: Props) {
             {/* Quick Actions */}
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Ações Rápidas</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button className="flex items-center gap-3 p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <div className="p-2 bg-pink-100 dark:bg-pink-900/20 rounded-lg">
                             <Users className="w-5 h-5 text-pink-600 dark:text-pink-400" />
                         </div>
                         <div className="text-left">
-                            <div className="font-medium text-gray-900 dark:text-white">Cadastrar Aluno</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Adicionar novo aluno</div>
+                            <div className="font-medium text-gray-900 dark:text-white">Cadastrar Franqueado</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Adicionar novo franqueado</div>
                         </div>
                     </button>
 
@@ -180,7 +180,7 @@ export function StudentManagementDashboard({ stats }: Props) {
                         </div>
                         <div className="text-left">
                             <div className="font-medium text-gray-900 dark:text-white">Matrícula em Lote</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Matricular vários alunos</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Matricular vários franqueados</div>
                         </div>
                     </button>
 
@@ -199,10 +199,10 @@ export function StudentManagementDashboard({ stats }: Props) {
             {/* Recent Activity Summary */}
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Resumo de Atividades</h3>
-                
+
                 <div className="space-y-3">
                     <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-600 dark:text-gray-400">Novos alunos cadastrados hoje</span>
+                        <span className="text-gray-600 dark:text-gray-400">Novos franqueados cadastrados hoje</span>
                         <span className="font-semibold text-gray-900 dark:text-white">3</span>
                     </div>
                     <div className="flex items-center justify-between py-2">
@@ -210,7 +210,7 @@ export function StudentManagementDashboard({ stats }: Props) {
                         <span className="font-semibold text-gray-900 dark:text-white">7</span>
                     </div>
                     <div className="flex items-center justify-between py-2">
-                        <span className="text-gray-600 dark:text-gray-400">Alunos ativos na última semana</span>
+                        <span className="text-gray-600 dark:text-gray-400">Franqueados ativos na última semana</span>
                         <span className="font-semibold text-gray-900 dark:text-white">{Math.round(stats.activeStudents * 0.8)}</span>
                     </div>
                     <div className="flex items-center justify-between py-2">

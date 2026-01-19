@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { MemberNotification } from '@/types/members';
 
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 const StudentNavbar: React.FC = () => {
   const router = useRouter();
@@ -158,25 +158,26 @@ const StudentNavbar: React.FC = () => {
     router.push('/login');
   };
 
-  const userName = user?.email?.split('@')[0] || 'Aluno';
+  const userName = user?.email?.split('@')[0] || 'Franqueado';
   const userAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${userName}`;
 
   return (
     <nav
       ref={navRef}
       className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out px-4 md:px-12 py-2 ${isScrolled
-        ? 'bg-[#121212]/80 backdrop-blur-xl shadow-lg border-b border-white/5'
+        ? 'bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl shadow-lg border-b border-gray-200 dark:border-white/5'
         : 'bg-transparent'
         }`}
     >
       <div className="flex items-center justify-between">
         {/* Logo */}
         <Link href="/members" className="flex items-center gap-3 group cursor-pointer">
-          <img
-            src="/assets/logopink.png"
-            alt="Mozart Logo"
-            className="h-60 w-auto object-contain transition-all duration-300 -mt-20"
-          />
+          <span
+            className="text-3xl md:text-5xl text-[#FF0080] drop-shadow-[0_0_8px_rgba(255,0,128,0.5)] transition-all duration-300 hover:drop-shadow-[0_0_15px_rgba(255,0,128,0.8)] pb-2"
+            style={{ fontFamily: '"Great Vibes", cursive' }}
+          >
+            Love for Sweet
+          </span>
         </Link>
 
         {/* Right Actions */}
@@ -185,7 +186,7 @@ const StudentNavbar: React.FC = () => {
           {/* Home Link */}
           <Link
             href="/members"
-            className="group p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-[#FF0080] bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 border border-white/10 shadow-sm hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] hover:border-[#FF0080]"
+            className="group p-2.5 rounded-full text-gray-500 dark:text-gray-300 hover:text-white hover:bg-[#FF0080] bg-gray-100 dark:bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] hover:border-[#FF0080]"
           >
             <Home size={20} className="group-hover:text-white transition-colors" />
           </Link>
@@ -193,7 +194,7 @@ const StudentNavbar: React.FC = () => {
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="group p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-[#FF0080] bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 border border-white/10 shadow-sm hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] hover:border-[#FF0080]"
+            className="group p-2.5 rounded-full text-gray-500 dark:text-gray-300 hover:text-white hover:bg-[#FF0080] bg-gray-100 dark:bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] hover:border-[#FF0080]"
             aria-label="Toggle Theme"
           >
             {theme === 'dark' ? (
@@ -210,7 +211,7 @@ const StudentNavbar: React.FC = () => {
               className={`relative group p-2.5 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border shadow-sm
                 ${isNotificationsOpen
                   ? 'bg-[#FF0080] text-white border-[#FF0080] shadow-[0_0_15px_rgba(255,0,128,0.4)]'
-                  : 'bg-white/5 text-gray-300 hover:bg-[#FF0080] hover:text-white hover:border-[#FF0080] hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] border-white/10'
+                  : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-300 hover:bg-[#FF0080] hover:text-white hover:border-[#FF0080] hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] border-gray-200 dark:border-white/10'
                 }
               `}
             >
@@ -295,7 +296,7 @@ const StudentNavbar: React.FC = () => {
               <div className="absolute right-0 mt-4 w-56 bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 overflow-hidden ring-1 ring-black/5 origin-top-right">
                 <div className="px-5 py-3 border-b border-gray-100/10 dark:border-white/5 bg-white/10 dark:bg-white/5">
                   <p className="text-sm text-gray-900 dark:text-white font-medium">{userName}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Conta de Aluno</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Conta de Franqueado</p>
                 </div>
                 <div className="p-1">
                   <Link

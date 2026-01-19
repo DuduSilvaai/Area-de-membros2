@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { createPortalSchema } from '@/lib/validation/schemas';
 import { Save, Settings, Users, Shield, MessageSquare } from 'lucide-react';
 import { Button, Input, Select, Switch, FileUpload } from './UIComponents';
 import { createPortal } from '@/app/(admin)/portals/actions';
@@ -11,26 +12,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 // --- SCHEMA DE VALIDAÇÃO (Baseado no código recuperado) ---
-const schema = yup.object().shape({
-    name: yup.string().required('O nome é obrigatório').min(3, 'Mínimo de 3 caracteres'),
-    description: yup.string().required('Descrição obrigatória').min(10, 'Mínimo de 10 caracteres').max(500),
-    support_email: yup.string().email('Email inválido').required('Email de suporte obrigatório'),
-    support_external_url: yup.string().url('URL inválida').nullable(),
-    theme: yup.string().required(),
-    is_external_domain: yup.number(),
-    // Configurações de tema
-    theme_settings: yup.object().shape({
-        default_color: yup.string(),
-        light_logo_url: yup.string().nullable(),
-        dark_logo_url: yup.string().nullable(),
-    }),
-    // Configurações de comentários
-    comments_settings: yup.object().shape({
-        day_limit: yup.number().min(0).max(200),
-        character_limit: yup.number().min(10).max(999),
-        automatically_publish: yup.boolean(),
-    })
-});
+// --- SCHEMA DE VALIDAÇÃO (Baseado no action) ---
+const schema = createPortalSchema;
 
 // --- COMPONENTE DO FORMULÁRIO ---
 export default function TeamForm() {
@@ -40,7 +23,7 @@ export default function TeamForm() {
 
     // Hook do Formulário
     const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
-        resolver: yupResolver(schema),
+        resolver: zodResolver(schema),
         defaultValues: {
             name: '',
             description: '',

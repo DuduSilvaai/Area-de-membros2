@@ -6,7 +6,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { ConversationWithStudent, MessageWithSender, MessageContent, MessageType } from '@/types/chat';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { MessageInput } from '@/components/admin/chat/MessageInput';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { CornerDownRight } from 'lucide-react';
 
 interface ChatAreaProps {

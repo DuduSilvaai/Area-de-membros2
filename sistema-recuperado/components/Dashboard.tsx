@@ -110,7 +110,7 @@ const StatWidget = ({ title, value, icon: Icon, trend, subValue, gradient = 'fro
 
 const LatestCommentsWidget = ({ comments }: { comments: CommentItem[] }) => (
   <HoloCard className="p-8 h-full">
-    <SectionTitle icon={MessageSquare} title="Conversas Recentes" subtitle="O que os alunos estão dizendo" />
+    <SectionTitle icon={MessageSquare} title="Conversas Recentes" subtitle="O que os franqueados estão dizendo" />
 
     <div className="space-y-4">
       {comments.length === 0 ? (
@@ -158,7 +158,7 @@ const LatestCommentsWidget = ({ comments }: { comments: CommentItem[] }) => (
 
 const LeaderboardWidget = ({ students }: { students: TopStudent[] }) => (
   <HoloCard className="p-8 h-full bg-gradient-to-b from-white/80 to-white/40 dark:from-[#0A0A0A]/90 dark:to-[#0A0A0A]/50">
-    <SectionTitle icon={Trophy} title="Top Alunos" subtitle="Mais engajados nos últimos 30 dias" />
+    <SectionTitle icon={Trophy} title="Top Franqueados" subtitle="Mais engajados nos últimos 30 dias" />
 
     <div className="space-y-2">
       {students.length === 0 ? (
@@ -236,7 +236,7 @@ export default function Dashboard({ stats }: DashboardProps) {
         {/* Stats Row */}
         <div className="lg:col-span-4 h-full">
           <StatWidget
-            title="Total de Alunos"
+            title="Total de Franqueados"
             value={stats.totalStudents.toString()}
             icon={Users}
             trend="+3 novos"
@@ -263,7 +263,7 @@ export default function Dashboard({ stats }: DashboardProps) {
             value={stats.accessesToday.toString()}
             icon={Zap}
             gradient="from-emerald-400 to-teal-500"
-            subValue={<span>Alunos ativos na plataforma</span>}
+            subValue={<span>Franqueados ativos na plataforma</span>}
           />
         </div>
 

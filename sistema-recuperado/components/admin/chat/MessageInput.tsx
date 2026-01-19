@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, KeyboardEvent, ChangeEvent } from 'react';
 import { MessageContent, MessageType } from '@/types/chat';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 interface MessageInputProps {
     onSendMessage: (content: MessageContent, type: MessageType) => Promise<void>;

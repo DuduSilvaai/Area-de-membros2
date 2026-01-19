@@ -1,0 +1,177 @@
+﻿
+> sistema-recuperado@0.1.0 build
+> next build
+
+node.exe : [baseline-
+browser-mapping] The 
+data in this module 
+is over two months 
+old.  To ensure 
+accurate Baseline 
+data, please update: 
+`npm i baseline-brows
+er-mapping@latest -D`
+No C:\Program Files\n
+odejs\npm.ps1:29 
+caractere:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([baseli   
+ ne-brows...ping@    
+latest -D`:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+   Ôû▓ Next.js 16.0.3 (Turbopack)
+   - Environments: .env.local
+
+ ÔÜá The 
+"middleware" file 
+convention is 
+deprecated. Please 
+use "proxy" instead. 
+Learn more: https://n
+extjs.org/docs/messag
+es/middleware-to-prox
+y
+   Creating an optimized production build ...
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+ Ô£ô Compiled successfully in 8.3s
+   Running TypeScript ...
+Failed to compile.
+
+./app/run-migration/p
+age.tsx:17:23
+Type error: No 
+overload matches 
+this call.
+  Overload 1 of 2, 
+'(relation: 
+"portals" | 
+"modules" | 
+"contents" | 
+"profiles" | 
+"comments" | 
+"conversations" | 
+"lesson_attachments" 
+| "enrollments" | 
+"comment_likes" | 
+"access_logs" | 
+"progress" | 
+"messages" | 
+"events"): PostgrestQ
+ueryBuilder<...>', 
+gave the following 
+error.
+    Argument of type 
+'"information_schema.
+columns"' is not 
+assignable to 
+parameter of type 
+'"portals" | 
+"modules" | 
+"contents" | 
+"profiles" | 
+"comments" | 
+"conversations" | 
+"lesson_attachments" 
+| "enrollments" | 
+"comment_likes" | 
+"access_logs" | 
+"progress" | 
+"messages" | 
+"events"'.
+  Overload 2 of 2, 
+'(relation: never): P
+ostgrestQueryBuilder<
+{ PostgrestVersion: 
+"12"; }, { Tables: { 
+modules: { Row: { 
+id: string; 
+created_at: string; 
+updated_at: string | 
+null; title: string; 
+description: string 
+| null; order_index: 
+number; image_url: 
+string | null; 
+portal_id: string | 
+null; 
+parent_module_id: 
+string | null; 
+is_active: boolean; 
+}; Insert: { ...; }; 
+Update: { ...; }; 
+Relationships: 
+[...]; }; ... 11 
+more ...; events: { 
+...; }; }; Views: 
+{}; Functions: {}; 
+Enums: {}; 
+CompositeTypes: {}; 
+}, never, never, 
+never>', gave the 
+following error.
+    Argument of type 
+'"information_schema.
+columns"' is not 
+assignable to 
+parameter of type 
+'never'.
+
+[0m [90m 15 |[39m 
+            [90m// 
+Check if updated_at 
+column exists[39m
+ [90m 16 |[39m     
+        
+[36mconst[39m { 
+data[33m:[39m 
+columns[33m,[39m 
+error[33m:[39m 
+columnError } 
+[33m=[39m 
+[36mawait[39m 
+supabase
+[31m[1m>[22m[39m
+[90m 17 |[39m       
+          [33m.[39m
+[36mfrom[39m([32m'
+information_schema.co
+lumns'[39m)
+ [90m    |[39m     
+                  
+[31m[1m^[22m[39m
+ [90m 18 |[39m     
+            [33m.[3
+9mselect([32m'column
+_name'[39m)
+ [90m 19 |[39m     
+            [33m.[3
+9meq([32m'table_name
+'[39m[33m,[39m [3
+2m'enrollments'[39m)
+ [90m 20 |[39m     
+            [33m.[3
+9meq([32m'column_nam
+e'[39m[33m,[39m [
+32m'updated_at'[39m)
+[33m;[39m[0m
+Next.js build worker 
+exited with code: 1 
+and signal: null

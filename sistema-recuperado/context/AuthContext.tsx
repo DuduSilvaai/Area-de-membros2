@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User } from '@supabase/supabase-js'; // Removemos Session daqui pois não estava usando explicitamente no tipo
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabase/client';
 
 type Profile = {
   id: string;
@@ -21,6 +21,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   // Começa carregando

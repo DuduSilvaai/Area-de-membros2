@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Play, Info, Clock, PlayCircle } from 'lucide-react';
@@ -266,7 +266,7 @@ export default function PortalLobbyPage() {
     if (!portal) return null;
 
     return (
-        <div className="min-h-screen bg-[#0F0F12] text-white selection:bg-[#FF0080]/30 pb-20 font-sans">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0F0F12] text-gray-900 dark:text-white selection:bg-[#FF0080]/30 pb-20 font-sans transition-colors duration-500">
             <StudentNavbar />
 
             {/* HERO SECTION - Full Width */}
@@ -283,8 +283,8 @@ export default function PortalLobbyPage() {
                 ></div>
 
                 {/* Gradients for Cinematic Look */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F12] via-[#0F0F12]/60 to-transparent"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0F0F12] via-[#0F0F12]/50 to-transparent opacity-90"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-50 dark:from-[#0F0F12] via-gray-50/60 dark:via-[#0F0F12]/60 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-50 dark:from-[#0F0F12] via-gray-50/50 dark:via-[#0F0F12]/50 to-transparent opacity-90"></div>
 
                 {/* Hero Content */}
                 <div className="relative z-10 w-full max-w-[1600px] mx-auto px-6 md:px-12 pb-16 md:pb-24">
@@ -296,11 +296,11 @@ export default function PortalLobbyPage() {
                             {/* Optional: Add 'New' badge or other meta */}
                         </div>
 
-                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-6 leading-tight drop-shadow-lg">
+                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-gray-900 dark:text-white mb-6 leading-tight drop-shadow-lg">
                             {portal.name}
                         </h1>
 
-                        <p className="text-gray-300 text-lg md:text-xl mb-10 line-clamp-3 font-light tracking-wide max-w-2xl leading-relaxed">
+                        <p className="text-gray-600 dark:text-gray-300 text-lg md:text-xl mb-10 line-clamp-3 font-light tracking-wide max-w-2xl leading-relaxed">
                             {portal.description || "Bem-vindo ao portal. Explore os módulos abaixo para começar sua jornada de aprendizado."}
                         </p>
 
@@ -338,7 +338,7 @@ export default function PortalLobbyPage() {
                                 )}
                             </button>
                             <button
-                                className="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md text-white px-8 py-4 rounded-xl font-medium text-lg transition-all border border-white/10 hover:border-white/20"
+                                className="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md text-gray-900 dark:text-white px-8 py-4 rounded-xl font-medium text-lg transition-all border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20"
                                 onClick={() => {
                                     const element = document.getElementById('modules-section');
                                     element?.scrollIntoView({ behavior: 'smooth' });
@@ -359,10 +359,10 @@ export default function PortalLobbyPage() {
                 <section id="modules-section">
                     <div className="flex items-end justify-between mb-8 pl-2 border-l-4 border-[#FF0080]">
                         <div>
-                            <h2 className="text-2xl md:text-3xl font-serif font-bold text-white drop-shadow-md">
+                            <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 dark:text-white drop-shadow-md">
                                 Módulos de Aprendizado
                             </h2>
-                            <p className="text-gray-400 text-sm mt-2 font-light tracking-wide">
+                            <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 font-light tracking-wide">
                                 Explore o conteúdo organizado para sua evolução.
                             </p>
                         </div>
@@ -423,7 +423,7 @@ export default function PortalLobbyPage() {
                                     {/* Card Meta */}
                                     <div className="mt-5 px-2">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/10 text-white px-2 py-1 rounded border border-white/5 backdrop-blur-md">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white px-2 py-1 rounded border border-gray-200 dark:border-white/5 backdrop-blur-md">
                                                 Módulo {module.order_index}
                                             </span>
                                             <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
@@ -431,11 +431,11 @@ export default function PortalLobbyPage() {
                                             </span>
                                         </div>
 
-                                        <h3 className="text-xl font-bold text-white mb-2 leading-tight group-hover:text-[#FF0080] transition-colors line-clamp-1">
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 leading-tight group-hover:text-[#FF0080] transition-colors line-clamp-1">
                                             {module.title}
                                         </h3>
 
-                                        <p className="text-sm text-gray-400 line-clamp-2 font-light leading-relaxed">
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 font-light leading-relaxed">
                                             {module.description || "Descrição não disponível."}
                                         </p>
                                     </div>

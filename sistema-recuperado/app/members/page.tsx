@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Command, Loader2, RefreshCw } from 'lucide-react';
-import { useTheme } from '@/context/ThemeContext';
-import { supabase } from '@/lib/supabaseClient';
-import CourseCard from '@/components/members/CourseCard';
-
-const BRAND_LOGO = "https://cdn-icons-png.flaticon.com/512/2964/2964063.png";
+import Link from 'next/link';
+import { RefreshCw, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import CinematicHeader from '@/components/cinematic/CinematicHeader';
+import CinematicPortalCard from '@/components/cinematic/PortalCard';
+import BackgroundEffects from '@/components/cinematic/BackgroundEffects';
 
 interface Portal {
   id: string;
@@ -20,12 +20,11 @@ interface Portal {
 
 export default function MobilePortalSelection() {
   const router = useRouter();
-  const { theme } = useTheme();
   const [portals, setPortals] = useState<Portal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-  const [hoveredPortal, setHoveredPortal] = useState<string | null>(null);
+  const [hoveredPortalId, setHoveredPortalId] = useState<string | null>(null);
 
   const fetchPortals = async (forceRefresh = false) => {
     if (forceRefresh) {
@@ -37,7 +36,7 @@ export default function MobilePortalSelection() {
     try {
       const { data, error } = await supabase
         .from('portals')
-        .select('*');
+        .select('id, name, image_url, description, settings');
 
       if (error) {
         console.error('Error fetching portals:', error);
@@ -64,91 +63,69 @@ export default function MobilePortalSelection() {
 
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-[#0a0a0a]">
-        <Loader2 className="w-8 h-8 animate-spin text-mozart-pink" />
+      <div className="h-screen w-full flex items-center justify-center bg-brand-dark">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-pink" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-full flex flex-col items-center justify-center relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a] selection:bg-mozart-pink selection:text-white">
+    <div className="h-screen w-full relative bg-gray-50 dark:bg-black text-gray-900 dark:text-white font-sans selection:bg-brand-pink/30 selection:text-brand-pink overflow-hidden">
 
-      {/* Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-white dark:via-black/50 dark:to-black z-0 pointer-events-none"></div>
+      <BackgroundEffects />
 
-      {/* Netflix Logo - Top Left */}
-      <div className="absolute top-6 left-6 md:top-10 md:left-10 z-20">
-        <div className="relative w-40 md:w-56 transition-transform hover:scale-105 duration-500">
-          <div className="absolute inset-0 bg-[#E50914]/20 blur-2xl rounded-full opacity-0 hover:opacity-100 transition-opacity duration-500"></div>
-          <img
-            src="/assets/logotipo-netflix.png"
-            alt="Netflix Logo"
-            className="w-full object-contain drop-shadow-2xl relative z-10"
-          />
-        </div>
-      </div>
+      <main className="relative z-10 w-full h-full flex flex-col justify-start items-center overflow-hidden pt-2 md:pt-4">
+        <CinematicHeader />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col items-center justify-center h-full px-6 py-8">
+        {/* Refresh Button - Integrated nicely below header */}
+        <div className="flex flex-col items-center justify-center gap-1 mb-2 -mt-4 animate-fade-in opacity-0" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
+          <button
+            onClick={() => fetchPortals(true)}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 px-3 py-1 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 backdrop-blur-md border border-gray-200 dark:border-white/10 hover:border-brand-pink/30 rounded-full text-[9px] font-medium text-gray-600 dark:text-gray-400 hover:text-brand-pink dark:hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+          >
+            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin text-brand-pink' : 'group-hover:text-brand-pink transition-colors'}`} />
+            {refreshing ? 'Atualizando bases...' : 'Atualizar Portais'}
+          </button>
 
-        {/* Header - More Compact */}
-        <div
-          className={`text-center mb-8 md:mb-12 shrink-0 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] ${hoveredPortal ? 'opacity-30 blur-sm scale-95' : 'opacity-100 blur-0 scale-100'}`}
-        >
-
-
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-gray-900 dark:text-white mb-4 tracking-tighter leading-tight">
-            Selecione seu <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF0080] to-[#E60073] animate-gradient-x">Domínio</span>
-          </h1>
-          <p className="text-lg text-gray-500 dark:text-gray-400 font-light w-full max-w-2xl mx-auto tracking-wide">
-            Entre em um ambiente especializado projetado para <span className="text-gray-900 dark:text-white font-medium">aprendizado profundo</span>.
-          </p>
-
-          {/* Refresh Button */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => fetchPortals(true)}
-              disabled={refreshing}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Atualizando...' : 'Atualizar Portais'}
-            </button>
-
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              Última atualização: {lastRefresh.toLocaleTimeString()}
-            </div>
+          <div className="text-[10px] text-gray-600 font-mono tracking-wider">
+            Última sincronização: {lastRefresh.toLocaleTimeString()}
           </div>
         </div>
 
-        {/* The Portals Grid - Switched from Custom Inline to CourseCard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-6xl justify-items-center">
-          {portals.map((portal) => {
-            // Map Portal Data to Course Format
-            const courseData = {
-              id: portal.id,
-              title: portal.name,
-              thumbnail: portal.settings?.banner_url || portal.image_url,
-              progress: 0, // Default to 0 as we don't have portal-level progress summary yet
-              author: 'Mozart Academy',
-              total_lessons: 0 // Placeholder
-            };
+        {/* Horizontal Scroll Layout */}
+        <div className="w-full h-full overflow-x-auto overflow-y-hidden pb-4 px-4 sm:px-8 custom-scrollbar scrollbar-none">
+          <div className="flex flex-nowrap gap-8 md:gap-12 min-w-min mx-auto justify-center items-start pt-2 h-full">
+            {portals.map((portal, index) => {
+              const isHovered = hoveredPortalId === portal.id;
+              const isAnyHovered = hoveredPortalId !== null;
 
-            return (
-              <div
-                key={portal.id}
-                className="w-full flex justify-center transform hover:-translate-y-2 transition-transform duration-300"
-                onMouseEnter={() => setHoveredPortal(portal.id)}
-                onMouseLeave={() => setHoveredPortal(null)}
-              >
-                <CourseCard course={courseData} />
-              </div>
-            );
-          })}
+              return (
+                <div
+                  key={portal.id}
+                  className={`w-[280px] md:w-[320px] flex-shrink-0 animate-slide-up transition-all duration-500 ease-out
+                  ${isHovered ? 'scale-[1.01] -translate-y-1 z-20 brightness-110 drop-shadow-[0_0_35px_rgba(255,45,120,0.6)]' : ''}
+                  ${isAnyHovered && !isHovered ? 'scale-95 grayscale opacity-40 blur-[1px]' : 'hover:-translate-y-1'}
+                `}
+                  style={{ animationDelay: `${index * 150}ms` }}
+                  onMouseEnter={() => setHoveredPortalId(portal.id)}
+                  onMouseLeave={() => setHoveredPortalId(null)}
+                >
+                  <Link href={`/members/${portal.id}`}>
+                    <CinematicPortalCard
+                      title={portal.name}
+                      subtitle={portal.description || "Mozart Academy"}
+                      imageUrl={portal.settings?.banner_url || portal.image_url}
+                      progress={0} // Default as per requirements
+                      isLocked={false}
+                    />
+                  </Link>
+                </div>
+              )
+            })}
+          </div>
         </div>
-
-
-
-      </div>
+      </main>
     </div>
   );
 }

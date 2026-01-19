@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { Mail, Clock, BookOpen, Edit2, Save, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import StudentNavbar from '@/components/members/StudentNavbar';
@@ -24,12 +24,20 @@ export default function ProfilePage() {
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Learning activity stats
+    const [learningStats, setLearningStats] = useState({
+        completedLessons: 0,
+        totalHoursWatched: 0
+    });
+
     useEffect(() => {
         async function fetchProfile() {
             if (!user) return;
 
             try {
                 setLoading(true);
+
+                // Fetch profile data
                 const { data, error } = await supabase
                     .from('profiles')
                     .select('*')
@@ -48,6 +56,26 @@ export default function ProfilePage() {
                     });
                     setAvatarUrl(profile.avatar_url);
                 }
+
+                // Fetch learning stats - count completed lessons
+                const { data: progressData, error: progressError } = await supabase
+                    .from('progress')
+                    .select('content_id, is_completed')
+                    .eq('user_id', user.id)
+                    .eq('is_completed', true);
+
+                if (!progressError && progressData) {
+                    const completedCount = progressData.length;
+
+                    // Estimate hours: assume average of 10 minutes per lesson
+                    const estimatedHours = Math.round((completedCount * 10 / 60) * 10) / 10;
+
+                    setLearningStats({
+                        completedLessons: completedCount,
+                        totalHoursWatched: estimatedHours
+                    });
+                }
+
             } catch (error) {
                 console.error('Error fetching profile:', error);
                 toast.error('Erro ao carregar perfil.');
@@ -168,8 +196,8 @@ export default function ProfilePage() {
                                         <BookOpen size={24} />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-gray-900 dark:text-white">-</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Cursos Completos</p>
+                                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{learningStats.completedLessons}</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Aulas Concluídas</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
@@ -177,8 +205,8 @@ export default function ProfilePage() {
                                         <Clock size={24} />
                                     </div>
                                     <div>
-                                        <p className="text-2xl font-bold text-gray-900 dark:text-white">-</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Horas Assistidas</p>
+                                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{learningStats.totalHoursWatched}h</p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Horas Estimadas</p>
                                     </div>
                                 </div>
                             </div>

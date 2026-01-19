@@ -52,18 +52,18 @@ export default async function UsersPage() {
 
   // Calculate dashboard stats
   const totalStudents = users?.length || 0;
-  const activeStudents = users?.filter(u => !u.banned_until || new Date(u.banned_until) <= new Date()).length || 0;
+  const activeStudents = users?.filter(u => !(u as any).banned_until || new Date((u as any).banned_until) <= new Date()).length || 0;
   const inactiveStudents = totalStudents - activeStudents;
   const totalEnrollments = enrollments?.length || 0;
-  const studentsWithAccess = users?.filter(u => 
+  const studentsWithAccess = users?.filter(u =>
     enrollments?.some(e => e.user_id === u.id)
   ).length || 0;
   const studentsWithoutAccess = totalStudents - studentsWithAccess;
-  
+
   // Calculate recent enrollments (last 7 days)
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const recentEnrollments = enrollments?.filter(e => 
+  const recentEnrollments = enrollments?.filter(e =>
     new Date(e.enrolled_at) >= sevenDaysAgo
   ).length || 0;
 

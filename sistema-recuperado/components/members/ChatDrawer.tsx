@@ -5,7 +5,7 @@ import { useChat } from '@/lib/hooks/useChat';
 import { useParams } from 'next/navigation';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { MessageContent, MessageType } from '@/types/chat';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 interface ChatDrawerProps {
     isOpen: boolean;

@@ -1,0 +1,177 @@
+﻿
+> sistema-recuperado@0.1.0 build
+> next build
+
+node.exe : [baseline-
+browser-mapping] The 
+data in this module 
+is over two months 
+old.  To ensure 
+accurate Baseline 
+data, please update: 
+`npm i baseline-brows
+er-mapping@latest -D`
+No C:\Program Files\n
+odejs\npm.ps1:29 
+caractere:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([baseli   
+ ne-brows...ping@    
+latest -D`:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+   Ôû▓ Next.js 16.0.3 (Turbopack)
+   - Environments: .env.local
+
+ ÔÜá The 
+"middleware" file 
+convention is 
+deprecated. Please 
+use "proxy" instead. 
+Learn more: https://n
+extjs.org/docs/messag
+es/middleware-to-prox
+y
+   Creating an optimized production build ...
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+ Ô£ô Compiled successfully in 8.4s
+   Running TypeScript ...
+Failed to compile.
+
+./app/(admin)/users/a
+ctions.ts:70:49
+Type error: No 
+overload matches 
+this call.
+  Overload 1 of 2, 
+'(values: { id?: 
+string | undefined; 
+user_id?: string | 
+null | undefined; 
+action: string; 
+details?: Json | 
+undefined; 
+content_id?: string 
+| null | undefined; 
+created_at?: string 
+| undefined; }, 
+options?: { ...; } | 
+undefined): Postgrest
+FilterBuilder<...>', 
+gave the following 
+error.
+    Type '{ 
+target_user_id: 
+string; portal_id: 
+string; permissions: 
+EnrollmentPermissions
+; }' is not 
+assignable to type 
+'Json | undefined'.
+      Types of 
+property 
+'permissions' are 
+incompatible.
+        Type 'Enrollm
+entPermissions' is 
+not assignable to 
+type 'Json | 
+undefined'.
+          Type 'Enrol
+lmentPermissions' is 
+not assignable to 
+type '{ [key: 
+string]: Json | 
+undefined; }'.
+            Index 
+signature for type 
+'string' is missing 
+in type 'EnrollmentPe
+rmissions'.
+  Overload 2 of 2, 
+'(values: { id?: 
+string | undefined; 
+user_id?: string | 
+null | undefined; 
+action: string; 
+details?: Json | 
+undefined; 
+content_id?: string 
+| null | undefined; 
+created_at?: string 
+| undefined; }[], 
+options?: { ...; } | 
+undefined): Postgrest
+FilterBuilder<...>', 
+gave the following 
+error.
+    Object literal 
+may only specify 
+known properties, 
+and 'user_id' does 
+not exist in type '{ 
+id?: string | 
+undefined; user_id?: 
+string | null | 
+undefined; action: 
+string; details?: 
+Json | undefined; 
+content_id?: string 
+| null | undefined; 
+created_at?: string 
+| undefined; }[]'.
+
+[0m [90m 68 |[39m 
+    [90m// Log the 
+action (using 
+currentUser already 
+fetched above)[39m
+ [90m 69 |[39m     
+[36mif[39m 
+(currentUser) {
+[31m[1m>[22m[39m
+[90m 70 |[39m       
+  [36mawait[39m adm
+inSupabase[33m.[39m
+[36mfrom[39m([32m'
+access_logs'[39m)[3
+3m.[39minsert({
+ [90m    |[39m     
+                     
+                     
+  
+[31m[1m^[22m[39m
+ [90m 71 |[39m     
+        
+user_id[33m:[39m cu
+rrentUser[33m.[39mi
+d[33m,[39m
+ [90m 72 |[39m     
+        
+action[33m:[39m [3
+2m'update_permissions
+'[39m[33m,[39m
+ [90m 73 |[39m     
+        
+details[33m:[39m 
+{[0m
+Next.js build worker 
+exited with code: 1 
+and signal: null

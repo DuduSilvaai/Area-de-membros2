@@ -7,66 +7,57 @@ export async function getDashboardStats() {
   const supabase = await createClient();
 
   try {
-    // 1. Total Students
-    const { count: totalStudents, error: studentsError } = await supabase
-      .from('enrollments')
-      .select('*', { count: 'exact', head: true });
-
-    if (studentsError) console.error('Error fetching students count:', JSON.stringify(studentsError, null, 2));
-
-    // 2. Total Lessons
-    const { count: totalLessons, error: lessonsError } = await supabase
-      .from('contents')
-      .select('*', { count: 'exact', head: true });
-
-    if (lessonsError) console.error('Error fetching lessons count:', JSON.stringify(lessonsError, null, 2));
-
-    // 3. Accesses Today
+    // Run independent counts in parallel for performance
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
 
-    const { count: accessesToday, error: accessesError } = await supabase
-      .from('access_logs')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayISO);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    if (accessesError) console.error('Error fetching today accesses:', JSON.stringify(accessesError, null, 2));
+    const [
+      studentsResult,
+      lessonsResult,
+      accessesResult,
+      commentsResult,
+      latestCommentsResult,
+      activeLogsResult
+    ] = await Promise.all([
+      // 1. Total Students
+      supabase.from('enrollments').select('*', { count: 'estimated', head: true }),
+      // 2. Total Lessons
+      supabase.from('contents').select('*', { count: 'estimated', head: true }),
+      // 3. Accesses Today - Keep exact for today as it's a smaller range usually, or estimated if huge
+      supabase.from('access_logs').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
+      // 4. Comments Today
+      supabase.from('comments').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
+      // 5. Latest Comments
+      supabase
+        .from('comments')
+        .select('id, text, created_at, user_id, content_id, contents(title)')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      // 6. Active Logs Sample (Limit to prevent timeout - DB should handle aggregation in future optimization)
+      supabase
+        .from('access_logs')
+        .select('user_id')
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .limit(1000) // Optimization: Limit to latest 1000 interactions to avoid fetching millions of rows
+    ]);
 
-    // 4. Comments Today
-    const { count: commentsToday, error: commentsError } = await supabase
-      .from('comments')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayISO);
+    // Process Basic Counts
+    const totalStudents = studentsResult.count || 0;
+    const totalLessons = lessonsResult.count || 0;
+    const accessesToday = accessesResult.count || 0;
+    const commentsToday = commentsResult.count || 0;
 
-    if (commentsError) console.error('Error fetching today comments:', JSON.stringify(commentsError, null, 2));
-
-    // 5. Latest Comments
-    const { data: latestCommentsData, error: latestCommentsError } = await supabase
-      .from('comments')
-      .select(`
-        id,
-        text,
-        created_at,
-        user_id,
-        content_id,
-        contents (
-          title
-        )
-      `)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (latestCommentsError) console.error('Error fetching latest comments:', JSON.stringify(latestCommentsError, null, 2));
-
+    // Process Latest Comments
     let latestCommentsWithProfiles: any[] = [];
+    const latestCommentsData = latestCommentsResult.data;
+
     if (latestCommentsData && latestCommentsData.length > 0) {
       const commentUserIds = Array.from(new Set(latestCommentsData.map(c => c.user_id).filter(Boolean)));
-
-      const { data: commentProfiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, email') // Assuming avatar_url might not be on profile or we use fallback
-        .in('id', commentUserIds);
+      const { data: commentProfiles } = await supabase.from('profiles').select('id, full_name, email').in('id', commentUserIds);
 
       latestCommentsWithProfiles = latestCommentsData.map(comment => {
         const profile = commentProfiles?.find(p => p.id === comment.user_id);
@@ -75,30 +66,20 @@ export async function getDashboardStats() {
           text: comment.text,
           created_at: comment.created_at,
           user_name: profile?.full_name || profile?.email || 'Usuário',
-          user_avatar: null, // Avatar logic can be improved if we know where it is, currently fallback in UI
+          user_avatar: null,
           lesson_title: (comment.contents as any)?.title || 'Aula desconhecida'
         };
       });
     }
 
-    // 6. Top Active Students (Last 30 Days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const { data: activeLogs, error: activeLogsError } = await supabase
-      .from('access_logs')
-      .select('user_id')
-      .gte('created_at', thirtyDaysAgo.toISOString());
-
-    if (activeLogsError) console.error('Error fetching active logs:', JSON.stringify(activeLogsError, null, 2));
-
+    // Process Top Students from Sample
     let topStudents: any[] = [];
+    const activeLogs = activeLogsResult.data;
+
     if (activeLogs && activeLogs.length > 0) {
       const studentCounts: Record<string, number> = {};
       activeLogs.forEach(log => {
-        if (log.user_id) {
-          studentCounts[log.user_id] = (studentCounts[log.user_id] || 0) + 1;
-        }
+        if (log.user_id) studentCounts[log.user_id] = (studentCounts[log.user_id] || 0) + 1;
       });
 
       const topUserIds = Object.keys(studentCounts)
@@ -106,13 +87,7 @@ export async function getDashboardStats() {
         .slice(0, 5);
 
       if (topUserIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, email') // Removed avatar_url if not in profiles, assuming it might be in users or profiles. Using logic from previous code.
-          .in('id', topUserIds);
-
-        // Also try to get avatars if they are in public.users metadata or stored elsewhere? 
-        // In this codebase, profiles usually has basics. Let's assume standard profile fields.
+        const { data: profiles } = await supabase.from('profiles').select('id, full_name, email').in('id', topUserIds);
 
         topStudents = topUserIds.map(id => {
           const profile = profiles?.find(p => p.id === id);
@@ -127,13 +102,13 @@ export async function getDashboardStats() {
     }
 
     return {
-      totalStudents: totalStudents || 0,
-      totalLessons: totalLessons || 0,
-      accessesToday: accessesToday || 0,
-      commentsToday: commentsToday || 0,
+      totalStudents,
+      totalLessons,
+      accessesToday,
+      commentsToday,
       latestComments: latestCommentsWithProfiles,
       topStudents,
-      recentActivity: [] // Keeping empty or removing if unused in new design
+      recentActivity: []
     };
 
   } catch (error) {

@@ -38,7 +38,7 @@ const HeroBanner: React.FC<HeroBannerProps> = ({ userFirstName, featuredCourse }
             <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-12 pb-16 md:pb-24">
                 <div className="max-w-2xl animate-fade-in-up">
                     <span className="inline-block py-1.5 px-4 rounded-full bg-mozart-pink/10 border border-mozart-pink/20 text-mozart-pink text-xs font-bold tracking-widest mb-6 uppercase shadow-[0_0_15px_rgba(255,0,128,0.1)]">
-                        {featuredCourse && featuredCourse.progress > 0 ? 'Continuar Aprendendo' : 'Área do Aluno'}
+                        {featuredCourse && featuredCourse.progress > 0 ? 'Continuar Aprendendo' : 'Área do Franqueado'}
                     </span>
                     <h1 className="text-4xl md:text-6xl font-serif font-bold text-gray-900 dark:text-white mb-6 leading-tight drop-shadow-sm">
                         {featuredCourse?.title || `Bem-vindo de volta, ${userFirstName}`}

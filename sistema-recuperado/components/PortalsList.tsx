@@ -140,14 +140,6 @@ export default function PortalsList() {
 
   const fetchPortals = async () => {
     console.log('🔍 fetchPortals iniciado');
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      toast.error('Erro de configuração: Variáveis de ambiente ausentes');
-      setIsLoading(false);
-      return;
-    }
 
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Timeout: Supabase demorou muito')), 10000)
@@ -205,8 +197,8 @@ export default function PortalsList() {
       setShowCreateModal(false);
 
       // Redirect to the new portal's settings page
-      if (result.portal?.id) {
-        router.push(`/portals/${result.portal.id}/settings`);
+      if (result.data?.portal?.id) {
+        router.push(`/portals/${result.data.portal.id}/settings`);
       } else {
         await fetchPortals();
         router.refresh();

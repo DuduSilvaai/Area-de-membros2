@@ -1,0 +1,94 @@
+﻿
+> sistema-recuperado@0.1.0 build
+> next build
+
+node.exe : [baseline-
+browser-mapping] The 
+data in this module 
+is over two months 
+old.  To ensure 
+accurate Baseline 
+data, please update: 
+`npm i baseline-brows
+er-mapping@latest -D`
+No C:\Program Files\n
+odejs\npm.ps1:29 
+caractere:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([baseli   
+ ne-brows...ping@    
+latest -D`:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+   Ôû▓ Next.js 16.0.3 (Turbopack)
+   - Environments: .env.local
+
+ ÔÜá The 
+"middleware" file 
+convention is 
+deprecated. Please 
+use "proxy" instead. 
+Learn more: https://n
+extjs.org/docs/messag
+es/middleware-to-prox
+y
+   Creating an optimized production build ...
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+ Ô£ô Compiled successfully in 11.2s
+   Running TypeScript ...
+Failed to compile.
+
+./scripts/test-admin-
+delete.ts:3:20
+Type error: Cannot 
+find module 'dotenv' 
+or its corresponding 
+type declarations.
+
+[0m [90m 1 |[39m
+ [90m 2 |[39m 
+[36mimport[39m { 
+createClient } 
+[36mfrom[39m [32m'
+@supabase/supabase-js
+'[39m[33m;[39m
+[31m[1m>[22m[39m
+[90m 3 |[39m 
+[36mimport[39m 
+dotenv 
+[36mfrom[39m [32m'
+dotenv'[39m[33m;[3
+9m
+ [90m   |[39m      
+              
+[31m[1m^[22m[39m
+ [90m 4 |[39m 
+[36mimport[39m 
+path [36mfrom[39m 
+[32m'path'[39m[33m;
+[39m
+ [90m 5 |[39m
+ [90m 6 |[39m 
+[90m// Load env 
+vars from local .env 
+file[39m[0m
+Next.js build worker 
+exited with code: 1 
+and signal: null

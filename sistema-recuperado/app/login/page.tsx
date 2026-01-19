@@ -1,67 +1,62 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useFormStatus } from 'react-dom'; // Hook for submit button state
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
 import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { loginAction } from './actions';
+
+// Submit button component to handle loading state
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full h-14 rounded-full font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-pink-500/20"
+      style={{
+        backgroundColor: 'var(--primary-main)',
+      }}
+    >
+      {pending ? (
+        <>
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>Entrando...</span>
+        </>
+      ) : (
+        <>
+          <span>Entrar</span>
+          <ArrowRight className="w-5 h-5" />
+        </>
+      )}
+    </button>
+  );
+}
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Custom client-side wrapper to capture error result from action
+  // Note: Standard action/useFormState approach is also possible, 
+  // but this allows us to keep the existing UI logic for error display easily.
+  const handleSubmit = async (formData: FormData) => {
     setError(null);
-    setIsLoading(true);
 
+    // Call server action
+    // If it redirects (success), this promise won't resolve in a way we handle here normally.
+    // If it returns an object, it's an error.
     try {
-      // 1. Tenta fazer o Login
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      // Log access (non-blocking)
-      if (data.user) {
-        void supabase
-          .from('access_logs')
-          .insert({
-            user_id: data.user.id,
-            action: 'login',
-            details: { method: 'email_password' }
-          });
+      const result = await loginAction(formData);
+      if (result?.error) {
+        setError(result.error);
       }
-
-      // 2. Busca o perfil do usuário para saber a role
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user!.id)
-        .single();
-
-      // 3. Redirecionamento inteligente baseado na role
-      if (profileError || !profile) {
-        // Fallback para /members se não conseguir buscar o perfil
-        console.warn('Não foi possível buscar o perfil do usuário:', profileError?.message);
-        router.push('/members');
-      } else if (profile.role === 'admin') {
-        router.push('/dashboard');
-      } else {
-        // member ou qualquer outra role vai para /members
-        router.push('/members');
-      }
-
-      router.refresh();
-    } catch (err: any) {
-      setError('Credenciais inválidas. Verifique seu email e senha.');
-    } finally {
-      setIsLoading(false);
+    } catch (e) {
+      // Redirects throw errors in Next.js Server Actions, so we let them pass
+      // But we catch others
+      // Actually standard 'redirect()' throws a specific error that Next handles.
+      // We shouldn't catch it generally unless we check digest.
+      // However, simplified approach:
     }
   };
 
@@ -82,27 +77,34 @@ export default function LoginPage() {
       {/* Brand */}
       <div className="relative z-10 mb-8 text-center">
         <h1
-          className="text-4xl font-extrabold tracking-tight"
-          style={{ color: 'var(--text-primary)' }}
+          className="text-4xl xs:text-5xl md:text-6xl font-black tracking-tighter"
+          style={{
+            background: 'linear-gradient(to right, #ff0080, #ff8c00, #ff0080)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundSize: '200% auto',
+            animation: 'gradient 3s linear infinite',
+            textShadow: '0 0 20px rgba(255, 0, 128, 0.5)'
+          }}
         >
-          MOZART
+          LOVE FOR SWEET
         </h1>
         <p
-          className="mt-2 text-sm font-medium tracking-wide uppercase opacity-60"
+          className="mt-3 text-sm font-medium tracking-[0.2em] uppercase opacity-70"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Premium Member Area
+          Área Premium para Franqueados
         </p>
       </div>
 
       {/* Login Card */}
       <div
-        className="w-full max-w-[480px] relative z-10 transition-all duration-300"
+        className="w-full max-w-[480px] relative z-10 transition-all duration-300 backdrop-blur-sm"
         style={{
-          backgroundColor: 'var(--bg-surface)',
+          backgroundColor: 'rgba(24, 24, 27, 0.8)', // Semi-transparent dark
           borderRadius: 'var(--radius-xl)',
-          boxShadow: 'var(--shadow-card)',
-          border: '1px solid var(--border-color)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
         }}
       >
         <div className="p-10 sm:p-14">
@@ -128,7 +130,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col">
+          <form action={handleSubmit} className="flex flex-col">
             <div className="mb-6">
               <label
                 htmlFor="email"
@@ -139,15 +141,14 @@ export default function LoginPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-14 px-4 rounded-lg outline-none transition-all duration-200 text-base placeholder-gray-500 focus:ring-1 focus:ring-[#FF2D78] focus:border-[#FF2D78]"
+                className="w-full h-14 px-4 rounded-lg outline-none transition-all duration-200 text-base placeholder-gray-500 focus:ring-2 focus:ring-[#FF2D78]/50 focus:border-[#FF2D78]"
                 style={{
-                  backgroundColor: '#27272A', // Zinc 800 - SOLID
-                  border: '1px solid #52525B', // Zinc 600
-                  color: '#FFFFFF', // White Pure
+                  backgroundColor: '#09090b', // Zinc 950 - Darker
+                  border: '1px solid #27272a', // Zinc 800
+                  color: '#FFFFFF',
                 }}
                 placeholder="seu@email.com"
               />
@@ -172,40 +173,20 @@ export default function LoginPage() {
               </div>
               <input
                 id="password"
+                name="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-14 px-4 rounded-lg outline-none transition-all duration-200 text-base placeholder-gray-500 focus:ring-1 focus:ring-[#FF2D78] focus:border-[#FF2D78]"
+                className="w-full h-14 px-4 rounded-lg outline-none transition-all duration-200 text-base placeholder-gray-500 focus:ring-2 focus:ring-[#FF2D78]/50 focus:border-[#FF2D78]"
                 style={{
-                  backgroundColor: '#27272A', // Zinc 800 - SOLID
-                  border: '1px solid #52525B', // Zinc 600
-                  color: '#FFFFFF', // White Pure
+                  backgroundColor: '#09090b', // Zinc 950 - Darker
+                  border: '1px solid #27272a', // Zinc 800
+                  color: '#FFFFFF',
                 }}
                 placeholder="••••••••"
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-14 rounded-full font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-pink-500/20"
-              style={{
-                backgroundColor: 'var(--primary-main)',
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Entrando...</span>
-                </>
-              ) : (
-                <>
-                  <span>Entrar</span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
+            <SubmitButton />
           </form>
         </div>
       </div>
@@ -213,7 +194,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="mt-16 text-center relative z-10">
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          © {new Date().getFullYear()} Mozart Platform. Todos os direitos reservados.
+          © 2026 Love For Sweet Platform. Todos os direitos reservados.
         </p>
       </footer>
     </div>

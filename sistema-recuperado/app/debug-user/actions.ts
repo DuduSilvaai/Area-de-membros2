@@ -1,8 +1,15 @@
 'use server';
 
 import { createAdminClient } from '../../lib/supabase/server';
+import { requireAdmin } from '@/lib/auth-guard';
 
 export async function debugUserAccess(userEmail: string) {
+    try {
+        await requireAdmin();
+    } catch {
+        return { error: 'Unauthorized' };
+    }
+
     const adminSupabase = await createAdminClient();
 
     try {
@@ -11,13 +18,13 @@ export async function debugUserAccess(userEmail: string) {
 
         // 1. Find user by email
         const { data: { users }, error: usersError } = await adminSupabase.auth.admin.listUsers();
-        
+
         if (usersError) {
             return { error: `Error listing users: ${usersError.message}` };
         }
 
         const targetUser = users?.find(u => u.email === userEmail);
-        
+
         if (!targetUser) {
             return { error: `User with email ${userEmail} not found` };
         }
@@ -64,20 +71,20 @@ export async function debugUserAccess(userEmail: string) {
                 .in('id', enrolledPortalIds)
                 .eq('is_active', true)
                 .order('name');
-            
+
             console.log('Members page query result:', memberPortals);
             console.log('Members page query error:', memberError);
-            
+
             if (memberError) {
                 return { error: `Members page query error: ${memberError.message}` };
             }
-            
+
             membersPageResult = memberPortals || [];
         }
 
         // 9. Check for issues
         const issues: string[] = [];
-        
+
         // Check if enrolled portals are active
         activeEnrollments.forEach(enrollment => {
             const portal = allPortals?.find(p => p.id === enrollment.portal_id);
@@ -93,7 +100,7 @@ export async function debugUserAccess(userEmail: string) {
             acc[id] = (acc[id] || 0) + 1;
             return acc;
         }, {});
-        
+
         Object.entries(portalCounts).forEach(([portalId, count]) => {
             if ((count as number) > 1) {
                 issues.push(`Multiple active enrollments for portal ${portalId} (${count} enrollments)`);

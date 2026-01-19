@@ -202,9 +202,9 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
             {/* Header */}
             <div className="flex flex-row items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gerenciar Alunos</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gerenciar Franqueados</h1>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {stats.total} alunos • {stats.enrolled} matriculados • {stats.noEnrollment} sem acesso • {stats.active} ativos • {stats.inactive} inativos
+                        {stats.total} franqueados • {stats.enrolled} matriculados • {stats.noEnrollment} sem acesso • {stats.active} ativos • {stats.inactive} inativos
                     </p>
                 </div>
                 <div className="flex gap-3">
@@ -222,7 +222,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                         className="inline-flex items-center px-6 py-3 bg-pink-600 text-white rounded-full font-semibold text-sm hover:bg-pink-700 transition-colors shadow-lg"
                     >
                         <UserPlus className="w-4 h-4 mr-2" />
-                        Cadastrar Aluno
+                        Cadastrar Franqueado
                     </button>
                 </div>
             </div>
@@ -307,9 +307,8 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                     filteredUsers.map(user => (
                         <div
                             key={user.id}
-                            className={`bg-white dark:bg-gray-800 rounded-xl border p-6 transition-all hover:shadow-lg ${
-                                selectedUsers.has(user.id) ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20' : 'border-gray-200 dark:border-gray-700'
-                            } ${user.is_disabled ? 'opacity-60' : ''}`}
+                            className={`bg-white dark:bg-gray-800 rounded-xl border p-6 transition-all hover:shadow-lg ${selectedUsers.has(user.id) ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/20' : 'border-gray-200 dark:border-gray-700'
+                                } ${user.is_disabled ? 'opacity-60' : ''}`}
                         >
                             <div className="flex items-start justify-between">
                                 <div className="flex items-start gap-4 flex-1">
@@ -405,14 +404,13 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                                         >
                                             <Key className="w-4 h-4" />
                                         </button>
-                                        
+
                                         <button
                                             onClick={() => handleToggleUserStatus(user.id, user.email, user.is_disabled || false)}
-                                            className={`p-2 rounded-lg transition-colors ${
-                                                user.is_disabled 
-                                                    ? 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20' 
-                                                    : 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-                                            }`}
+                                            className={`p-2 rounded-lg transition-colors ${user.is_disabled
+                                                ? 'text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                                                : 'text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+                                                }`}
                                             title={user.is_disabled ? 'Ativar usuário' : 'Desativar usuário'}
                                         >
                                             {user.is_disabled ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
@@ -435,7 +433,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                 ) : (
                     <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
                         <Filter className="mx-auto w-12 h-12 text-gray-400" />
-                        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">Nenhum aluno encontrado</h3>
+                        <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">Nenhum franqueado encontrado</h3>
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                             Tente ajustar os filtros de busca
                         </p>
@@ -448,7 +446,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 border border-gray-200 dark:border-gray-700">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Novo Aluno</h2>
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Novo Franqueado</h2>
                             <button
                                 onClick={() => setIsCreateModalOpen(false)}
                                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -502,7 +500,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                                     onChange={e => setNewUser({ ...newUser, role: e.target.value })}
                                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                                 >
-                                    <option value="member">Aluno (Padrão)</option>
+                                    <option value="member">Franqueado (Padrão)</option>
                                     <option value="admin">Administrador</option>
                                 </select>
                             </div>
@@ -527,7 +525,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                                             Criando...
                                         </>
                                     ) : (
-                                        'Criar Aluno'
+                                        newUser.role === 'admin' ? 'Criar Administrador' : 'Criar Franqueado'
                                     )}
                                 </button>
                             </div>
@@ -596,7 +594,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                                 >
                                     <Users className="w-4 h-4 mr-2" />
-                                    Matricular Alunos
+                                    Matricular Franqueados
                                 </button>
                             </div>
                         </form>

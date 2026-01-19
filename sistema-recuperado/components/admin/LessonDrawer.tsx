@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { AccessManager } from '@/components/admin/AccessManager';
 
 interface Attachment {

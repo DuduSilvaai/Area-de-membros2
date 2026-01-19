@@ -1,0 +1,96 @@
+﻿
+> sistema-recuperado@0.1.0 build
+> next build
+
+node.exe : [baseline-
+browser-mapping] The 
+data in this module 
+is over two months 
+old.  To ensure 
+accurate Baseline 
+data, please update: 
+`npm i baseline-brows
+er-mapping@latest -D`
+No C:\Program Files\n
+odejs\npm.ps1:29 
+caractere:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([baseli   
+ ne-brows...ping@    
+latest -D`:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+   Ôû▓ Next.js 16.0.3 (Turbopack)
+   - Environments: .env.local
+
+ ÔÜá The 
+"middleware" file 
+convention is 
+deprecated. Please 
+use "proxy" instead. 
+Learn more: https://n
+extjs.org/docs/messag
+es/middleware-to-prox
+y
+   Creating an optimized production build ...
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+ Ô£ô Compiled successfully in 9.0s
+   Running TypeScript ...
+Failed to compile.
+
+./app/test-enrollment
+/page.tsx:47:32
+Type error: 'error' 
+is of type 'unknown'.
+
+[0m [90m 45 |[39m 
+        } 
+[36mcatch[39m 
+(error) {
+ [90m 46 |[39m     
+        console[33m.
+[39merror([32m'Test
+ error:'[39m[33m,[
+39m error)[33m;[39m
+[31m[1m>[22m[39m
+[90m 47 |[39m       
+      setResult({ 
+error[33m:[39m erro
+r[33m.[39mtoString(
+) })[33m;[39m
+ [90m    |[39m     
+                     
+      
+[31m[1m^[22m[39m
+ [90m 48 |[39m     
+        alert([32m`U
+nexpected error: ${er
+ror}`[39m)[33m;[39
+m
+ [90m 49 |[39m     
+    } 
+[36mfinally[39m {
+ [90m 50 |[39m     
+        setLoading([
+36mfalse[39m)[33m;
+[39m[0m
+Next.js build worker 
+exited with code: 1 
+and signal: null

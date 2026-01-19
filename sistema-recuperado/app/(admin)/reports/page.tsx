@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { FileText, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
 import FilterPanel, { FilterValues } from '@/components/admin/FilterPanel';
@@ -89,7 +89,8 @@ export default function ReportsPage() {
             const { data, error: usersError } = await supabase
                 .from('profiles' as any)
                 .select('id, full_name, email')
-                .order('full_name');
+                .order('full_name')
+                .limit(100);
 
             if (usersError) throw usersError;
 

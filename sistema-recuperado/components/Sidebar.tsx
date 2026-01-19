@@ -36,8 +36,11 @@ export default function Sidebar() {
 
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-pink-600 to-pink-700 tracking-widest uppercase m-0">
-          LOVE FOR SWEET
+        <h1
+          className="text-3xl text-transparent bg-clip-text bg-gradient-to-br from-pink-600 to-pink-700 dark:from-pink-400 dark:to-pink-600 m-0 pb-1"
+          style={{ fontFamily: '"Great Vibes", cursive' }}
+        >
+          Love for Sweet
         </h1>
       </div>
 

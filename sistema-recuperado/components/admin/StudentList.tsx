@@ -48,7 +48,7 @@ export function StudentList({ portalId }: StudentListProps) {
                 user_id: e.user_id,
                 enrolled_at: e.created_at,
                 user: {
-                    email: `aluno_${e.user_id.substring(0, 4)}@exemplo.com`,
+                    email: `franqueado_${e.user_id.substring(0, 4)}@exemplo.com`,
                     raw_user_meta_data: {}
                 }
             })) || [];
@@ -56,7 +56,7 @@ export function StudentList({ portalId }: StudentListProps) {
             setStudents(mapped);
         } catch (error: any) {
             console.error('Error fetching students (RAW):', JSON.stringify(error, null, 2));
-            toast.error(`Erro ao carregar alunos: ${error.message || JSON.stringify(error) || 'Erro desconhecido'}`);
+            toast.error(`Erro ao carregar franqueados: ${error.message || JSON.stringify(error) || 'Erro desconhecido'}`);
         } finally {
             setLoading(false);
         }
@@ -75,7 +75,7 @@ export function StudentList({ portalId }: StudentListProps) {
             toast.info('Simulação: Convite enviado!');
             await new Promise(r => setTimeout(r, 1000));
             setEmailToEnroll('');
-            toast.success('Aluno matriculado com sucesso!');
+            toast.success('Franqueado matriculado com sucesso!');
         } catch (error) {
             toast.error('Erro ao matricular');
         } finally {
@@ -91,7 +91,7 @@ export function StudentList({ portalId }: StudentListProps) {
                 <div>
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                         <Users className="w-5 h-5 text-[#FF2D78]" />
-                        Base de Alunos
+                        Base de Franqueados
                     </h2>
                     <p className="text-zinc-500 text-sm mt-1">
                         Gerencie quem tem acesso ao conteúdo.
@@ -101,7 +101,7 @@ export function StudentList({ portalId }: StudentListProps) {
                 <form onSubmit={handleManualEnroll} className="flex gap-3 w-full md:w-auto items-center">
                     <input
                         type="email"
-                        placeholder="Novo aluno por email"
+                        placeholder="Novo franqueado por email"
                         value={emailToEnroll}
                         onChange={(e) => setEmailToEnroll(e.target.value)}
                         className="flex-1 md:w-64 h-12 bg-[#27272A] border border-[#52525B] text-white rounded-xl focus:ring-2 focus:ring-[#FF2D78]/20 focus:border-[#FF2D78] outline-none px-4 text-sm transition-all placeholder:text-zinc-600"
@@ -142,8 +142,8 @@ export function StudentList({ portalId }: StudentListProps) {
                         <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4 text-zinc-600">
                             <Users className="w-8 h-8" />
                         </div>
-                        <p className="text-zinc-400 font-bold text-lg">Nenhum aluno encontrado</p>
-                        <p className="text-sm text-zinc-600 mt-1">Sua base de alunos está vazia.</p>
+                        <p className="text-zinc-400 font-bold text-lg">Nenhum franqueado encontrado</p>
+                        <p className="text-sm text-zinc-600 mt-1">Sua base de franqueados está vazia.</p>
                     </div>
                 ) : (
                     students.map((student) => (

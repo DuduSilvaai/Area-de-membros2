@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import LessonSidebar, { Module, Lesson } from '@/components/members/LessonSidebar';
@@ -370,44 +370,65 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
         return result;
     };
 
-    // Action: Mark Complete
+    // Action: Toggle Complete
     const handleLessonComplete = async () => {
-        if (!user || completedLessonIds.has(lessonId)) return;
+        if (!user) return;
+
+        const isCurrentlyCompleted = completedLessonIds.has(lessonId);
 
         try {
-            const { error } = await supabase.from('progress').upsert({
-                user_id: user.id,
-                content_id: lessonId,
-                is_completed: true,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id,content_id' });
+            if (isCurrentlyCompleted) {
+                // Uncomplete the lesson
+                const { error } = await supabase
+                    .from('progress')
+                    .update({ is_completed: false, updated_at: new Date().toISOString() })
+                    .eq('user_id', user.id)
+                    .eq('content_id', lessonId);
 
-            if (error) throw error;
+                if (error) throw error;
 
-            setCompletedLessonIds(prev => new Set(prev).add(lessonId));
-            toast.success('Aula concluída!');
-
-            // Auto-advance
-            if (nextLessonId) {
-                setTimeout(() => {
-                    router.push(`/members/${portalId}/lesson/${nextLessonId}`);
-                }, 3000);
-                toast.info('Próxima aula em 3 segundos...');
+                setCompletedLessonIds(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(lessonId);
+                    return newSet;
+                });
+                toast.success('Aula desmarcada como concluída.');
             } else {
-                toast.success('Curso finalizado! Parabéns!');
+                // Complete the lesson
+                const { error } = await supabase.from('progress').upsert({
+                    user_id: user.id,
+                    content_id: lessonId,
+                    is_completed: true,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id,content_id' });
+
+                if (error) throw error;
+
+                setCompletedLessonIds(prev => new Set(prev).add(lessonId));
+                toast.success('Aula concluída!');
+
+                // Auto-advance only when completing
+                if (nextLessonId) {
+                    setTimeout(() => {
+                        router.push(`/members/${portalId}/lesson/${nextLessonId}`);
+                    }, 3000);
+                    toast.info('Próxima aula em 3 segundos...');
+                } else {
+                    toast.success('Curso finalizado! Parabéns!');
+                }
             }
 
         } catch (err) {
-            console.error('Error marking complete:', JSON.stringify(err, null, 2));
-            toast.error('Erro ao concluir aula');
+            console.error('Error toggling completion:', JSON.stringify(err, null, 2));
+            toast.error('Erro ao atualizar status da aula');
         }
     };
 
     if (loading) {
-        return <div className="min-h-screen bg-[#0F0F12] flex items-center justify-center text-white">
+        return <div className="min-h-screen bg-gray-50 dark:bg-[#0F0F12] flex items-center justify-center text-gray-900 dark:text-white transition-colors">
             <div className="flex flex-col items-center gap-4">
-                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-gray-400">Carregando aula...</p>
+                <div className="w-8 h-8 border-4 border-pink-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-gray-500 dark:text-gray-400">Carregando aula...</p>
             </div>
         </div>;
     }
@@ -415,25 +436,25 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
     if (!currentLesson) return null;
 
     return (
-        <div className="flex flex-col h-screen bg-[#0F0F12] text-white overflow-hidden">
+        <div className="flex flex-col h-screen bg-gray-50 dark:bg-[#0F0F12] text-gray-900 dark:text-white overflow-hidden transition-colors">
 
             {/* Header / Breadcrumb */}
-            <header className="h-16 flex-shrink-0 border-b border-white/5 bg-[#0F0F12] flex items-center justify-between px-4 lg:px-8 z-20">
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <Link href="/members" className="hover:text-white transition-colors flex items-center gap-1">
+            <header className="h-16 flex-shrink-0 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#0F0F12] flex items-center justify-between px-4 lg:px-8 z-20 transition-colors">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <Link href="/members" className="hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1">
                         <Home size={16} /> Meus Cursos
                     </Link>
                     <ChevronRight size={14} />
-                    <Link href={`/members/${portalId}`} className="text-gray-200 font-medium truncate max-w-[150px] sm:max-w-none hover:text-white transition-colors">
+                    <Link href={`/members/${portalId}`} className="text-gray-700 dark:text-gray-200 font-medium truncate max-w-[150px] sm:max-w-none hover:text-gray-900 dark:hover:text-white transition-colors">
                         {courseTitle}
                     </Link>
                     <ChevronRight size={14} />
-                    <span className="text-white font-medium truncate hidden sm:inline-block">{currentLesson.title}</span>
+                    <span className="text-gray-900 dark:text-white font-medium truncate hidden sm:inline-block">{currentLesson.title}</span>
                 </div>
 
                 <button
                     onClick={() => setMobileSidebarOpen(true)}
-                    className="lg:hidden p-2 text-gray-400 hover:text-white"
+                    className="lg:hidden p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 >
                     <Menu size={24} />
                 </button>
@@ -442,11 +463,11 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
             <div className="flex flex-1 overflow-hidden relative">
 
                 {/* Main Content Area */}
-                <main className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#0F0F12]" ref={topRef}>
+                <main className="flex-1 overflow-y-auto custom-scrollbar relative bg-gray-50 dark:bg-[#0F0F12] transition-colors" ref={topRef}>
                     <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
 
                         {/* Video Player Container */}
-                        <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/5 mb-8 relative group">
+                        <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-200 dark:border-white/5 mb-8 relative group">
                             {currentLesson.video_url ? (
                                 <VideoPlayer
                                     url={signedVideoUrl || currentLesson.video_url}
@@ -464,27 +485,27 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                         </div>
 
                         {/* Title & Actions Row */}
-                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 border-b border-white/5 pb-8">
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 border-b border-gray-200 dark:border-white/5 pb-8">
                             <div className="flex-1">
-                                <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{currentLesson.title}</h1>
+                                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">{currentLesson.title}</h1>
                                 {/* Optional: Add module name here if available */}
                             </div>
 
                             <div className="flex flex-col gap-3 flex-shrink-0 w-full md:w-auto">
                                 <button
                                     onClick={handleLessonComplete}
-                                    disabled={completedLessonIds.has(lessonId)}
                                     className={`
                                       flex items-center justify-center gap-2 px-8 py-3 rounded-full font-bold transition-all text-sm uppercase tracking-wide
                                       ${completedLessonIds.has(lessonId)
-                                            ? 'bg-green-500/10 text-green-500 cursor-default border border-green-500/20'
-                                            : 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-red-600/20'}
+                                            ? 'bg-green-500/10 text-green-600 dark:text-green-500 border border-green-500/20 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20'
+                                            : 'bg-pink-600 hover:bg-pink-700 text-white shadow-lg hover:shadow-pink-600/20'}
                                     `}
+                                    title={completedLessonIds.has(lessonId) ? 'Clique para desmarcar' : 'Marcar como concluída'}
                                 >
                                     {completedLessonIds.has(lessonId) ? (
                                         <>
                                             <CheckCircle size={18} />
-                                            Aula Concluída
+                                            <span className="group-hover:hidden">Aula Concluída</span>
                                         </>
                                     ) : (
                                         'Marcar como Concluída'
@@ -494,7 +515,7 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                                 <div className="flex items-center justify-center gap-2">
                                     <button
                                         onClick={() => prevLessonId && router.push(`/members/${portalId}/lesson/${prevLessonId}`)}
-                                        className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+                                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 transition-colors"
                                         disabled={!prevLessonId}
                                         title="Aula Anterior"
                                     >
@@ -503,7 +524,7 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                                     <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Navegar</span>
                                     <button
                                         onClick={() => nextLessonId && router.push(`/members/${portalId}/lesson/${nextLessonId}`)}
-                                        className="p-2 rounded-full hover:bg-white/5 text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+                                        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-30 transition-colors"
                                         disabled={!nextLessonId}
                                         title="Próxima Aula"
                                     >
@@ -517,21 +538,21 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
                             {/* Description */}
                             <div className="lg:col-span-2 space-y-6">
-                                <h3 className="text-lg font-semibold text-white">Sobre a aula</h3>
-                                <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sobre a aula</h3>
+                                <div className="prose dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 leading-relaxed">
                                     {currentLesson.description ? (
                                         <p className="whitespace-pre-wrap">{currentLesson.description}</p>
                                     ) : (
-                                        <p className="text-gray-500 italic">Sem descrição.</p>
+                                        <p className="text-gray-400 dark:text-gray-500 italic">Sem descrição.</p>
                                     )}
                                 </div>
                             </div>
 
                             {/* Materials */}
                             <div className="lg:col-span-1">
-                                <div className="bg-[#141417] rounded-xl border border-white/5 p-6 sticky top-6">
-                                    <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
-                                        <Download size={18} className="text-red-500" />
+                                <div className="bg-white dark:bg-[#141417] rounded-xl border border-gray-200 dark:border-white/5 p-6 sticky top-6 shadow-sm">
+                                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                        <Download size={18} className="text-pink-500" />
                                         Materiais Complementares
                                     </h3>
 
@@ -543,23 +564,23 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                                                     href={attachment.url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all group"
+                                                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-gray-100 dark:border-transparent hover:border-gray-200 dark:hover:border-white/10 transition-all group"
                                                 >
-                                                    <div className="p-2 rounded bg-[#0F0F12] text-gray-400 group-hover:text-red-500 transition-colors">
+                                                    <div className="p-2 rounded bg-gray-100 dark:bg-[#0F0F12] text-gray-500 dark:text-gray-400 group-hover:text-pink-500 transition-colors">
                                                         <FileText size={18} />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-sm text-gray-200 group-hover:text-white truncate">
+                                                        <p className="font-medium text-sm text-gray-700 dark:text-gray-200 group-hover:text-gray-900 dark:group-hover:text-white truncate">
                                                             {attachment.name || `Arquivo ${idx + 1}`}
                                                         </p>
-                                                        <p className="text-[10px] text-gray-500 uppercase tracking-wide">Download</p>
+                                                        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">Download</p>
                                                     </div>
                                                 </a>
                                             ))}
                                         </div>
                                     ) : (
                                         <div className="text-center py-6">
-                                            <p className="text-sm text-gray-600">Nenhum material disponível.</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-600">Nenhum material disponível.</p>
                                         </div>
                                     )}
                                 </div>
@@ -567,8 +588,8 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                         </div>
 
                         {/* Comments Section */}
-                        <div className="border-t border-white/5 pt-8">
-                            <h3 className="text-xl font-bold text-white mb-6">Comentários e Dúvidas</h3>
+                        <div className="border-t border-gray-200 dark:border-white/5 pt-8">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Comentários e Dúvidas</h3>
                             <LessonComments lessonId={lessonId} />
                         </div>
 
@@ -577,14 +598,14 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
 
                 {/* Right Sidebar */}
                 <aside className={`
-                    fixed inset-y-0 right-0 z-40 w-80 bg-[#111114] border-l border-white/5 
+                    fixed inset-y-0 right-0 z-40 w-80 bg-white dark:bg-[#111114] border-l border-gray-200 dark:border-white/5 
                     transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
                     ${mobileSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
                 `}>
                     <div className="h-full flex flex-col">
-                        <div className="h-16 flex-shrink-0 flex items-center justify-between px-4 border-b border-white/5 bg-[#111114]">
-                            <span className="font-bold text-sm uppercase tracking-wider text-gray-400">Conteúdo do Curso</span>
-                            <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-gray-400">
+                        <div className="h-16 flex-shrink-0 flex items-center justify-between px-4 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#111114] transition-colors">
+                            <span className="font-bold text-sm uppercase tracking-wider text-gray-700 dark:text-gray-400">Conteúdo do Curso</span>
+                            <button onClick={() => setMobileSidebarOpen(false)} className="lg:hidden p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                                 <X size={20} />
                             </button>
                         </div>
