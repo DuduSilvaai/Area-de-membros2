@@ -56,7 +56,7 @@ async function createUserAction(formData: FormData) {
 }
 
 interface Props {
-  searchParams: { success?: string; error?: string };
+  searchParams: Promise<{ success?: string; error?: string }>;
 }
 
 async function syncAction() {
@@ -67,6 +67,8 @@ async function syncAction() {
 
 export default async function UsersPageSimple({ searchParams }: Props) {
   try {
+    // Await searchParams as it's a Promise in Next.js 15
+    const params = await searchParams;
     const adminSupabase = await createAdminClient();
 
     // Fetch users using Admin API
@@ -101,15 +103,15 @@ export default async function UsersPageSimple({ searchParams }: Props) {
         </div>
 
         {/* Success/Error Messages */}
-        {searchParams.success && (
+        {params.success && (
           <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <p className="text-green-800 dark:text-green-200">{searchParams.success}</p>
+            <p className="text-green-800 dark:text-green-200">{params.success}</p>
           </div>
         )}
 
-        {searchParams.error && (
+        {params.error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-800 dark:text-red-200">{searchParams.error}</p>
+            <p className="text-red-800 dark:text-red-200">{params.error}</p>
           </div>
         )}
 

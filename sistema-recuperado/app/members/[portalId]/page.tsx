@@ -46,6 +46,7 @@ interface LastViewed {
     lessonTitle: string;
     moduleTitle: string;
     progress: number;
+    thumbnail: string | null;
 }
 
 export default function PortalLobbyPage() {
@@ -59,6 +60,22 @@ export default function PortalLobbyPage() {
     const [loading, setLoading] = useState(true);
     const [lastViewed, setLastViewed] = useState<LastViewed | null>(null);
     const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+
+    // Hero enhancements
+    const [heroState, setHeroState] = useState<'new' | 'in_progress' | 'completed'>('new');
+    const [heroImages, setHeroImages] = useState<string[]>([]);
+    const [currentHeroImageIndex, setCurrentHeroImageIndex] = useState(0);
+
+    // Carousel Effect
+    useEffect(() => {
+        if (heroImages.length <= 1) return;
+
+        const interval = setInterval(() => {
+            setCurrentHeroImageIndex(prev => (prev + 1) % heroImages.length);
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [heroImages]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -100,6 +117,7 @@ export default function PortalLobbyPage() {
                         description,
                         order_index,
                         image_url,
+                        parent_module_id,
                         contents (
                             id,
                             title,
@@ -121,10 +139,13 @@ export default function PortalLobbyPage() {
                     return permissions.allowed_modules?.includes(m.id);
                 });
 
-                // Process modules to verify content ordering
+                // Process modules to verify content ordering and map types
                 const processedModules = filteredModulesRaw.map((m) => ({
                     ...m,
-                    contents: (m.contents || []).sort((a, b) => a.order_index - b.order_index)
+                    contents: (m.contents || []).sort((a, b) => a.order_index - b.order_index).map(c => ({
+                        ...c,
+                        duration_minutes: c.duration_seconds ? Math.round(c.duration_seconds / 60) : null
+                    }))
                 }));
                 // Sort modules by order_index
                 processedModules.sort((a, b) => a.order_index - b.order_index);
@@ -159,7 +180,8 @@ export default function PortalLobbyPage() {
                                     lessonId: lesson.id,
                                     lessonTitle: lesson.title,
                                     moduleTitle: mod.title,
-                                    progress: prog.is_completed ? 100 : 0
+                                    progress: prog.is_completed ? 100 : 0,
+                                    thumbnail: mod.image_url || null
                                 };
                                 break;
                             }
@@ -175,11 +197,30 @@ export default function PortalLobbyPage() {
                         lessonId: first.id,
                         lessonTitle: first.title,
                         moduleTitle: processedModules[0].title,
-                        progress: 0
+                        progress: 0,
+                        thumbnail: processedModules[0].image_url || null
                     };
                 }
 
                 setLastViewed(targetLesson);
+
+                // Collect hero images for carousel (unique module images)
+                const images = processedModules
+                    .map(m => m.image_url)
+                    .filter(url => url !== null && url !== undefined) as string[];
+                setHeroImages(images.length > 0 ? images : [portalData?.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop']);
+
+                // Determine Hero State
+                const totalLessonsCount = processedModules.reduce((acc, m) => acc + m.contents.length, 0);
+                const completedCount = completedSet.size;
+
+                if (completedCount === 0) {
+                    setHeroState('new');
+                } else if (completedCount === totalLessonsCount && totalLessonsCount > 0) {
+                    setHeroState('completed');
+                } else {
+                    setHeroState('in_progress');
+                }
 
             } catch (error) {
                 console.error("Error loading portal:", error);
@@ -232,8 +273,13 @@ export default function PortalLobbyPage() {
             <div className="relative w-full h-[65vh] md:h-[75vh] flex items-end overflow-hidden">
                 {/* Background Image */}
                 <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-[20s] hover:scale-105 ease-linear"
-                    style={{ backgroundImage: `url(${portal.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop'})` }}
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-[20s] hover:scale-105 ease-linear transition-all duration-1000"
+                    style={{
+                        backgroundImage: `url(${heroState === 'in_progress'
+                            ? (lastViewed?.thumbnail || portal.image_url || heroImages[0])
+                            : heroImages[currentHeroImageIndex]
+                            })`
+                    }}
                 ></div>
 
                 {/* Gradients for Cinematic Look */}
@@ -260,11 +306,36 @@ export default function PortalLobbyPage() {
 
                         <div className="flex flex-col sm:flex-row gap-5">
                             <button
-                                onClick={handleContinue}
+                                onClick={() => {
+                                    if (heroState === 'new' || heroState === 'completed') {
+                                        // Start from beginning
+                                        if (modules.length > 0 && modules[0].contents.length > 0) {
+                                            router.push(`/members/${portalId}/lesson/${modules[0].contents[0].id}`);
+                                        } else {
+                                            toast.error("Nenhuma aula disponível para iniciar.");
+                                        }
+                                    } else {
+                                        handleContinue();
+                                    }
+                                }}
                                 className="group flex items-center justify-center gap-3 bg-[#FF0080] hover:bg-[#d6006c] text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 active:scale-95 shadow-[0_10px_40px_-10px_rgba(255,0,128,0.5)] border border-white/10"
                             >
-                                <Play fill="currentColor" size={20} className="group-hover:text-white transition-colors" />
-                                {lastViewed?.progress && lastViewed.progress > 0 ? "Continuar Assistindo" : "Começar Agora"}
+                                {heroState === 'in_progress' && lastViewed ? (
+                                    <>
+                                        <Play fill="currentColor" size={20} className="group-hover:text-white transition-colors" />
+                                        Continuar Assistindo
+                                    </>
+                                ) : heroState === 'completed' ? (
+                                    <>
+                                        <PlayCircle size={20} className="group-hover:text-white transition-colors" />
+                                        Assistir mais uma vez
+                                    </>
+                                ) : (
+                                    <>
+                                        <PlayCircle size={20} className="group-hover:text-white transition-colors" />
+                                        Começar aqui
+                                    </>
+                                )}
                             </button>
                             <button
                                 className="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md text-white px-8 py-4 rounded-xl font-medium text-lg transition-all border border-white/10 hover:border-white/20"

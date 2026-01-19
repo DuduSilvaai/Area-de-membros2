@@ -22,7 +22,7 @@ export function EmptyState({
     return (
         <div
             className={cn(
-                'flex flex-col items-center justify-center py-16 px-8 text-center',
+                'flex flex-col items-center justify-center py-16 px-8 text-center w-full',
                 className
             )}
         >
@@ -34,7 +34,7 @@ export function EmptyState({
                 {title}
             </h3>
 
-            <p className="text-sm text-[var(--text-secondary)] max-w-sm mb-6">
+            <p className="text-sm text-[var(--text-secondary)] max-w-lg mx-auto mb-6">
                 {description}
             </p>
 

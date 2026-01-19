@@ -64,7 +64,7 @@ export interface MemberPortal {
 }
 
 export interface MemberNotification {
-    id: number;
+    id: string | number;
     title: string;
     message: string;
     time: string;

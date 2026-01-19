@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Search, Plus, Users, Globe, Loader2, X, Cloud, Trash2 } from 'lucide-react';
-import { Input } from '@/components/UIComponents';
 import { Button } from '@/components/UIComponents';
 import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
@@ -252,15 +251,25 @@ export default function PortalsList() {
         </div>
 
         {/* Search */}
-        <div style={{ maxWidth: '400px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-            <Search style={{ width: '20px', height: '20px', color: 'var(--text-secondary)', position: 'absolute', left: '12px' }} />
-            <Input
+        {/* Search */}
+        <div style={{ maxWidth: '400px', width: '100%', position: 'relative' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search style={{ position: 'absolute', left: '12px', width: '20px', height: '20px', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+            <input
               type="text"
               placeholder="Buscar portais..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '36px' }}
+              style={{
+                width: '100%',
+                padding: '10px 16px 10px 40px',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                fontSize: '14px',
+                outline: 'none',
+              }}
             />
           </div>
         </div>

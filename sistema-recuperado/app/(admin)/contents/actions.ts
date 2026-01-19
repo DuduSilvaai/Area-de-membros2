@@ -99,7 +99,11 @@ export async function reorderContents(updates: { id: string; order_index: number
  * Delete a module (cascade will handle children and contents)
  */
 export async function deleteModule(moduleId: string) {
+    const supabase = await createClient();
     const adminSupabase = await createAdminClient();
+
+    // Get current user for logging
+    const { data: { user } } = await supabase.auth.getUser();
 
     try {
         const { error } = await adminSupabase
@@ -110,6 +114,15 @@ export async function deleteModule(moduleId: string) {
         if (error) {
             console.error('Error deleting module:', error);
             return { error: error.message };
+        }
+
+        // Log the action
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'delete_module',
+                details: { module_id: moduleId }
+            });
         }
 
         revalidatePath('/admin/contents');
@@ -199,6 +212,21 @@ export async function createModule(data: {
             return { error: `${error.message} (Código: ${error.code})${error.hint ? ' - Dica: ' + error.hint : ''}` };
         }
 
+        // Log the action
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'create_module',
+                details: {
+                    module_id: newModule.id,
+                    module_title: data.title,
+                    portal_id: data.portal_id
+                }
+            });
+        }
+
         console.log('✅ [SERVER] Módulo criado com sucesso:', newModule);
         revalidatePath('/', 'layout');
         return { data: newModule, success: true };
@@ -257,7 +285,11 @@ export async function updateModule(id: string, data: {
  * Delete a content item
  */
 export async function deleteContent(contentId: string) {
+    const supabase = await createClient();
     const adminSupabase = await createAdminClient();
+
+    // Get current user for logging
+    const { data: { user } } = await supabase.auth.getUser();
 
     try {
         const { error } = await adminSupabase
@@ -268,6 +300,15 @@ export async function deleteContent(contentId: string) {
         if (error) {
             console.error('Error deleting content:', error);
             return { error: error.message };
+        }
+
+        // Log the action
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'delete_content',
+                details: { content_id: contentId }
+            });
         }
 
         revalidatePath('/admin/contents');
@@ -355,6 +396,22 @@ export async function createContent(data: {
                 hint: error.hint
             });
             return { error: `${error.message} (Código: ${error.code})${error.hint ? ' - Dica: ' + error.hint : ''}` };
+        }
+
+        // Log the action
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'create_content',
+                details: {
+                    content_id: newContent.id,
+                    content_title: data.title,
+                    module_id: data.module_id,
+                    content_type: data.content_type
+                }
+            });
         }
 
         console.log('✅ [SERVER] Conteúdo criado com sucesso:', newContent);

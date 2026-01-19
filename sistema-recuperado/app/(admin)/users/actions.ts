@@ -68,6 +68,19 @@ export async function upsertEnrollment(
 
     console.log('Enrollment upserted successfully:', data);
 
+    // Log the action (using currentUser already fetched above)
+    if (currentUser) {
+        await adminSupabase.from('access_logs').insert({
+            user_id: currentUser.id,
+            action: 'update_permissions',
+            details: {
+                target_user_id: userId,
+                portal_id: portalId,
+                permissions: permissions
+            }
+        });
+    }
+
     // Force cache invalidation with multiple strategies
     revalidatePath(`/users/${userId}/manage`);
     revalidatePath('/users');
@@ -90,6 +103,7 @@ export async function upsertEnrollment(
 }
 
 export async function deleteEnrollment(userId: string, portalId: string) {
+    const supabase = await createClient();
     const adminSupabase = getAdminClient();
 
     console.log('Soft-deleting enrollment for user:', userId, 'portal:', portalId);
@@ -112,6 +126,19 @@ export async function deleteEnrollment(userId: string, portalId: string) {
     }
 
     console.log('Enrollment soft-deleted successfully:', data);
+
+    // Log the action
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
+        await adminSupabase.from('access_logs').insert({
+            user_id: currentUser.id,
+            action: 'remove_enrollment',
+            details: {
+                target_user_id: userId,
+                portal_id: portalId
+            }
+        });
+    }
 
     // Force cache invalidation with multiple strategies
     revalidatePath(`/users/${userId}/manage`);

@@ -96,10 +96,31 @@ export async function createPortal(data: {
             logDebug('Enrollment created successfully');
         }
 
+        // Log the action
+        await adminSupabase.from('access_logs').insert({
+            user_id: user.id,
+            action: 'create_portal',
+            details: {
+                portal_id: newPortal.id,
+                portal_name: data.name
+            }
+        });
+
         revalidatePath('/portals');
         revalidatePath('/dashboard');
         return { success: true, portal: newPortal };
     } catch (error: any) {
+        // Log error
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'error',
+                details: {
+                    action_attempted: 'create_portal',
+                    error_message: error.message
+                }
+            });
+        }
         logDebug('Catch Error in createPortal', error.message);
         console.error('Error in createPortal:', error);
         return { error: 'Erro ao criar portal (Exception)' };
@@ -219,6 +240,17 @@ export async function updatePortalSettings(
         }
 
         logDebug('Portal settings updated successfully');
+
+        // Log the action
+        await adminSupabase.from('access_logs').insert({
+            user_id: authData.user.id,
+            action: 'update_portal',
+            details: {
+                portal_id: portalId,
+                portal_name: data.name
+            }
+        });
+
         revalidatePath(`/portals/${portalId}`);
         revalidatePath(`/portals/${portalId}/settings`);
         revalidatePath('/portals');

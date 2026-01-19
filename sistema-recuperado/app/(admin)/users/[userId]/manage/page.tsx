@@ -14,7 +14,7 @@ export default async function UserManagePage({ params }: Props) {
 
   // Get user details
   const { data: user, error: userError } = await adminSupabase.auth.admin.getUserById(userId);
-  
+
   if (userError || !user.user) {
     notFound();
   }
@@ -55,7 +55,21 @@ export default async function UserManagePage({ params }: Props) {
     .limit(10);
 
   const userData = user.user;
-  const isDisabled = user.user.banned_until && new Date(user.user.banned_until) > new Date();
+  const isDisabled = (user.user as any).banned_until && new Date((user.user as any).banned_until) > new Date();
+
+  // Log page view (non-blocking)
+  const supabase = await createClient();
+  const { data: { user: currentAdmin } } = await supabase.auth.getUser();
+  if (currentAdmin) {
+    void adminSupabase.from('access_logs').insert({
+      user_id: currentAdmin.id,
+      action: 'view_user_profile',
+      details: {
+        viewed_user_id: userId,
+        viewed_user_email: userData.email
+      }
+    });
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -161,7 +175,7 @@ export default async function UserManagePage({ params }: Props) {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     Matriculado em {new Date(enrollment.enrolled_at).toLocaleDateString('pt-BR')}
                     {enrollment.expires_at && (
@@ -229,13 +243,29 @@ function getActionLabel(action: string): string {
     'login': 'Login realizado',
     'logout': 'Logout realizado',
     'view_content': 'Conteúdo visualizado',
+    'view_user_profile': 'Perfil visualizado',
     'complete_lesson': 'Aula concluída',
     'start_lesson': 'Aula iniciada',
     'comment_created': 'Comentário criado',
     'chat_message': 'Mensagem enviada',
     'enrollment_created': 'Matrícula criada',
     'enrollment_updated': 'Matrícula atualizada',
+    'create_user': 'Usuário criado',
+    'reset_password': 'Senha redefinida',
+    'activate_user': 'Usuário ativado',
+    'deactivate_user': 'Usuário desativado',
+    'bulk_enroll': 'Matrícula em massa',
+    'update_permissions': 'Permissões atualizadas',
+    'remove_enrollment': 'Matrícula removida',
+    'access_denied': 'Acesso negado',
+    'error': 'Erro do sistema',
+    'create_portal': 'Portal criado',
+    'update_portal': 'Portal atualizado',
+    'create_module': 'Módulo criado',
+    'delete_module': 'Módulo excluído',
+    'create_content': 'Aula criada',
+    'delete_content': 'Aula excluída',
   };
-  
+
   return labels[action] || action;
 }

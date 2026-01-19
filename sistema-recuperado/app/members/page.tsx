@@ -76,25 +76,31 @@ export default function MobilePortalSelection() {
       {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-white dark:via-black/50 dark:to-black z-0 pointer-events-none"></div>
 
+      {/* Netflix Logo - Top Left */}
+      <div className="absolute top-6 left-6 md:top-10 md:left-10 z-20">
+        <div className="relative w-40 md:w-56 transition-transform hover:scale-105 duration-500">
+          <div className="absolute inset-0 bg-[#E50914]/20 blur-2xl rounded-full opacity-0 hover:opacity-100 transition-opacity duration-500"></div>
+          <img
+            src="/assets/logotipo-netflix.png"
+            alt="Netflix Logo"
+            className="w-full object-contain drop-shadow-2xl relative z-10"
+          />
+        </div>
+      </div>
+
       <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col items-center justify-center h-full px-6 py-8">
 
         {/* Header - More Compact */}
         <div
           className={`text-center mb-8 md:mb-12 shrink-0 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] ${hoveredPortal ? 'opacity-30 blur-sm scale-95' : 'opacity-100 blur-0 scale-100'}`}
         >
-          <div className="inline-flex items-center justify-center w-14 h-14 mb-6 rounded-2xl bg-white/5 backdrop-blur-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.1)] dark:shadow-[0_0_30px_rgba(255,255,255,0.05)] transform hover:rotate-12 transition-transform duration-500">
-            <img
-              src={BRAND_LOGO}
-              className={`w-8 h-8 object-contain transition-all duration-500 ${theme === 'dark' ? 'filter brightness-0 invert' : 'filter brightness-0 opacity-80'}`}
-              alt="Logo"
-            />
-          </div>
+
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-gray-900 dark:text-white mb-4 tracking-tighter leading-tight">
-            Selecione seu <span className="text-transparent bg-clip-text bg-gradient-to-r from-mozart-pink to-purple-600 animate-gradient-x">Domínio</span>
+            Selecione seu <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF0080] to-[#E60073] animate-gradient-x">Domínio</span>
           </h1>
           <p className="text-lg text-gray-500 dark:text-gray-400 font-light w-full max-w-2xl mx-auto tracking-wide">
-            Entre em um ambiente especializado projetado para <span className="text-gray-900 dark:text-white font-medium">trabalho profundo</span> e flow.
+            Entre em um ambiente especializado projetado para <span className="text-gray-900 dark:text-white font-medium">aprendizado profundo</span>.
           </p>
 
           {/* Refresh Button */}
@@ -140,12 +146,7 @@ export default function MobilePortalSelection() {
           })}
         </div>
 
-        {/* Footer - Stick to bottom of container but fade out */}
-        <div className={`mt-8 md:mt-12 transition-opacity duration-500 ${hoveredPortal ? 'opacity-0' : 'opacity-40'}`}>
-          <div className="flex items-center justify-center gap-2 text-[10px] text-gray-400 dark:text-gray-500 font-bold tracking-[0.3em] uppercase">
-            <Command size={12} /> Powered by Mozart LMS
-          </div>
-        </div>
+
 
       </div>
     </div>

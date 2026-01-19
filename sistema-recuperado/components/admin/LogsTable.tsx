@@ -133,7 +133,11 @@ export function LogsTable({
 
     // Empty state
     if (logs.length === 0) {
-        return <EmptyState className={className} />;
+        return (
+            <div className={cn('overflow-hidden rounded-xl border border-white/10 bg-[var(--bg-surface)]', className)}>
+                <EmptyState />
+            </div>
+        );
     }
 
     const headerClass = cn(
