@@ -28,6 +28,7 @@ interface LessonContent {
     video_url: string | null;
     duration_seconds: number | null;
     attachments?: { name: string; url: string }[];
+    config?: { cover_url?: string;[key: string]: any };
 }
 
 export default function LessonPage({ params }: { params: Promise<{ portalId: string; lessonId: string }> }) {
@@ -108,7 +109,7 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                     .single();
 
                 if (lessonError) throw lessonError;
-                setCurrentLesson(lessonData);
+                setCurrentLesson(lessonData as unknown as LessonContent);
 
                 // --- URL SIGNING LOGIC ---
                 // If it's a Supabase Storage URL, generate a signed URL
@@ -446,6 +447,7 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                             {currentLesson.video_url ? (
                                 <VideoPlayer
                                     url={signedVideoUrl || currentLesson.video_url}
+                                    poster={currentLesson.config?.cover_url}
                                     autoPlay={false}
                                     initialTime={initialTime}
                                     onProgress={handleProgress}
