@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Command, Loader2 } from 'lucide-react';
+import { Command, Loader2, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { supabase } from '@/lib/supabaseClient';
+import CourseCard from '@/components/members/CourseCard';
 
 const BRAND_LOGO = "https://cdn-icons-png.flaticon.com/512/2964/2964063.png";
 
@@ -14,7 +15,7 @@ interface Portal {
   image_url: string | null;
   description: string | null;
   logo?: string;
-  settings?: Record<string, unknown>;
+  settings?: any;
 }
 
 export default function MobilePortalSelection() {
@@ -22,26 +23,42 @@ export default function MobilePortalSelection() {
   const { theme } = useTheme();
   const [portals, setPortals] = useState<Portal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [hoveredPortal, setHoveredPortal] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchPortals() {
-      try {
-        const { data, error } = await supabase
-          .from('portals')
-          .select('*');
+  const fetchPortals = async (forceRefresh = false) => {
+    if (forceRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
 
-        if (error) {
-          console.error('Error fetching portals:', error);
-        } else {
-          setPortals(data || []);
+    try {
+      const { data, error } = await supabase
+        .from('portals')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching portals:', error);
+      } else {
+        setPortals(data || []);
+        if (forceRefresh) {
+          setLastRefresh(new Date());
         }
-      } catch (err) {
-        console.error('Unexpected error:', err);
-      } finally {
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+    } finally {
+      if (forceRefresh) {
+        setRefreshing(false);
+      } else {
         setLoading(false);
       }
     }
+  };
 
+  useEffect(() => {
     fetchPortals();
   }, []);
 
@@ -79,7 +96,7 @@ export default function MobilePortalSelection() {
           <p className="text-lg text-gray-500 dark:text-gray-400 font-light w-full max-w-2xl mx-auto tracking-wide">
             Entre em um ambiente especializado projetado para <span className="text-gray-900 dark:text-white font-medium">trabalho profundo</span> e flow.
           </p>
-          
+
           {/* Refresh Button */}
           <div className="flex items-center gap-4">
             <button
@@ -90,7 +107,7 @@ export default function MobilePortalSelection() {
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
               {refreshing ? 'Atualizando...' : 'Atualizar Portais'}
             </button>
-            
+
             <div className="text-xs text-gray-500 dark:text-gray-400">
               Última atualização: {lastRefresh.toLocaleTimeString()}
             </div>
@@ -111,7 +128,12 @@ export default function MobilePortalSelection() {
             };
 
             return (
-              <div key={portal.id} className="w-full flex justify-center transform hover:-translate-y-2 transition-transform duration-300">
+              <div
+                key={portal.id}
+                className="w-full flex justify-center transform hover:-translate-y-2 transition-transform duration-300"
+                onMouseEnter={() => setHoveredPortal(portal.id)}
+                onMouseLeave={() => setHoveredPortal(null)}
+              >
                 <CourseCard course={courseData} />
               </div>
             );

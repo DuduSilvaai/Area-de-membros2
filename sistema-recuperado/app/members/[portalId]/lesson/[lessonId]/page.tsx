@@ -379,7 +379,7 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                 content_id: lessonId,
                 is_completed: true,
                 updated_at: new Date().toISOString()
-            });
+            }, { onConflict: 'user_id,content_id' });
 
             if (error) throw error;
 
@@ -397,7 +397,8 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
             }
 
         } catch (err) {
-            console.error('Error marking complete:', err);
+            console.error('Error marking complete:', JSON.stringify(err, null, 2));
+            toast.error('Erro ao concluir aula');
         }
     };
 
@@ -422,7 +423,9 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                         <Home size={16} /> Meus Cursos
                     </Link>
                     <ChevronRight size={14} />
-                    <span className="text-gray-200 font-medium truncate max-w-[150px] sm:max-w-none">{courseTitle}</span>
+                    <Link href={`/members/${portalId}`} className="text-gray-200 font-medium truncate max-w-[150px] sm:max-w-none hover:text-white transition-colors">
+                        {courseTitle}
+                    </Link>
                     <ChevronRight size={14} />
                     <span className="text-white font-medium truncate hidden sm:inline-block">{currentLesson.title}</span>
                 </div>
