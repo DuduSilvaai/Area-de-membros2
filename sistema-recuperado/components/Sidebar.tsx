@@ -14,7 +14,8 @@ import {
   Globe,
   Sun,
   Moon,
-  MessageCircle
+  MessageCircle,
+  MessageSquareText
 } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -22,6 +23,7 @@ const MENU_ITEMS = [
   { name: 'Meus Portais', href: '/portals', icon: Globe },
   { name: 'Usuários', href: '/users', icon: Users },
   { name: 'Chat & Mentoria', href: '/chat', icon: MessageCircle },
+  { name: 'Comentários', href: '/comments', icon: MessageSquareText },
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
@@ -32,11 +34,11 @@ export default function Sidebar() {
   const { signOut } = useAuth();
 
   return (
-    <div className="fixed left-3 top-3 h-[calc(100vh-24px)] w-[260px] flex flex-col bg-[var(--bg-sidebar)] backdrop-blur-md border-r border-[var(--bg-sidebar-border)] rounded-xl shadow-xl transition-all duration-300 z-50">
+    <div className="fixed left-3 top-3 h-[calc(100vh-24px)] w-[260px] flex flex-col bg-white dark:bg-gray-800 backdrop-blur-md border-r border-gray-200 dark:border-gray-700 rounded-xl shadow-xl transition-all duration-300 z-50">
 
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-[var(--bg-sidebar-border)]">
-        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-[var(--primary-main)] to-[var(--primary-hover)] tracking-tighter uppercase m-0">
+      <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
+        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-pink-600 to-pink-700 tracking-tighter uppercase m-0">
           MOZART
         </h1>
       </div>
@@ -52,14 +54,14 @@ export default function Sidebar() {
               className={`
                 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200
                 ${isActive
-                  ? 'bg-gradient-to-br from-[var(--primary-main)] to-[var(--primary-hover)] text-[var(--text-on-primary)] shadow-[0_8px_24px_rgba(255,45,120,0.25)] font-semibold'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text-primary)]'
+                  ? 'bg-gradient-to-br from-pink-600 to-pink-700 text-white shadow-lg font-semibold'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                 }
               `}
             >
               <item.icon
                 size={20}
-                className={`shrink-0 ${isActive ? 'text-[var(--text-on-primary)]' : 'currentColor'}`}
+                className={`shrink-0 ${isActive ? 'text-white' : 'currentColor'}`}
               />
               <span>{item.name}</span>
             </Link>
@@ -68,10 +70,10 @@ export default function Sidebar() {
       </nav>
 
       {/* Theme Toggle */}
-      <div className="p-3 border-y border-[var(--bg-sidebar-border)]">
+      <div className="p-3 border-y border-gray-200 dark:border-gray-700">
         <button
           onClick={toggleTheme}
-          className="flex items-center gap-3 px-3.5 py-2.5 w-full text-sm font-medium text-[var(--text-secondary)] bg-transparent hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text-primary)] rounded-2xl transition-all duration-200"
+          className="flex items-center gap-3 px-3.5 py-2.5 w-full text-sm font-medium text-gray-600 dark:text-gray-400 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-2xl transition-all duration-200"
           title={`Alternar para modo ${theme === 'light' ? 'escuro' : 'claro'}`}
         >
           {theme === 'light' ? (
@@ -87,7 +89,7 @@ export default function Sidebar() {
       <div className="p-3 shrink-0">
         <button
           onClick={signOut}
-          className="flex items-center gap-3 px-3.5 py-2.5 w-full text-sm font-medium text-[var(--status-error)] bg-transparent hover:bg-red-500/10 rounded-2xl transition-all duration-200"
+          className="flex items-center gap-3 px-3.5 py-2.5 w-full text-sm font-medium text-red-600 bg-transparent hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all duration-200"
         >
           <LogOut size={20} className="shrink-0" />
           <span>Sair</span>

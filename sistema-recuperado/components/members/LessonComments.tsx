@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { deleteComment } from '@/app/actions/comments';
 
 interface Comment {
     id: string;
@@ -50,50 +51,60 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     useEffect(() => {
         if (!lessonId) return;
 
-        const fetchComments = async () => {
+        const fetchComments = async (isBackground = false) => {
             try {
-                setLoading(true);
-                const { data, error } = await supabase
+                if (!isBackground) setLoading(true);
+                // 1. Fetch Comments
+                const { data: commentsData, error: commentsError } = await supabase
                     .from('comments')
-                    .select(`
-            *,
-            profiles (
-              full_name,
-              avatar_url
-            )
-          `)
+                    .select('*')
                     .eq('content_id', lessonId)
                     .order('created_at', { ascending: false });
 
-                if (error) throw error;
+                if (commentsError) throw commentsError;
 
-                // Fetch likes separately or as a count if possible, but simplest is to fetch all likes for these comments
-                // For optimization, we could use a custom view or subquery. 
-                // For now, let's just create a quick map of likes.
-
-                const commentIds = data.map(c => c.id);
-                if (commentIds.length > 0) {
-                    const { data: likesData, error: likesError } = await supabase
-                        .from('comment_likes')
-                        .select('comment_id, user_id')
-                        .in('comment_id', commentIds);
-
-                    if (!likesError && likesData) {
-                        const updatedComments = data.map((comment) => {
-                            const likes = likesData.filter(l => l.comment_id === comment.id);
-                            return {
-                                ...comment,
-                                likes_count: likes.length,
-                                user_liked: user ? likes.some(l => l.user_id === user.id) : false
-                            };
-                        });
-                        setComments(updatedComments);
-                        setLoading(false);
-                        return;
-                    }
+                if (!commentsData || commentsData.length === 0) {
+                    setComments([]);
+                    setLoading(false);
+                    return;
                 }
 
-                setComments(data);
+                // 2. Fetch Profiles manually (since FK is missing/unreliable)
+                const userIds = Array.from(new Set(commentsData.map(c => c.user_id)));
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, avatar_url')
+                    .in('id', userIds);
+
+                if (profilesError) console.error('Error fetching profiles:', profilesError);
+
+                const profilesMap = new Map((profilesData || []).map(p => [p.id, p]));
+
+                // 3. Fetch Likes
+                const commentIds = commentsData.map(c => c.id);
+                const { data: likesData, error: likesError } = await supabase
+                    .from('comment_likes')
+                    .select('comment_id, user_id')
+                    .in('comment_id', commentIds);
+
+                // 4. Merge Data
+                const mergedComments = commentsData.map(comment => {
+                    const profile = profilesMap.get(comment.user_id);
+                    const likes = (likesData || []).filter(l => l.comment_id === comment.id);
+
+                    return {
+                        ...comment,
+                        profiles: profile ? [{ // Mimic existing structure or simplify
+                            full_name: profile.full_name,
+                            avatar_url: profile.avatar_url
+                        }] : [],
+                        likes_count: likes.length,
+                        user_liked: user ? likes.some(l => l.user_id === user.id) : false
+                    };
+                });
+
+                setComments(mergedComments);
+
             } catch (error) {
                 console.error('Error fetching comments:', error);
             } finally {
@@ -104,16 +115,43 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         fetchComments();
 
         // Subscribe to realtime changes
+        // Subscribe to realtime changes
+        // Separated into two channels to handle DELETEs which might not trigger 'content_id' filter
+        // depending on Replica Identity settings (defaults to PK only)
         const channel = supabase
-            .channel('public:comments')
+            .channel(`comments:${lessonId}`)
             .on('postgres_changes', {
-                event: '*',
+                event: 'INSERT',
                 schema: 'public',
                 table: 'comments',
                 filter: `content_id=eq.${lessonId}`
             }, (payload) => {
-                // Simple re-fetch strategy for consistency
-                fetchComments();
+                fetchComments(true);
+            })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'comments',
+                filter: `content_id=eq.${lessonId}`
+            }, (payload) => {
+                fetchComments(true);
+            })
+            .on('postgres_changes', {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'comments'
+            }, (payload) => {
+                // For DELETE, we check if the deleted ID is in our current list
+                // We cannot rely on filter here if Replica Identity is default
+                const deletedId = payload.old.id;
+                setComments(prev => {
+                    const exists = prev.some(c => c.id === deletedId);
+                    if (exists) {
+                        // Remove immediately
+                        return prev.filter(c => c.id !== deletedId);
+                    }
+                    return prev;
+                });
             })
             .subscribe();
 
@@ -212,16 +250,29 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
         if (!confirm('Tem certeza que deseja excluir este comentário?')) return;
 
         try {
-            const { error } = await supabase
-                .from('comments')
-                .delete()
-                .eq('id', commentId);
+            // Optimistic update
+            setComments(prev => prev.filter(c => c.id !== commentId));
 
-            if (error) throw error;
-            // Realtime update will handle the list refresh
+            if (user?.user_metadata?.role === 'admin') {
+                // Admin delete via Server Action (bypasses RLS)
+                const result = await deleteComment(commentId);
+                if (!result.success) {
+                    console.error('Server Delete Error:', result.error);
+                    alert(`Falha ao excluir (Admin): ${result.error}`);
+                    throw new Error(result.error);
+                }
+            } else {
+                // User delete via Client (respects RLS)
+                const { error } = await supabase
+                    .from('comments')
+                    .delete()
+                    .eq('id', commentId);
+                if (error) throw error;
+            }
         } catch (error) {
             console.error('Error deleting comment:', error);
             alert('Erro ao excluir comentário');
+            window.location.reload();
         }
     }
 
@@ -335,7 +386,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                             Responder
                                         </button>
 
-                                        {user && user.id === comment.user_id && (
+                                        {user && (user.id === comment.user_id || user.user_metadata?.role === 'admin') && (
                                             <button
                                                 onClick={() => handleDelete(comment.id)}
                                                 className="flex items-center gap-1.5 text-red-500/70 hover:text-red-500 transition-colors ml-auto opacity-0 group-hover:opacity-100"
@@ -410,7 +461,7 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                                                 {reply.likes_count || 0}
                                                             </button>
 
-                                                            {user && user.id === reply.user_id && (
+                                                            {user && (user.id === reply.user_id || user.user_metadata?.role === 'admin') && (
                                                                 <button
                                                                     onClick={() => handleDelete(reply.id)}
                                                                     className="text-red-500/70 hover:text-red-500 transition-colors ml-auto"

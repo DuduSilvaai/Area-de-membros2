@@ -77,7 +77,7 @@ export function ChatWidget({ portalId, lessonId, lessonTitle, moduleTitle }: Cha
             <button
                 onClick={handleOpen}
                 className={`
-          fixed bottom-6 right-6 z-40
+          fixed bottom-6 right-6 z-[100]
           w-14 h-14 rounded-full
           bg-gradient-to-br from-pink-500 to-pink-600
           hover:from-pink-600 hover:to-pink-700

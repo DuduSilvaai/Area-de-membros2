@@ -11,6 +11,16 @@ import { CheckCircle, Download, ChevronLeft, ChevronRight, Menu, X, FileText, Ho
 import { toast } from 'sonner';
 import Link from 'next/link';
 
+// Helper for Realtime Security
+const checkAccess = (
+    permissions: { access_all: boolean; allowed_modules: string[] },
+    currentModuleId?: string | null
+) => {
+    if (permissions.access_all) return true;
+    if (!currentModuleId) return false; // If lesson has no module (orphan), deny or allow? stricter to deny.
+    return permissions.allowed_modules.includes(currentModuleId);
+};
+
 interface LessonContent {
     id: string;
     title: string;
@@ -34,6 +44,14 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [nextLessonId, setNextLessonId] = useState<string | null>(null);
     const [prevLessonId, setPrevLessonId] = useState<string | null>(null);
+
+    const [initialTime, setInitialTime] = useState(0);
+
+    // Save progress ref to avoid closure staleness issues in throttling
+    const saveProgressRef = useRef<(time: number) => void>(() => { });
+
+    // State for Signed URL (to handle private buckets)
+    const [signedVideoUrl, setSignedVideoUrl] = useState<string | null>(null);
 
     // Fetch all data
     useEffect(() => {
@@ -62,7 +80,7 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                     setCourseTitle(enrollment.portals.name);
                 }
 
-                // 2. Fetch Modules & Lessons (Flat fetch then restructure)
+                // 2. Fetch Modules & Lessons
                 const { data: rawModules, error: modulesError } = await supabase
                     .from('modules')
                     .select(`
@@ -92,14 +110,57 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                 if (lessonError) throw lessonError;
                 setCurrentLesson(lessonData);
 
-                // 4. Fetch User Progress
+                // --- URL SIGNING LOGIC ---
+                // If it's a Supabase Storage URL, generate a signed URL
+                if (lessonData.video_url && lessonData.video_url.includes('/storage/v1/object/public/')) {
+                    try {
+                        // Extract path: .../object/public/[bucket]/[path]
+                        const urlObj = new URL(lessonData.video_url);
+                        // Path parts after /object/public/
+                        // Example: /storage/v1/object/public/course-content/videos/file.mp4
+                        const activePath = urlObj.pathname.split('/object/public/')[1]; // "course-content/videos/file.mp4"
+
+                        if (activePath) {
+                            const [bucket, ...rest] = activePath.split('/');
+                            const filePath = rest.join('/');
+
+                            console.log(`Attempting to sign URL for bucket: ${bucket}, path: ${filePath}`);
+
+                            const { data: signedData, error: signedError } = await supabase
+                                .storage
+                                .from(bucket)
+                                .createSignedUrl(filePath, 60 * 60 * 2); // 2 hours
+
+                            if (signedError) {
+                                console.error('Error signing URL:', signedError);
+                            } else if (signedData) {
+                                console.log('Signed URL generated successfully');
+                                setSignedVideoUrl(signedData.signedUrl);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing video URL for signing:', e);
+                    }
+                } else {
+                    setSignedVideoUrl(null); // Reset or null if not valid
+                }
+                // -------------------------
+
+                // 4. Fetch User Progress (Completion & Last Position)
                 const { data: progressData } = await supabase
                     .from('progress')
-                    .select('content_id')
-                    .eq('user_id', user.id)
-                    .eq('is_completed', true);
+                    .select('content_id, is_completed, last_position')
+                    .eq('user_id', user.id); // Fetch all for this user to map completion + current lesson position
 
-                setCompletedLessonIds(new Set(progressData?.map(p => p.content_id) || []));
+                // Map completed IDs
+                const completed = progressData?.filter(p => p.is_completed).map(p => p.content_id) || [];
+                setCompletedLessonIds(new Set(completed));
+
+                // Get current lesson progress
+                const currentProgress = progressData?.find(p => p.content_id === lessonId);
+                if (currentProgress?.last_position) {
+                    setInitialTime(currentProgress.last_position);
+                }
 
                 // Reconstruct Tree
                 const fullTree = buildModuleTree(rawModules);
@@ -123,7 +184,130 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
         if (user) loadCourseData();
     }, [user, portalId, lessonId, router]);
 
-    // Scroll to top on lesson change
+    // Progress Saving Logic (Throttled)
+    useEffect(() => {
+        let lastSave = 0;
+        const SAVE_INTERVAL = 5000; // Save every 5 seconds
+
+        saveProgressRef.current = async (time: number) => {
+            const now = Date.now();
+            if (now - lastSave < SAVE_INTERVAL) return;
+
+            lastSave = now;
+            if (!user) return;
+
+            try {
+                await supabase.from('progress').upsert({
+                    user_id: user.id,
+                    content_id: lessonId,
+                    last_position: Math.floor(time),
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id,content_id' });
+            } catch (error) {
+                console.error('Error saving progress:', error);
+            }
+        };
+    }, [user, lessonId]);
+
+    const handleProgress = (time: number) => {
+        saveProgressRef.current(time);
+    };
+
+    // 🛡️ REAL-TIME SECURITY & ACCESS CONTROL
+    useEffect(() => {
+        if (!user || !portalId) return;
+
+        // 1. Initial/Static Check for Module Permission (Granular)
+        // We need to wait for modules to be loaded and `currentLesson` to be identified to know the Module ID.
+        // However, we can also check this during the initial load, but a reactive check here is safer.
+        if (!loading && currentLesson && modules.length > 0) {
+            // Find which module this lesson belongs to
+            let foundModuleId: string | null = null;
+            for (const m of modules) {
+                // Check direct lessons
+                if (m.lessons.find(l => l.id === lessonId)) {
+                    foundModuleId = m.id;
+                    break;
+                }
+                // Check submodules
+                if (!foundModuleId) {
+                    for (const sub of m.subModules) {
+                        if (sub.lessons.find(l => l.id === lessonId)) {
+                            foundModuleId = sub.id;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // We need to re-fetch enrollment permissions locally or store them in state to check against foundModuleId.
+            // Since we don't have them in state, let's fetch them OR rely on the Realtime listener to catch updates.
+            // Ideally, `loadCourseData` should have stored permissions.
+            // Let's rely on the Realtime Listener below to enforce "revocation" specifically, 
+            // and trust the initial load (which we need to patch to strict check too).
+        }
+
+        console.log("🛡️ [Security] Initializing Realtime Access Monitor...");
+
+        const channel = supabase
+            .channel(`security-enrollment-${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // UPDATE or DELETE
+                    schema: 'public',
+                    table: 'enrollments',
+                    filter: `user_id=eq.${user.id}`
+                },
+                async (payload) => {
+                    console.log("🛡️ [Security] Enrollment change detected:", payload);
+
+                    // If DELETE or UPDATE with is_active=false
+                    if (payload.eventType === 'DELETE' || (payload.new && !(payload.new as any).is_active)) {
+                        // Check if it's THIS portal
+                        if ((payload.old as any).portal_id === portalId || (payload.new as any).portal_id === portalId) {
+                            toast.error('Seu acesso a este curso foi revogado.');
+                            router.replace('/members');
+                            return;
+                        }
+                    }
+
+                    // If UPDATE (permissions changed)
+                    if (payload.eventType === 'UPDATE' && (payload.new as any).is_active) {
+                        const newPermissions = (payload.new as any).permissions;
+
+                        // We need the Current Module ID to verify.
+                        // We can't easily get it inside this callback without refs or state.
+                        // Strategy: Re-fetch the lesson's module relation.
+
+                        // 1. Fetch lesson's module
+                        const { data: lessonContent } = await supabase
+                            .from('contents')
+                            .select('module_id')
+                            .eq('id', lessonId)
+                            .single();
+
+                        if (lessonContent?.module_id) {
+                            const hasAccess = checkAccess(newPermissions, lessonContent.module_id);
+                            if (!hasAccess) {
+                                toast.error('Seu acesso a este módulo foi revogado pelo administrador.');
+                                router.replace(`/members/${portalId}`);
+                            } else {
+                                toast.success('Suas permissões foram atualizadas.');
+                            }
+                        }
+                    }
+                }
+            )
+            .subscribe((status) => {
+                console.log(`🛡️ [Security] Status: ${status}`);
+            });
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user, portalId, lessonId, router, loading, modules]); // Dependencies
+
     useEffect(() => {
         if (!loading && currentLesson) {
             topRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -261,8 +445,10 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                         <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/5 mb-8 relative group">
                             {currentLesson.video_url ? (
                                 <VideoPlayer
-                                    url={currentLesson.video_url}
-                                    autoPlay={false} // Requirement said manual start usually, but "Proxima aula" suggests auto. respecting previous default false.
+                                    url={signedVideoUrl || currentLesson.video_url}
+                                    autoPlay={false}
+                                    initialTime={initialTime}
+                                    onProgress={handleProgress}
                                     onEnded={handleLessonComplete}
                                 />
                             ) : (

@@ -7,7 +7,9 @@ interface VideoPlayerProps {
     // New props
     videoUrl?: string;
     poster?: string;
+    initialTime?: number;
     onEnded?: () => void;
+    onProgress?: (time: number) => void;
     // Legacy props for backward compatibility
     url?: string;
     autoPlay?: boolean;
@@ -16,7 +18,9 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
     videoUrl,
     poster,
+    initialTime = 0,
     onEnded,
+    onProgress,
     url,
     autoPlay = false
 }) => {
@@ -27,6 +31,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const [showControls, setShowControls] = useState(true);
     const [currentTime, setCurrentTime] = useState('0:00');
     const [duration, setDuration] = useState('0:00');
+    const initialTimeSet = useRef(false);
 
     const defaultPoster = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop';
 
@@ -44,13 +49,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (!video) return;
 
         const updateProgress = () => {
+            if (!video.duration) return;
             const prog = (video.currentTime / video.duration) * 100;
             setProgress(prog);
             setCurrentTime(formatTime(video.currentTime));
+            onProgress?.(video.currentTime);
         };
 
         const handleLoadedMetadata = () => {
             setDuration(formatTime(video.duration));
+
+            // Set initial time if provided and valid
+            if (!initialTimeSet.current && initialTime > 0 && initialTime < video.duration) {
+                video.currentTime = initialTime;
+                initialTimeSet.current = true;
+            }
+
             if (autoPlay) {
                 video.play().catch(() => {
                     // Autoplay blocked, user needs to interact
@@ -126,6 +140,38 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         return (
             <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-2xl flex items-center justify-center">
                 <p className="text-gray-500">Nenhum vídeo disponível</p>
+            </div>
+        );
+    }
+
+    // Helper to determine if URL is an embed
+    const getEmbedUrl = (url: string) => {
+        if (!url) return '';
+        // Handle YouTube
+        const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        if (ytMatch && ytMatch[1]) {
+            return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=${autoPlay ? 1 : 0}`;
+        }
+        // Handle Vimeo
+        const vimeoMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
+        if (vimeoMatch && vimeoMatch[1]) {
+            return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=${autoPlay ? 1 : 0}`;
+        }
+        return null;
+    };
+
+    const embedUrl = getEmbedUrl(actualVideoUrl);
+
+    if (embedUrl) {
+        return (
+            <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-2xl">
+                <iframe
+                    src={embedUrl}
+                    className="w-full h-full"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                />
             </div>
         );
     }

@@ -24,9 +24,11 @@ export interface UserWithEnrollments {
     raw_user_meta_data: {
         name?: string;
         avatar_url?: string;
+        role?: 'admin' | 'member';
         [key: string]: any;
     };
     enrollments: Enrollment[];
+    is_disabled?: boolean; // New field for user status
 }
 
 export interface Portal {
@@ -46,6 +48,45 @@ export interface Portal {
         support_email: string;
         [key: string]: any;
     } | null;
+}
+
+export interface ModuleWithChildren {
+    id: string;
+    title: string;
+    description: string | null;
+    portal_id: string;
+    parent_module_id: string | null;
+    order_index: number;
+    is_active: boolean;
+    image_url: string | null;
+    is_released?: boolean;
+    release_date?: string | null;
+    children?: ModuleWithChildren[];
+}
+
+// New types for admin management
+export interface UserManagementStats {
+    total: number;
+    enrolled: number;
+    noEnrollment: number;
+    active: number;
+    inactive: number;
+}
+
+export interface BulkEnrollmentData {
+    portalId: string;
+    accessAll: boolean;
+    selectedModules: string[];
+    expiresAt?: string;
+}
+
+export interface UserAction {
+    id: string;
+    user_id: string;
+    action: 'create_user' | 'reset_password' | 'activate_user' | 'deactivate_user' | 'bulk_enroll' | 'update_permissions';
+    details: Record<string, any>;
+    created_at: string;
+    performed_by: string;
 }
 
 export interface ModuleWithChildren {

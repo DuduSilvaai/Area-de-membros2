@@ -36,13 +36,13 @@ export async function middleware(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     // Define paths that are public and don't require authentication
-    const publicPaths = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/confirm'];
+    const publicPaths = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/confirm', '/api/test-env'];
     const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path));
 
     // ============================================================
     // PROTEÇÃO POR ROLE - Rotas administrativas
     // ============================================================
-    const adminPaths = ['/dashboard', '/portals', '/users', '/settings', '/chat', '/reports', '/contents', '/events', '/admin'];
+    const adminPaths = ['/dashboard', '/portals', '/users', '/settings', '/chat', '/reports', '/contents', '/events', '/admin', '/comments'];
     const isAdminPath = adminPaths.some(path => request.nextUrl.pathname.startsWith(path));
 
     // Verificar role do usuário para rotas admin
