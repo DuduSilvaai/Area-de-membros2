@@ -413,7 +413,9 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
                                                                 // Handle YouTube
                                                                 const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
                                                                 if (ytMatch && ytMatch[1]) {
-                                                                    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+                                                                    // Use youtube-nocookie.com and add origin to bypass restrictions
+                                                                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                                                                    return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?modestbranding=1&rel=0&origin=${origin}`;
                                                                 }
 
                                                                 // Handle Vimeo
@@ -427,7 +429,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
                                                             };
 
                                                             const embedUrl = getEmbedUrl(formData.video_url || '');
-                                                            const isEmbeddable = embedUrl.includes('youtube.com/embed') || embedUrl.includes('player.vimeo.com');
+                                                            const isEmbeddable = embedUrl.includes('youtube') || embedUrl.includes('player.vimeo.com');
 
                                                             if (formData.content_type === 'external_video' || isEmbeddable) {
                                                                 return (
@@ -435,8 +437,9 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
                                                                         src={embedUrl}
                                                                         className="w-full h-full"
                                                                         frameBorder="0"
-                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                                                         allowFullScreen
+                                                                        loading="lazy"
                                                                     />
                                                                 );
                                                             } else {

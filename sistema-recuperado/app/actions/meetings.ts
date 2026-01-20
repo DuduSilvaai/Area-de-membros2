@@ -18,14 +18,7 @@ export type CreateMeetingData = Pick<Meeting, 'student_id' | 'title' | 'descript
 export type UpdateMeetingData = Partial<Pick<Meeting, 'title' | 'description' | 'link'>>;
 
 export async function getMeetings(studentId: string) {
-    const supabase = await createClient(); // Use regular client to enforce RLS (Student sees own, Admin sees all/based on policy)
-    // Actually, for Admin accessing a specific student, they should see that student's meetings.
-    // If AuthContext is admin, RLS allows.
-
-    // However, if we are in AdminChatPage, we are using createAdminClient typically to bypass some things, 
-    // but meetings RLS is set up. Let's stick to createClient for standard access or createAdminClient 
-    // if we need to bypass (e.g. if the admin is not "authenticated" in the same way RLS expects).
-    // In this project, admins seem to have the role in metadata.
+    const supabase = await createClient();
 
     const { data: meetings, error } = await supabase
         .from('meetings')
@@ -42,21 +35,12 @@ export async function getMeetings(studentId: string) {
 }
 
 export async function createMeeting(data: CreateMeetingData) {
-    const supabase = await createAdminClient(); // Use Admin Client to ensure write access regardless of tricky RLS context if needed, though policies allow admin.
+    const supabase = await createAdminClient();
 
-    // Validation could go here
     if (!data.title || !data.student_id) {
         return { error: 'Title and Student ID are required' };
     }
 
-    const { data: user } = await supabase.auth.getUser(); // This might return null with Admin Client if we don't pass cookies? 
-    // actually createAdminClient uses service role, so auth.uid() is not traditional.
-    // We should probably pass the admin_id manually from the UI or get it from standard client session.
-
-    // Better approach:
-    // Use standard client to get current user (admin), then use that ID.
-    // Use Admin Client to INSERT if we want to be safe, or standard if RLS works.
-    // Let's use standard client for AUTH check.
     const standardClient = await createClient();
     const { data: authData } = await standardClient.auth.getUser();
 
@@ -79,7 +63,7 @@ export async function createMeeting(data: CreateMeetingData) {
     }
 
     revalidatePath(`/chat`);
-    revalidatePath(`/admin/chat`); // Adjust paths as needed
+    revalidatePath(`/admin/chat`);
     return { data: newMeeting };
 }
 
@@ -106,35 +90,20 @@ export async function updateMeeting(id: string, data: UpdateMeetingData) {
 }
 
 // Generate Signed URL for client-side upload
+// SIMPLIFIED VERSION: Assumes bucket exists (via SQL) and tries to use it directly
 export async function getMeetingPresignedUrl(fileName: string, fileType: string, studentId: string) {
+    console.log('[Upload] Starting presigned URL generation for:', fileName);
     try {
         const supabase = await createAdminClient();
         const bucketName = 'meeting-files';
 
-        // Check bucket and create if needed (Idempotent check)
-        // Note: listBuckets() is cheaper than failing an upload
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const bucketExists = buckets?.some(b => b.name === bucketName);
-
-        if (!bucketExists) {
-            await supabase.storage.createBucket(bucketName, {
-                public: true,
-                fileSizeLimit: 524288000, // 500MB
-                allowedMimeTypes: [
-                    'video/*',
-                    'audio/*',
-                    'application/pdf',
-                    'application/msword',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'application/vnd.ms-powerpoint',
-                    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-                ]
-            });
-        }
+        // Direct attempt to create signed URL
+        // We assume the bucket exists because the user ran the SQL setup script.
 
         // Generate unique path
         const fileExt = fileName.split('.').pop() || 'bin';
         const filePath = `${studentId}/${Date.now()}.${fileExt}`;
+        console.log('[Upload] Generating URL for path:', filePath, 'in bucket:', bucketName);
 
         // Create Signed Upload URL
         const { data, error } = await supabase.storage
@@ -142,9 +111,30 @@ export async function getMeetingPresignedUrl(fileName: string, fileType: string,
             .createSignedUploadUrl(filePath);
 
         if (error) {
-            console.error('Error creating signed url:', error);
-            return { error: error.message };
+            console.error('[Upload] Error creating signed url:', error);
+
+            // If meeting-files fails, try to use 'attachments' as a last resort backup
+            if (error.message.includes('resource does not exist')) {
+                console.log('[Upload] meeting-files not found, trying attachments bucket...');
+                const { data: fallbackData, error: fallbackError } = await supabase.storage
+                    .from('attachments')
+                    .createSignedUploadUrl(filePath);
+
+                if (fallbackError) {
+                    return { error: `Erro grave: Bucket 'meeting-files' não encontrado mesmo após rodar o SQL. Verifique se o SQL rodou com sucesso no Supabase.` };
+                }
+
+                return {
+                    signedUrl: fallbackData.signedUrl,
+                    path: filePath,
+                    token: fallbackData.token,
+                    bucketName: 'attachments'
+                };
+            }
+            return { error: `Erro no servidor: ${error.message}` };
         }
+
+        console.log('[Upload] Success! URL generated.');
 
         return {
             signedUrl: data.signedUrl,
@@ -154,7 +144,7 @@ export async function getMeetingPresignedUrl(fileName: string, fileType: string,
         };
 
     } catch (error: any) {
-        console.error('Config error:', error);
+        console.error('[Upload] Config error:', error);
         return { error: error.message };
     }
 }

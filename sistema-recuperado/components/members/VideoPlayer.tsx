@@ -147,16 +147,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // Helper to determine if URL is an embed
     const getEmbedUrl = (url: string) => {
         if (!url) return '';
+
         // Handle YouTube
+        // Supports: youtube.com/watch?v=, youtube.com/embed/, youtu.be/, youtube.com/v/
         const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+
         if (ytMatch && ytMatch[1]) {
-            return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=${autoPlay ? 1 : 0}`;
+            // Use youtube-nocookie.com for better privacy and fewer restrictions
+            // Add origin to prevent some embedding blocks
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=${autoPlay ? 1 : 0}&modestbranding=1&rel=0&origin=${origin}`;
         }
+
         // Handle Vimeo
         const vimeoMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
         if (vimeoMatch && vimeoMatch[1]) {
             return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=${autoPlay ? 1 : 0}`;
         }
+
         return null;
     };
 
@@ -169,8 +177,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     src={embedUrl}
                     className="w-full h-full"
                     frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
+                    loading="lazy"
+                    title="Video Player"
                 />
             </div>
         );
