@@ -35,44 +35,78 @@ export async function middleware(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser();
 
-    // Define paths that are public and don't require authentication
-    const publicPaths = ['/login', '/signup', '/forgot-password', '/auth/callback', '/auth/confirm', '/api/test-env'];
+    // 1. Define Public Paths (No Auth Required)
+    const publicPaths = [
+        '/login',
+        '/signup',
+        '/forgot-password',
+        '/auth/callback',
+        '/auth/confirm'
+    ];
     const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path));
 
-    // ============================================================
-    // PROTEÇÃO POR ROLE - Rotas administrativas
-    // ============================================================
-    const adminPaths = ['/dashboard', '/portals', '/users', '/settings', '/chat', '/reports', '/contents', '/events', '/admin', '/comments'];
+    // 2. Define Admin Paths (Admin Role Required) - Strict Prefix Matching
+    const adminPaths = [
+        '/dashboard',
+        '/portals',
+        '/users',
+        '/settings',
+        '/chat',
+        '/reports',
+        '/contents',
+        '/events',
+        '/admin',
+        '/comments'
+    ];
     const isAdminPath = adminPaths.some(path => request.nextUrl.pathname.startsWith(path));
 
-    // Verificar role do usuário para rotas admin
-    if (user && isAdminPath) {
-        // Buscar role do user_metadata
-        const userRole = user.user_metadata?.role;
+    // 3. Define Member Paths (Authenticated Users) - Explicitly allowed or fallback?
+    // In this app, everything not public and not admin is generally for members (e.g. /members)
+    // But we should be careful.
 
-        // BLOQUEIO: Se não é admin, redirecionar para /members
-        if (userRole !== 'admin') {
-            console.log('[Middleware] Acesso admin negado para role:', userRole);
+    // CASE A: User is NOT authenticated
+    if (!user) {
+        if (!isPublicPath) {
             const url = request.nextUrl.clone();
-            url.pathname = '/members';
+            url.pathname = '/login';
             return NextResponse.redirect(url);
         }
+        // Allow public path access
+        return response;
     }
 
-    // If user is NOT authenticated and trying to access a protected route
-    if (!user && !isPublicPath) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/login';
-        return NextResponse.redirect(url);
-    }
+    // CASE B: User IS authenticated
+    if (user) {
+        // If trying to access public auth pages (login/signup), redirect to appropriate dashboard
+        if (isPublicPath && request.nextUrl.pathname !== '/auth/callback') {
+            const url = request.nextUrl.clone();
+            const userRole = user.user_metadata?.role;
+            url.pathname = userRole === 'admin' ? '/dashboard' : '/members';
+            return NextResponse.redirect(url);
+        }
 
-    // If user IS authenticated and trying to access login/signup pages
-    if (user && isPublicPath && request.nextUrl.pathname !== '/auth/callback') {
-        const url = request.nextUrl.clone();
-        // Redireciona baseado no role do usuário
-        const userRole = user.user_metadata?.role;
-        url.pathname = userRole === 'admin' ? '/dashboard' : '/members';
-        return NextResponse.redirect(url);
+        // Redirect root to appropriate dashboard
+        if (request.nextUrl.pathname === '/') {
+            const url = request.nextUrl.clone();
+            const userRole = user.user_metadata?.role;
+            url.pathname = userRole === 'admin' ? '/dashboard' : '/members';
+            return NextResponse.redirect(url);
+        }
+
+        // Admin Route Protection
+        if (isAdminPath) {
+            const userRole = user.user_metadata?.role;
+            if (userRole !== 'admin') {
+                // Access denied for non-admins -> Redirect to members area
+                const url = request.nextUrl.clone();
+                url.pathname = '/members';
+                return NextResponse.redirect(url);
+            }
+        }
+
+        // Implicitly allow access to other paths (Member area)
+        // Ideally we would have a 'memberPaths' array and block anything else (404), 
+        // but for now we assume non-admin paths are safe for members.
     }
 
     return response;
@@ -86,7 +120,7 @@ export const config = {
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
          * - public (public folder)
-         * - extensions: svg, png, jpg, jpeg, gif, webp
+         * - extensions: svg, png, jpg, jpeg, gif, webp, css, js
          */
         "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)",
     ],

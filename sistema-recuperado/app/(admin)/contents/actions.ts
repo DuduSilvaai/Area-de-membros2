@@ -2,14 +2,20 @@
 
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin } from '@/lib/auth-guard';
+import { log } from '@/lib/logger';
+import { checkApiRateLimit } from '@/lib/rate-limit';
+import { createModuleSchema, createContentSchema } from '@/lib/validation/schemas';
 
 /**
  * Reorder multiple modules by updating their order_index
  */
 export async function reorderModules(updates: { id: string; order_index: number; parent_module_id?: string | null }[]) {
-    const adminSupabase = await createAdminClient();
-
+    if (!checkApiRateLimit('content_update')) return { error: 'Muitas requisições.' };
     try {
+        await requireAdmin();
+        const adminSupabase = await createAdminClient();
+
         // Update each module's order_index and optionally parent_module_id
         const updatePromises = updates.map(({ id, order_index, parent_module_id }) => {
             const updateData: any = { order_index };
@@ -34,8 +40,10 @@ export async function reorderModules(updates: { id: string; order_index: number;
 
         revalidatePath('/admin/contents');
         return { success: true };
-    } catch (error) {
-        console.error('Error in reorderModules:', error);
+        revalidatePath('/admin/contents');
+        return { success: true };
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Error in reorderModules');
         return { error: 'Erro ao reordenar módulos' };
     }
 }
@@ -44,16 +52,16 @@ export async function reorderModules(updates: { id: string; order_index: number;
  * Update a module's parent (move it in hierarchy)
  */
 export async function updateModuleParent(moduleId: string, newParentId: string | null) {
-    const adminSupabase = await createAdminClient();
-
     try {
+        await requireAdmin();
+        const adminSupabase = await createAdminClient();
         const { error } = await adminSupabase
             .from('modules')
             .update({ parent_module_id: newParentId })
             .eq('id', moduleId);
 
         if (error) {
-            console.error('Error updating module parent:', error);
+            log.error({ error: error.message }, 'Error updating module parent');
             return { error: error.message };
         }
 
@@ -69,9 +77,9 @@ export async function updateModuleParent(moduleId: string, newParentId: string |
  * Reorder contents within a module
  */
 export async function reorderContents(updates: { id: string; order_index: number }[]) {
-    const adminSupabase = await createAdminClient();
-
     try {
+        await requireAdmin();
+        const adminSupabase = await createAdminClient();
         const updatePromises = updates.map(({ id, order_index }) =>
             adminSupabase
                 .from('contents')
@@ -89,8 +97,10 @@ export async function reorderContents(updates: { id: string; order_index: number
 
         revalidatePath('/admin/contents');
         return { success: true };
-    } catch (error) {
-        console.error('Error in reorderContents:', error);
+        revalidatePath('/admin/contents');
+        return { success: true };
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Error in reorderContents');
         return { error: 'Erro ao reordenar conteúdos' };
     }
 }
@@ -99,7 +109,18 @@ export async function reorderContents(updates: { id: string; order_index: number
  * Delete a module (cascade will handle children and contents)
  */
 export async function deleteModule(moduleId: string) {
+    if (!checkApiRateLimit('content_update')) return { error: 'Muitas requisições.' };
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { error: 'Não autorizado' };
+    }
+
+    const supabase = await createClient();
     const adminSupabase = await createAdminClient();
+
+    // Get current user for logging
+    const { data: { user } } = await supabase.auth.getUser();
 
     try {
         const { error } = await adminSupabase
@@ -112,10 +133,21 @@ export async function deleteModule(moduleId: string) {
             return { error: error.message };
         }
 
+        // Log the action
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'delete_module',
+                details: { module_id: moduleId }
+            });
+        }
+
         revalidatePath('/admin/contents');
         return { success: true };
-    } catch (error) {
-        console.error('Error in deleteModule:', error);
+        revalidatePath('/admin/contents');
+        return { success: true };
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Error in deleteModule');
         return { error: 'Erro ao excluir módulo' };
     }
 }
@@ -124,9 +156,10 @@ export async function deleteModule(moduleId: string) {
  * Update a module's title
  */
 export async function updateModuleTitle(moduleId: string, title: string) {
-    const adminSupabase = await createAdminClient();
-
+    if (!checkApiRateLimit('content_update')) return { error: 'Muitas requisições.' };
     try {
+        await requireAdmin();
+        const adminSupabase = await createAdminClient();
         const { error } = await adminSupabase
             .from('modules')
             .update({ title: title.trim() })
@@ -139,8 +172,10 @@ export async function updateModuleTitle(moduleId: string, title: string) {
 
         revalidatePath('/admin/contents');
         return { success: true };
-    } catch (error) {
-        console.error('Error in updateModuleTitle:', error);
+        revalidatePath('/admin/contents');
+        return { success: true };
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Error in updateModuleTitle');
         return { error: 'Erro ao atualizar título' };
     }
 }
@@ -158,12 +193,23 @@ export async function createModule(data: {
     release_date?: string | null;
     image_url?: string | null;
 }) {
-    // DEBUGGING: Log dos dados recebidos
-    console.log('🟡 [SERVER] createModule - Dados recebidos:', JSON.stringify(data, null, 2));
+    // 1. Rate Limiting
+    if (!checkApiRateLimit('content_creation')) {
+        return { error: 'Muitas requisições. Tente novamente em alguns minutos.' };
+    }
 
-    if (!data.portal_id) {
-        console.error('❌ [SERVER] CRÍTICO: portal_id está vazio ou undefined!');
-        return { error: 'portal_id é obrigatório para criar um módulo' };
+    // 2. Input Validation
+    const validationResult = createModuleSchema.safeParse(data);
+    if (!validationResult.success) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { error: (validationResult.error as any).issues?.[0]?.message || 'Erro de validação' };
+    }
+
+    // 3. Admin Check
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { error: 'Não autorizado' };
     }
 
     const adminSupabase = await createAdminClient();
@@ -199,11 +245,26 @@ export async function createModule(data: {
             return { error: `${error.message} (Código: ${error.code})${error.hint ? ' - Dica: ' + error.hint : ''}` };
         }
 
-        console.log('✅ [SERVER] Módulo criado com sucesso:', newModule);
+        // Log the action
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'create_module',
+                details: {
+                    module_id: newModule.id,
+                    module_title: data.title,
+                    portal_id: data.portal_id
+                }
+            });
+        }
+
+        log.info({ moduleId: newModule.id }, 'Module created successfully');
         revalidatePath('/', 'layout');
         return { data: newModule, success: true };
     } catch (error: any) {
-        console.error('❌ [SERVER] Exception em createModule:', error);
+        log.error({ error: error.message }, 'Exception in createModule');
         return { error: error?.message || 'Erro desconhecido ao criar módulo' };
     }
 }
@@ -218,6 +279,12 @@ export async function updateModule(id: string, data: {
     is_released?: boolean;
     release_date?: string | null;
 }) {
+    if (!checkApiRateLimit('content_update')) return { error: 'Muitas requisições.' };
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { error: 'Não autorizado' };
+    }
 
     const adminSupabase = await createAdminClient();
 
@@ -247,8 +314,10 @@ export async function updateModule(id: string, data: {
 
         revalidatePath('/', 'layout'); // Revalidates everything
         return { success: true };
+        revalidatePath('/', 'layout'); // Revalidates everything
+        return { success: true };
     } catch (error: any) {
-        console.error('❌ [SERVER] Exception em updateModule:', error);
+        log.error({ error: error.message }, 'Exception in updateModule');
         return { error: error?.message || 'Erro ao atualizar módulo' };
     }
 }
@@ -257,7 +326,18 @@ export async function updateModule(id: string, data: {
  * Delete a content item
  */
 export async function deleteContent(contentId: string) {
+    if (!checkApiRateLimit('content_update')) return { error: 'Muitas requisições.' };
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { error: 'Não autorizado' };
+    }
+
+    const supabase = await createClient();
     const adminSupabase = await createAdminClient();
+
+    // Get current user for logging
+    const { data: { user } } = await supabase.auth.getUser();
 
     try {
         const { error } = await adminSupabase
@@ -270,10 +350,21 @@ export async function deleteContent(contentId: string) {
             return { error: error.message };
         }
 
+        // Log the action
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'delete_content',
+                details: { content_id: contentId }
+            });
+        }
+
         revalidatePath('/admin/contents');
         return { success: true };
-    } catch (error) {
-        console.error('Error in deleteContent:', error);
+        revalidatePath('/admin/contents');
+        return { success: true };
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Error in deleteContent');
         return { error: 'Erro ao excluir conteúdo' };
     }
 }
@@ -282,9 +373,10 @@ export async function deleteContent(contentId: string) {
  * Update a content's title
  */
 export async function updateContentTitle(contentId: string, title: string) {
-    const adminSupabase = await createAdminClient();
-
+    if (!checkApiRateLimit('content_update')) return { error: 'Muitas requisições.' };
     try {
+        await requireAdmin();
+        const adminSupabase = await createAdminClient();
         const { error } = await adminSupabase
             .from('contents')
             .update({ title: title.trim() })
@@ -297,8 +389,10 @@ export async function updateContentTitle(contentId: string, title: string) {
 
         revalidatePath('/admin/contents');
         return { success: true };
-    } catch (error) {
-        console.error('Error in updateContentTitle:', error);
+        revalidatePath('/admin/contents');
+        return { success: true };
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Error in updateContentTitle');
         return { error: 'Erro ao atualizar título do conteúdo' };
     }
 }
@@ -316,12 +410,23 @@ export async function createContent(data: {
     duration?: number;
     is_preview?: boolean;
 }) {
-    // DEBUGGING: Log dos dados recebidos
-    console.log('🟡 [SERVER] createContent - Dados recebidos:', JSON.stringify(data, null, 2));
+    // 1. Rate Limiting
+    if (!checkApiRateLimit('content_creation')) {
+        return { error: 'Muitas requisições. Tente novamente em alguns minutos.' };
+    }
 
-    if (!data.module_id) {
-        console.error('❌ [SERVER] CRÍTICO: module_id está vazio ou undefined!');
-        return { error: 'module_id é obrigatório para criar uma aula' };
+    // 2. Input Validation
+    const validationResult = createContentSchema.safeParse(data);
+    if (!validationResult.success) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { error: (validationResult.error as any).issues?.[0]?.message || 'Erro de validação' };
+    }
+
+    // 3. Admin Check
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { error: 'Não autorizado' };
     }
 
     const adminSupabase = await createAdminClient();
@@ -355,6 +460,22 @@ export async function createContent(data: {
                 hint: error.hint
             });
             return { error: `${error.message} (Código: ${error.code})${error.hint ? ' - Dica: ' + error.hint : ''}` };
+        }
+
+        // Log the action
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'create_content',
+                details: {
+                    content_id: newContent.id,
+                    content_title: data.title,
+                    module_id: data.module_id,
+                    content_type: data.content_type
+                }
+            });
         }
 
         console.log('✅ [SERVER] Conteúdo criado com sucesso:', newContent);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Play, Info, Clock, PlayCircle } from 'lucide-react';
@@ -46,6 +46,7 @@ interface LastViewed {
     lessonTitle: string;
     moduleTitle: string;
     progress: number;
+    thumbnail: string | null;
 }
 
 export default function PortalLobbyPage() {
@@ -59,6 +60,22 @@ export default function PortalLobbyPage() {
     const [loading, setLoading] = useState(true);
     const [lastViewed, setLastViewed] = useState<LastViewed | null>(null);
     const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+
+    // Hero enhancements
+    const [heroState, setHeroState] = useState<'new' | 'in_progress' | 'completed'>('new');
+    const [heroImages, setHeroImages] = useState<string[]>([]);
+    const [currentHeroImageIndex, setCurrentHeroImageIndex] = useState(0);
+
+    // Carousel Effect
+    useEffect(() => {
+        if (heroImages.length <= 1) return;
+
+        const interval = setInterval(() => {
+            setCurrentHeroImageIndex(prev => (prev + 1) % heroImages.length);
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [heroImages]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -100,6 +117,7 @@ export default function PortalLobbyPage() {
                         description,
                         order_index,
                         image_url,
+                        parent_module_id,
                         contents (
                             id,
                             title,
@@ -121,10 +139,13 @@ export default function PortalLobbyPage() {
                     return permissions.allowed_modules?.includes(m.id);
                 });
 
-                // Process modules to verify content ordering
+                // Process modules to verify content ordering and map types
                 const processedModules = filteredModulesRaw.map((m) => ({
                     ...m,
-                    contents: (m.contents || []).sort((a, b) => a.order_index - b.order_index)
+                    contents: (m.contents || []).sort((a, b) => a.order_index - b.order_index).map(c => ({
+                        ...c,
+                        duration_minutes: c.duration_seconds ? Math.round(c.duration_seconds / 60) : null
+                    }))
                 }));
                 // Sort modules by order_index
                 processedModules.sort((a, b) => a.order_index - b.order_index);
@@ -159,7 +180,8 @@ export default function PortalLobbyPage() {
                                     lessonId: lesson.id,
                                     lessonTitle: lesson.title,
                                     moduleTitle: mod.title,
-                                    progress: prog.is_completed ? 100 : 0
+                                    progress: prog.is_completed ? 100 : 0,
+                                    thumbnail: mod.image_url || null
                                 };
                                 break;
                             }
@@ -175,11 +197,30 @@ export default function PortalLobbyPage() {
                         lessonId: first.id,
                         lessonTitle: first.title,
                         moduleTitle: processedModules[0].title,
-                        progress: 0
+                        progress: 0,
+                        thumbnail: processedModules[0].image_url || null
                     };
                 }
 
                 setLastViewed(targetLesson);
+
+                // Collect hero images for carousel (unique module images)
+                const images = processedModules
+                    .map(m => m.image_url)
+                    .filter(url => url !== null && url !== undefined) as string[];
+                setHeroImages(images.length > 0 ? images : [portalData?.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop']);
+
+                // Determine Hero State
+                const totalLessonsCount = processedModules.reduce((acc, m) => acc + m.contents.length, 0);
+                const completedCount = completedSet.size;
+
+                if (completedCount === 0) {
+                    setHeroState('new');
+                } else if (completedCount === totalLessonsCount && totalLessonsCount > 0) {
+                    setHeroState('completed');
+                } else {
+                    setHeroState('in_progress');
+                }
 
             } catch (error) {
                 console.error("Error loading portal:", error);
@@ -225,20 +266,25 @@ export default function PortalLobbyPage() {
     if (!portal) return null;
 
     return (
-        <div className="min-h-screen bg-[#0F0F12] text-white selection:bg-[#FF0080]/30 pb-20 font-sans">
+        <div className="min-h-screen bg-gray-50 dark:bg-[#0F0F12] text-gray-900 dark:text-white selection:bg-[#FF0080]/30 pb-20 font-sans transition-colors duration-500">
             <StudentNavbar />
 
             {/* HERO SECTION - Full Width */}
             <div className="relative w-full h-[65vh] md:h-[75vh] flex items-end overflow-hidden">
                 {/* Background Image */}
                 <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-[20s] hover:scale-105 ease-linear"
-                    style={{ backgroundImage: `url(${portal.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop'})` }}
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-[20s] hover:scale-105 ease-linear transition-all duration-1000"
+                    style={{
+                        backgroundImage: `url(${heroState === 'in_progress'
+                            ? (lastViewed?.thumbnail || portal.image_url || heroImages[0])
+                            : heroImages[currentHeroImageIndex]
+                            })`
+                    }}
                 ></div>
 
                 {/* Gradients for Cinematic Look */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F12] via-[#0F0F12]/60 to-transparent"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0F0F12] via-[#0F0F12]/50 to-transparent opacity-90"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-50 dark:from-[#0F0F12] via-gray-50/60 dark:via-[#0F0F12]/60 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-50 dark:from-[#0F0F12] via-gray-50/50 dark:via-[#0F0F12]/50 to-transparent opacity-90"></div>
 
                 {/* Hero Content */}
                 <div className="relative z-10 w-full max-w-[1600px] mx-auto px-6 md:px-12 pb-16 md:pb-24">
@@ -250,24 +296,49 @@ export default function PortalLobbyPage() {
                             {/* Optional: Add 'New' badge or other meta */}
                         </div>
 
-                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-6 leading-tight drop-shadow-lg">
+                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-gray-900 dark:text-white mb-6 leading-tight drop-shadow-lg">
                             {portal.name}
                         </h1>
 
-                        <p className="text-gray-300 text-lg md:text-xl mb-10 line-clamp-3 font-light tracking-wide max-w-2xl leading-relaxed">
+                        <p className="text-gray-600 dark:text-gray-300 text-lg md:text-xl mb-10 line-clamp-3 font-light tracking-wide max-w-2xl leading-relaxed">
                             {portal.description || "Bem-vindo ao portal. Explore os módulos abaixo para começar sua jornada de aprendizado."}
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-5">
                             <button
-                                onClick={handleContinue}
+                                onClick={() => {
+                                    if (heroState === 'new' || heroState === 'completed') {
+                                        // Start from beginning
+                                        if (modules.length > 0 && modules[0].contents.length > 0) {
+                                            router.push(`/members/${portalId}/lesson/${modules[0].contents[0].id}`);
+                                        } else {
+                                            toast.error("Nenhuma aula disponível para iniciar.");
+                                        }
+                                    } else {
+                                        handleContinue();
+                                    }
+                                }}
                                 className="group flex items-center justify-center gap-3 bg-[#FF0080] hover:bg-[#d6006c] text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all hover:scale-105 active:scale-95 shadow-[0_10px_40px_-10px_rgba(255,0,128,0.5)] border border-white/10"
                             >
-                                <Play fill="currentColor" size={20} className="group-hover:text-white transition-colors" />
-                                {lastViewed?.progress && lastViewed.progress > 0 ? "Continuar Assistindo" : "Começar Agora"}
+                                {heroState === 'in_progress' && lastViewed ? (
+                                    <>
+                                        <Play fill="currentColor" size={20} className="group-hover:text-white transition-colors" />
+                                        Continuar Assistindo
+                                    </>
+                                ) : heroState === 'completed' ? (
+                                    <>
+                                        <PlayCircle size={20} className="group-hover:text-white transition-colors" />
+                                        Assistir mais uma vez
+                                    </>
+                                ) : (
+                                    <>
+                                        <PlayCircle size={20} className="group-hover:text-white transition-colors" />
+                                        Começar aqui
+                                    </>
+                                )}
                             </button>
                             <button
-                                className="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md text-white px-8 py-4 rounded-xl font-medium text-lg transition-all border border-white/10 hover:border-white/20"
+                                className="flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md text-gray-900 dark:text-white px-8 py-4 rounded-xl font-medium text-lg transition-all border border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20"
                                 onClick={() => {
                                     const element = document.getElementById('modules-section');
                                     element?.scrollIntoView({ behavior: 'smooth' });
@@ -288,10 +359,10 @@ export default function PortalLobbyPage() {
                 <section id="modules-section">
                     <div className="flex items-end justify-between mb-8 pl-2 border-l-4 border-[#FF0080]">
                         <div>
-                            <h2 className="text-2xl md:text-3xl font-serif font-bold text-white drop-shadow-md">
+                            <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900 dark:text-white drop-shadow-md">
                                 Módulos de Aprendizado
                             </h2>
-                            <p className="text-gray-400 text-sm mt-2 font-light tracking-wide">
+                            <p className="text-gray-600 dark:text-gray-400 text-sm mt-2 font-light tracking-wide">
                                 Explore o conteúdo organizado para sua evolução.
                             </p>
                         </div>
@@ -352,7 +423,7 @@ export default function PortalLobbyPage() {
                                     {/* Card Meta */}
                                     <div className="mt-5 px-2">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <span className="text-[10px] font-bold uppercase tracking-widest bg-white/10 text-white px-2 py-1 rounded border border-white/5 backdrop-blur-md">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white px-2 py-1 rounded border border-gray-200 dark:border-white/5 backdrop-blur-md">
                                                 Módulo {module.order_index}
                                             </span>
                                             <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
@@ -360,11 +431,11 @@ export default function PortalLobbyPage() {
                                             </span>
                                         </div>
 
-                                        <h3 className="text-xl font-bold text-white mb-2 leading-tight group-hover:text-[#FF0080] transition-colors line-clamp-1">
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 leading-tight group-hover:text-[#FF0080] transition-colors line-clamp-1">
                                             {module.title}
                                         </h3>
 
-                                        <p className="text-sm text-gray-400 line-clamp-2 font-light leading-relaxed">
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 font-light leading-relaxed">
                                             {module.description || "Descrição não disponível."}
                                         </p>
                                     </div>

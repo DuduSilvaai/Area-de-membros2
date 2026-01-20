@@ -17,6 +17,8 @@ export type ActionType =
     | 'login'
     | 'logout'
     | 'criacao'
+    | 'atualizacao'
+    | 'exclusao'
     | 'erro'
     | 'acesso_negado'
     | 'visualizacao'
@@ -43,6 +45,16 @@ const actionConfigs: Record<ActionType, ActionConfig> = {
         label: 'Criação',
         icon: Plus,
         className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
+    },
+    atualizacao: {
+        label: 'Atualização',
+        icon: Activity,
+        className: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
+    },
+    exclusao: {
+        label: 'Exclusão',
+        icon: AlertTriangle,
+        className: 'bg-orange-500/15 text-orange-400 border-orange-500/20',
     },
     erro: {
         label: 'Erro',
@@ -84,19 +96,38 @@ function getActionType(action: string): ActionType {
     ) {
         return 'criacao';
     }
+    if (
+        normalizedAction.includes('update') ||
+        normalizedAction.includes('atualiz') ||
+        normalizedAction.includes('reset') ||
+        normalizedAction.includes('permission') ||
+        normalizedAction.includes('activate') ||
+        normalizedAction.includes('ativ')
+    ) {
+        return 'atualizacao';
+    }
+    if (
+        normalizedAction.includes('remove') ||
+        normalizedAction.includes('delete') ||
+        normalizedAction.includes('exclu') ||
+        normalizedAction.includes('deactivate') ||
+        normalizedAction.includes('desativ')
+    ) {
+        return 'exclusao';
+    }
     if (normalizedAction.includes('erro') || normalizedAction.includes('error') || normalizedAction.includes('falha')) {
         return 'erro';
     }
     if (
         normalizedAction.includes('negado') ||
         normalizedAction.includes('denied') ||
-        normalizedAction.includes('bloqueado')
+        normalizedAction.includes('bloqueado') ||
+        normalizedAction.includes('access_denied')
     ) {
         return 'acesso_negado';
     }
     if (
         normalizedAction.includes('visual') ||
-        normalizedAction.includes('acess') ||
         normalizedAction.includes('view') ||
         normalizedAction.includes('assistiu')
     ) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { MessageSquare, MoreVertical, Pin, Trash2, CornerDownRight, Send } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 

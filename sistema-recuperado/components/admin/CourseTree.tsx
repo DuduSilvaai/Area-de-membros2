@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { DeleteConfirmationModal } from '@/components/admin/DeleteConfirmationModal';
 import {
@@ -90,6 +91,7 @@ export function CourseTree({ portalId }: CourseTreeProps) {
     });
 
     const supabase = createClient();
+    const router = useRouter();
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -218,7 +220,8 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                 toast.error(res.error);
             } else {
                 toast.success('Módulo criado!');
-                fetchData();
+                await fetchData();
+                router.refresh();
             }
         }
         setIsModuleModalOpen(false);
@@ -308,12 +311,12 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                     await reorderContents(newContents.map((c, i) => ({ id: c.id, order_index: i })));
                 }
             } else {
-                const supabase = createClient();
                 await supabase.from('contents').update({
                     module_id: targetModuleId,
                     order_index: newIndex
                 }).eq('id', active.id as string);
-                fetchData();
+                await fetchData();
+                router.refresh();
             }
         }
     };
@@ -384,7 +387,8 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                                             itemTitle: module.title,
                                             onConfirm: async () => {
                                                 await deleteModule(id);
-                                                fetchData();
+                                                await fetchData();
+                                                router.refresh();
                                             }
                                         });
                                     }}
@@ -405,7 +409,8 @@ export function CourseTree({ portalId }: CourseTreeProps) {
                                             itemTitle: lesson?.title || 'Aula',
                                             onConfirm: async () => {
                                                 await deleteContent(lessonId);
-                                                fetchData();
+                                                await fetchData();
+                                                router.refresh();
                                             }
                                         });
                                     }}

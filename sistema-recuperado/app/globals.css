@@ -416,3 +416,16 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+@layer utilities {
+  .text-rose-gold {
+    background: linear-gradient(to right, #F8D7DA, #E6A4B4, #D63384, #E6A4B4, #F8D7DA);
+    background-size: 200% auto;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    /* Fallback */
+    animation: shimmer 5s linear infinite;
+  }
+}

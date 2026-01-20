@@ -3,8 +3,15 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-function logDebug(message: string, data?: any) {
-    console.log(`[DEBUG] ${message}`, data || '');
+import { ActionResponse } from '@/types/app';
+import { Tables, TablesInsert, Json } from '@/types/supabase';
+import { requireAdmin } from '@/lib/auth-guard';
+import { log } from '@/lib/logger';
+import { checkApiRateLimit } from '@/lib/rate-limit';
+import { createPortalSchema } from '@/lib/validation/schemas';
+
+function logDebug(message: string, data?: unknown) {
+    // console.log(`[DEBUG] ${message}`, data || '');
 }
 
 export async function createPortal(data: {
@@ -14,26 +21,33 @@ export async function createPortal(data: {
     support_external_url?: string | null;
     theme?: string;
     is_external_domain?: number;
-    theme_settings?: any;
-    comments_settings?: any;
+    theme_settings?: Record<string, unknown>;
+    comments_settings?: Record<string, unknown>;
     image_url?: string | null;
-}) {
-    logDebug('Starting createPortal (Function Entry)', { data_received_name: data.name });
+}): Promise<ActionResponse<{ portal: Tables<'portals'> }>> {
+    log.info({ portalName: data.name }, 'Starting createPortal');
+
+    // 1. Rate Limiting
+    if (!checkApiRateLimit('portal_creation')) {
+        return { error: 'Muitas requisições. Tente novamente em alguns minutos.' };
+    }
+
+    // 2. Input Validation
+    const validationResult = createPortalSchema.safeParse(data);
+    if (!validationResult.success) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { error: (validationResult.error as any).issues?.[0]?.message || 'Erro de validação' };
+    }
 
     let adminSupabase;
     let user;
 
     try {
-        const cookieStore = await import('next/headers').then(mod => mod.cookies());
-        console.log('[Action] Cookies available:', cookieStore.getAll().map(c => c.name).join(', '));
-
+        user = await requireAdmin();
         adminSupabase = await createAdminClient();
-        const supabase = await createClient();
-        const { data: authData } = await supabase.auth.getUser();
-        user = authData.user;
     } catch (err: any) {
-        logDebug('CRITICAL: Failed to init clients', err.message);
-        return { error: 'Erro interno de inicialização' };
+        log.error({ errorMessage: err.message }, 'Unauthorized Create Portal');
+        return { error: 'Não autorizado' };
     }
 
     if (!user) {
@@ -63,7 +77,7 @@ export async function createPortal(data: {
                 name: data.name,
                 description: data.description,
                 image_url: data.image_url,
-                settings: settings,
+                settings: settings as unknown as Json, // Cast to Json for Supabase compatibility
                 is_active: true,
                 created_by: user.id
             }])
@@ -96,10 +110,31 @@ export async function createPortal(data: {
             logDebug('Enrollment created successfully');
         }
 
+        // Log the action
+        await adminSupabase.from('access_logs').insert({
+            user_id: user.id,
+            action: 'create_portal',
+            details: {
+                portal_id: newPortal.id,
+                portal_name: data.name
+            }
+        });
+
         revalidatePath('/portals');
         revalidatePath('/dashboard');
-        return { success: true, portal: newPortal };
+        return { data: { portal: newPortal } };
     } catch (error: any) {
+        // Log error
+        if (user) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: user.id,
+                action: 'error',
+                details: {
+                    action_attempted: 'create_portal',
+                    error_message: error.message
+                }
+            });
+        }
         logDebug('Catch Error in createPortal', error.message);
         console.error('Error in createPortal:', error);
         return { error: 'Erro ao criar portal (Exception)' };
@@ -107,6 +142,11 @@ export async function createPortal(data: {
 }
 
 export async function getPresignedUrl(fileName: string, fileType: string) {
+    try {
+        await requireAdmin();
+    } catch {
+        return { error: 'Unauthorized' };
+    }
     const adminSupabase = await createAdminClient();
 
     // Ensure unique path
@@ -124,7 +164,7 @@ export async function getPresignedUrl(fileName: string, fileType: string) {
     return { signedUrl: data.signedUrl, path: filePath, token: data.token };
 }
 
-export async function getPortal(portalId: string) {
+export async function getPortal(portalId: string): Promise<ActionResponse<{ portal: Tables<'portals'> }>> {
     logDebug('getPortal called', { portalId });
 
     try {
@@ -146,7 +186,7 @@ export async function getPortal(portalId: string) {
             return { error: error.message };
         }
 
-        return { portal: data };
+        return { data: { portal: data } };
     } catch (error: any) {
         logDebug('Exception in getPortal', error.message);
         return { error: 'Erro ao buscar portal' };
@@ -175,14 +215,15 @@ export async function updatePortalSettings(
 ) {
     logDebug('updatePortalSettings called', { portalId, data });
 
-    try {
-        const adminSupabase = await createAdminClient();
-        const supabase = await createClient();
-        const { data: authData } = await supabase.auth.getUser();
+    // 1. Rate Limiting
+    if (!checkApiRateLimit('portal_update')) {
+        return { error: 'Muitas requisições. Tente novamente em alguns minutos.' };
+    }
 
-        if (!authData.user) {
-            return { error: 'Usuário não autenticado' };
-        }
+    let user;
+    try {
+        user = await requireAdmin();
+        const adminSupabase = await createAdminClient();
 
         // Fetch current settings to merge
         const { data: currentPortal, error: fetchError } = await adminSupabase
@@ -201,7 +242,7 @@ export async function updatePortalSettings(
         const mergedSettings = {
             ...existingSettings,
             ...data.settings,
-        };
+        } as unknown as Json; // Cast to Json for Supabase compatibility
 
         const { error: updateError } = await adminSupabase
             .from('portals')
@@ -219,6 +260,17 @@ export async function updatePortalSettings(
         }
 
         logDebug('Portal settings updated successfully');
+
+        // Log the action
+        await adminSupabase.from('access_logs').insert({
+            user_id: user.id,
+            action: 'update_portal',
+            details: {
+                portal_id: portalId,
+                portal_name: data.name
+            }
+        });
+
         revalidatePath(`/portals/${portalId}`);
         revalidatePath(`/portals/${portalId}/settings`);
         revalidatePath('/portals');

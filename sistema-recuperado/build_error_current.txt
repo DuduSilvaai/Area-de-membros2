@@ -1,0 +1,122 @@
+﻿
+> sistema-recuperado@0.1.0 build
+> next build
+
+node.exe : [baseline-
+browser-mapping] The 
+data in this module 
+is over two months 
+old.  To ensure 
+accurate Baseline 
+data, please update: 
+`npm i baseline-brows
+er-mapping@latest -D`
+No C:\Program Files\n
+odejs\npm.ps1:29 
+caractere:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : 
+NotSpecifi    ed: 
+([baseline-bro    
+ws...ping@latest -   
+ D`:String) [], Rem  
+  oteException
+    + 
+FullyQualifiedEr    
+rorId : NativeComm   
+ andError
+ 
+   Ôû▓ Next.js 16.0.3 (Turbopack)
+   - Environments: .env.local
+
+ ÔÜá The 
+"middleware" file 
+convention is 
+deprecated. Please 
+use "proxy" instead. 
+Learn more: https://n
+extjs.org/docs/messag
+es/middleware-to-prox
+y
+   Creating an optimized production build ...
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+ Ô£ô Compiled successfully in 9.3s
+   Running TypeScript ...
+Failed to compile.
+
+./app/(admin)/users/p
+age-complex.tsx:55:48
+Type error: Property 
+'banned_until' does 
+not exist on type 
+'User'.
+
+[0m [90m 53 |[39m 
+  [90m// Calculate 
+dashboard stats[39m
+ [90m 54 |[39m   
+[36mconst[39m 
+totalStudents 
+[33m=[39m users[33
+m?[39m[33m.[39mlen
+gth [33m||[39m [35
+m0[39m[33m;[39m
+[31m[1m>[22m[39m
+[90m 55 |[39m   
+[36mconst[39m 
+activeStudents 
+[33m=[39m users[33
+m?[39m[33m.[39mfil
+ter(u [33m=>[39m [
+33m![39mu[33m.[39m
+banned_until 
+[33m||[39m 
+[36mnew[39m [33mDa
+te[39m(u[33m.[39mb
+anned_until) 
+[33m<=[39m 
+[36mnew[39m [33mDa
+te[39m())[33m.[39m
+length [33m||[39m 
+[35m0[39m[33m;[39m
+ [90m    |[39m     
+                     
+                     
+ [31m[1m^[22m[39m
+ [90m 56 |[39m   
+[36mconst[39m 
+inactiveStudents 
+[33m=[39m 
+totalStudents 
+[33m-[39m activeStu
+dents[33m;[39m
+ [90m 57 |[39m   
+[36mconst[39m 
+totalEnrollments 
+[33m=[39m enrollmen
+ts[33m?[39m[33m.[
+39mlength 
+[33m||[39m [35m0[
+39m[33m;[39m
+ [90m 58 |[39m   
+[36mconst[39m 
+studentsWithAccess 
+[33m=[39m users[33
+m?[39m[33m.[39mfil
+ter(u [33m=>[39m 
+[0m
+Next.js build worker 
+exited with code: 1 
+and signal: null

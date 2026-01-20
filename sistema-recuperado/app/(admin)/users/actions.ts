@@ -1,22 +1,46 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { EnrollmentPermissions } from '@/types/enrollment';
+import { ActionResponse, EnrollmentWithPortal } from '@/types/app';
+import { Tables, TablesInsert } from '@/types/supabase';
 import { revalidatePath } from 'next/cache';
+import { createUserSchema } from '@/lib/validation/schemas';
+import { checkUserCreationRateLimit, checkApiRateLimit } from '@/lib/rate-limit';
+import { log } from '@/lib/logger';
+import { requireAdmin } from '@/lib/auth-guard';
+import { generateSecurePassword, validatePasswordStrength, isCommonPassword } from '@/lib/security/password';
+// import * as yup from 'yup'; // Removed yup
+
+// Define types for paginated response
+export interface UserData {
+    id: string;
+    email?: string;
+    created_at: string;
+    last_sign_in_at?: string;
+    user_metadata: {
+        name?: string;
+        role?: string;
+        avatar_url?: string;
+    };
+    app_metadata: {
+        provider?: string;
+        [key: string]: any;
+    };
+}
+
+export interface PaginatedUsersResponse {
+    users: UserData[];
+    total: number;
+    page: number;
+    perPage: number;
+    totalPages: number;
+}
 
 // Helper to get admin client with service role
 function getAdminClient() {
-    return createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
-        }
-    );
+    return createAdminClient();
 }
 
 export async function upsertEnrollment(
@@ -27,31 +51,34 @@ export async function upsertEnrollment(
     const supabase = await createClient();
     const adminSupabase = getAdminClient();
 
-    console.log('Upserting enrollment for user:', userId, 'portal:', portalId, 'permissions:', permissions);
+    // Rate limit check
+    if (!checkApiRateLimit('enrollment')) {
+        return { error: 'Muitas requisições. Tente novamente em alguns minutos.' };
+    }
 
     // Get current user for enrolled_by field
     const { data: { user: currentUser } } = await supabase.auth.getUser();
 
     if (!currentUser) {
-        console.log('No current user found');
         return { error: 'Não autenticado' };
     }
 
-    console.log('Current user:', currentUser.id);
+
 
     const now = new Date().toISOString();
 
     // Temporarily remove enrolled_by until migration is run
-    const enrollmentData = {
+    // Temporarily remove enrolled_by until migration is run
+    const enrollmentData: TablesInsert<'enrollments'> = {
         user_id: userId,
         portal_id: portalId,
-        permissions: permissions as any,
+        permissions: permissions as unknown as any, // Cast to any temporarily to satisfy complex Json union type
         enrolled_at: now,
         // enrolled_by: currentUser.id, // Commented out until migration
         is_active: true
-    } as any; // Type assertion to handle potential updated_at field
+    };
 
-    console.log('Enrollment data to upsert:', enrollmentData);
+
 
     const { data, error } = await adminSupabase
         .from('enrollments')
@@ -62,11 +89,24 @@ export async function upsertEnrollment(
         .single();
 
     if (error) {
-        console.error('Error upserting enrollment:', error);
+        log.error({ errorMessage: error.message, code: error.code }, 'Error upserting enrollment');
         return { error: error.message };
     }
 
-    console.log('Enrollment upserted successfully:', data);
+
+
+    // Log the action (using currentUser already fetched above)
+    if (currentUser) {
+        await adminSupabase.from('access_logs').insert({
+            user_id: currentUser.id,
+            action: 'update_permissions',
+            details: JSON.parse(JSON.stringify({
+                target_user_id: userId,
+                portal_id: portalId,
+                permissions: permissions
+            }))
+        });
+    }
 
     // Force cache invalidation with multiple strategies
     revalidatePath(`/users/${userId}/manage`);
@@ -81,18 +121,18 @@ export async function upsertEnrollment(
             .from('enrollments')
             .update({ is_active: true } as any) // Trigger update to fire realtime
             .eq('id', data.id);
-    } catch (e) {
-        // This is just to trigger realtime notifications, ignore errors
-        console.log('Realtime trigger completed');
+    } catch {
+        // Realtime trigger - erros ignorados silenciosamente
     }
 
-    return { data };
+    return { data: data as unknown as Tables<'enrollments'> };
 }
 
 export async function deleteEnrollment(userId: string, portalId: string) {
+    const supabase = await createClient();
     const adminSupabase = getAdminClient();
 
-    console.log('Soft-deleting enrollment for user:', userId, 'portal:', portalId);
+
 
     // Use soft-delete instead of hard-delete to maintain data integrity
     // and ensure realtime subscriptions work properly
@@ -100,18 +140,31 @@ export async function deleteEnrollment(userId: string, portalId: string) {
         .from('enrollments')
         .update({
             is_active: false
-        } as any) // Type assertion to handle updated_at field
+        })
         .eq('user_id', userId)
         .eq('portal_id', portalId)
         .select()
         .single();
 
     if (error) {
-        console.error('Error soft-deleting enrollment:', error);
+        log.error({ errorMessage: error.message }, 'Error soft-deleting enrollment');
         return { error: error.message };
     }
 
-    console.log('Enrollment soft-deleted successfully:', data);
+
+
+    // Log the action
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
+        await adminSupabase.from('access_logs').insert({
+            user_id: currentUser.id,
+            action: 'remove_enrollment',
+            details: {
+                target_user_id: userId,
+                portal_id: portalId
+            }
+        });
+    }
 
     // Force cache invalidation with multiple strategies
     revalidatePath(`/users/${userId}/manage`);
@@ -125,14 +178,14 @@ export async function deleteEnrollment(userId: string, portalId: string) {
             .from('enrollments')
             .update({ is_active: false } as any) // Trigger update to fire realtime
             .eq('id', data.id);
-    } catch (e) {
-        console.log('Realtime trigger completed');
+    } catch {
+        // Realtime trigger - erros ignorados silenciosamente
     }
 
     return { success: true };
 }
 
-export async function getUserEnrollments(userId: string) {
+export async function getUserEnrollments(userId: string): Promise<ActionResponse<{ enrollments: EnrollmentWithPortal[] }>> {
     const adminSupabase = getAdminClient();
 
     const { data, error } = await adminSupabase
@@ -149,11 +202,12 @@ export async function getUserEnrollments(userId: string) {
         .eq('is_active', true);
 
     if (error) {
-        console.error('Error fetching enrollments:', error);
+        log.error({ errorMessage: error.message }, 'Error fetching enrollments');
         return { error: error.message };
     }
 
-    return { data };
+    // Cast is safe because of the select structure with relation
+    return { data: { enrollments: data as unknown as EnrollmentWithPortal[] } };
 }
 
 export async function createUser(data: {
@@ -161,13 +215,57 @@ export async function createUser(data: {
     email: string;
     password?: string;
     role: string;
-}) {
+}): Promise<ActionResponse<{ user: any; generatedPassword?: string }>> {
+    // Verify caller is an admin
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { error: 'Não autorizado: Apenas administradores podem criar usuários' };
+    }
+
+    // Rate limit check
+    if (!checkUserCreationRateLimit('user-creation')) {
+        return { error: 'Muitas requisições. Tente novamente em alguns minutos.' };
+    }
+
+    // Validate input with schema
+    const validationResult = createUserSchema.safeParse({
+        name: data.name,
+        email: data.email,
+        password: data.password || 'TempPass1@', // Temporary for validation
+        role: data.role
+    });
+
+    if (!validationResult.success) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { error: (validationResult.error as any).issues?.[0]?.message || 'Erro de validação' };
+    }
+
     const adminSupabase = getAdminClient();
+    let generatedPassword: string | undefined;
+
+    // Generate secure password if not provided
+    let userPassword = data.password;
+    if (!userPassword) {
+        generatedPassword = generateSecurePassword(16);
+        userPassword = generatedPassword;
+        log.info({ email: data.email }, 'Generated secure password for new user');
+    } else {
+        // Validate provided password strength
+        const passwordValidation = validatePasswordStrength(userPassword);
+        if (!passwordValidation.isValid) {
+            return { error: passwordValidation.errors.join(', ') };
+        }
+        // Check for common passwords
+        if (isCommonPassword(userPassword)) {
+            return { error: 'A senha fornecida é muito comum e insegura. Escolha uma senha mais forte.' };
+        }
+    }
 
     // 1. Create user in Supabase Auth
     const { data: newUser, error } = await adminSupabase.auth.admin.createUser({
         email: data.email,
-        password: data.password || 'Mudar123!', // Default password if not provided
+        password: userPassword,
         email_confirm: true, // Auto-confirm
         user_metadata: {
             name: data.name,
@@ -176,7 +274,7 @@ export async function createUser(data: {
     });
 
     if (error) {
-        console.error('Error creating user:', error);
+        log.error({ errorMessage: error.message }, 'Error creating user');
         return { error: error.message };
     }
 
@@ -206,20 +304,49 @@ export async function createUser(data: {
         await adminSupabase.from('access_logs').insert({
             user_id: currentUser.id,
             action: 'create_user',
-            details: {
+            details: JSON.parse(JSON.stringify({
                 created_user_id: newUser.user?.id,
                 created_user_email: data.email,
                 created_user_role: data.role
-            }
+            }))
         });
     }
 
     revalidatePath('/users');
-    return { data: newUser };
+    return {
+        data: {
+            user: newUser.user,
+            generatedPassword // Return generated password so admin can share with user
+        }
+    };
 }
 
 // New function to reset user password
 export async function resetUserPassword(userId: string, newPassword: string) {
+    // Verify caller is an admin
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { error: 'Não autorizado: Apenas administradores podem redefinir senhas' };
+    }
+
+    // Validate userId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+        return { error: 'ID de usuário inválido' };
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePasswordStrength(newPassword);
+    if (!passwordValidation.isValid) {
+        return { error: passwordValidation.errors.join(', ') };
+    }
+
+    // Check for common passwords
+    if (isCommonPassword(newPassword)) {
+        return { error: 'A senha fornecida é muito comum e insegura. Escolha uma senha mais forte.' };
+    }
+
     const adminSupabase = getAdminClient();
 
     const { data, error } = await adminSupabase.auth.admin.updateUserById(userId, {
@@ -227,7 +354,7 @@ export async function resetUserPassword(userId: string, newPassword: string) {
     });
 
     if (error) {
-        console.error('Error resetting password:', error);
+        log.error({ errorMessage: error.message }, 'Error resetting password');
         return { error: error.message };
     }
 
@@ -250,6 +377,19 @@ export async function resetUserPassword(userId: string, newPassword: string) {
 
 // New function to deactivate/activate user
 export async function toggleUserStatus(userId: string, disabled: boolean) {
+    // Verify caller is an admin
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { error: 'Não autorizado: Apenas administradores podem alterar status de usuários' };
+    }
+
+    // Validate userId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+        return { error: 'ID de usuário inválido' };
+    }
+
     const adminSupabase = getAdminClient();
 
     const { data, error } = await adminSupabase.auth.admin.updateUserById(userId, {
@@ -257,7 +397,7 @@ export async function toggleUserStatus(userId: string, disabled: boolean) {
     });
 
     if (error) {
-        console.error('Error toggling user status:', error);
+        log.error({ errorMessage: error.message }, 'Error toggling user status');
         return { error: error.message };
     }
 
@@ -351,13 +491,14 @@ export async function debugUserAccess(userEmail: string) {
         // Get active enrollments only
         const activeEnrollments = allEnrollments?.filter(e => e.is_active) || [];
 
-        // Get all portals
+        // Otimização: Buscar apenas campos necessários dos portais ativos
         const { data: allPortals, error: portalsError } = await adminSupabase
             .from('portals')
-            .select('*');
+            .select('id, name, is_active')
+            .eq('is_active', true); // Buscar apenas ativos direto do banco
 
-        // Get active portals only
-        const activePortals = allPortals?.filter(p => p.is_active) || [];
+        // Get active portals only (já filtrado na query, mas mantendo variável para compatibilidade lógica)
+        const activePortals = allPortals || [];
 
         // Get portal IDs from enrollments
         const enrolledPortalIds = activeEnrollments.map(e => e.portal_id);
@@ -404,7 +545,7 @@ export async function fixMissingEnrollments(userEmail: string) {
         // Get all active portals
         const { data: allPortals, error: portalsError } = await adminSupabase
             .from('portals')
-            .select('*')
+            .select('id, name')
             .eq('is_active', true);
 
         if (portalsError) {
@@ -539,6 +680,7 @@ export async function syncUsersProfiles() {
             if (error) throw error;
 
             if (users.length > 0) {
+                // Using User type from Supabase Auth
                 allUsers = [...allUsers, ...users];
                 page++;
             } else {
@@ -556,21 +698,28 @@ export async function syncUsersProfiles() {
         const batchSize = 20;
         for (let i = 0; i < allUsers.length; i += batchSize) {
             const batch = allUsers.slice(i, i + batchSize);
-            const updates = batch.map(async (user) => {
-                if (user.user_metadata?.name) {
-                    const { error } = await adminSupabase
-                        .from('profiles')
-                        .upsert({
-                            id: user.id,
-                            email: user.email,
-                            full_name: user.user_metadata.name,
-                            role: user.user_metadata.role === 'admin' ? 'admin' : 'member'
-                        });
+            // Otimização: Preparar todos os profiles do batch para um único upsert
+            const updates: TablesInsert<'profiles'>[] = batch
+                .filter((user: any) => user.user_metadata?.name) // Filtrar apenas usuários válidos
+                .map((user: any) => ({
+                    id: user.id,
+                    email: user.email,
+                    full_name: user.user_metadata.name,
+                    role: (user.user_metadata.role === 'admin' ? 'admin' : 'member') as 'admin' | 'member',
+                    updated_at: new Date().toISOString()
+                }));
 
-                    if (!error) updatedCount++;
+            if (updates.length > 0) {
+                const { error } = await adminSupabase
+                    .from('profiles')
+                    .upsert(updates, { onConflict: 'id' });
+
+                if (error) {
+                    console.error('Error syncing batch:', error);
+                } else {
+                    updatedCount += updates.length;
                 }
-            });
-            await Promise.all(updates);
+            }
         }
 
         console.log(`Profiles synced successfully. Updated: ${updatedCount}`);
@@ -582,5 +731,196 @@ export async function syncUsersProfiles() {
     } catch (error: any) {
         console.error('Error syncing profiles:', error);
         return { error: error.message };
+    }
+}
+
+// New function to delete user (Auth + DB)
+export async function deleteUser(userId: string) {
+    try {
+        await requireAdmin();
+        const adminSupabase = getAdminClient();
+        const supabase = await createClient(); // For logging user
+
+        // 1. Manual cleanup from public tables FIRST (to prevent FK constraints blocking Auth delete)
+        // We delete from "leaves" to "root" to avoid internal FK violations too, 
+        // though Supabase Auth delete is the strict one.
+
+        // Content interactions
+        await adminSupabase.from('comment_likes').delete().eq('user_id', userId);
+        await adminSupabase.from('comments').delete().eq('user_id', userId);
+        await adminSupabase.from('progress').delete().eq('user_id', userId);
+        await adminSupabase.from('lesson_attachments').delete().eq('type', 'file').ilike('url', `%${userId}%`); // Optional safety for uploads? skipped for now
+
+        // Communication
+        await adminSupabase.from('messages').delete().eq('sender_id', userId);
+        await adminSupabase.from('conversations').delete().eq('student_id', userId);
+        // If user was an admin in a conversation, nullify to keep chat for student
+        await adminSupabase.from('conversations').update({ admin_id: null }).eq('admin_id', userId);
+
+        // Access & System
+        await adminSupabase.from('enrollments').delete().eq('user_id', userId);
+        await adminSupabase.from('access_logs').delete().eq('user_id', userId);
+
+        // Notifications (using 'as any' since tables might be missing in types)
+        // Notifications (using 'as any' since tables might be missing in types)
+        await adminSupabase.from('notifications' as any).delete().eq('user_id', userId);
+        await adminSupabase.from('notification_reads' as any).delete().eq('user_id', userId);
+
+        // Delete profile (node)
+        await adminSupabase.from('profiles').delete().eq('id', userId);
+
+        // 2. Delete from Supabase Auth (Root)
+        const { error: deleteError } = await adminSupabase.auth.admin.deleteUser(userId);
+
+        if (deleteError) {
+            log.error({ errorMessage: deleteError.message }, 'Error deleting user from Auth');
+            return { error: deleteError.message };
+        }
+
+        // 3. Log the action
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: currentUser.id,
+                action: 'delete_user',
+                details: {
+                    target_user_id: userId
+                }
+            });
+        }
+
+        revalidatePath('/users');
+        revalidatePath('/members');
+        return { success: true };
+
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Exception in deleteUser');
+        return { error: error.message || 'Erro ao excluir usuário' };
+    }
+}
+
+// Optimized Paginated User Fetch
+export async function getPaginatedUsers(
+    page: number = 1,
+    perPage: number = 20,
+    search: string = ''
+): Promise<ActionResponse<PaginatedUsersResponse>> {
+    const adminSupabase = getAdminClient();
+
+    try {
+        // Unfortunately, Supabase Auth API doesn't support server-side search/filtering efficiently
+        // For filtering by name/email, we often need to rely on the 'profiles' table if it serves as a mirror
+        // OR fetch a larger batch from Auth and filter in memory (not ideal for huge datasets)
+
+        // BETTER APPROACH: Query 'profiles' table which SHOULD be synced and supports filtering
+        // We will join with auth users via loose coupling or just trust profiles for listing
+
+        let query = adminSupabase
+            .from('profiles')
+            .select('*', { count: 'exact' });
+
+        if (search) {
+            query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);
+        }
+
+        // Calculate range
+        const from = (page - 1) * perPage;
+        const to = from + perPage - 1;
+
+        query = query.range(from, to).order('full_name', { ascending: true });
+
+        const { data: profiles, error, count } = await query;
+
+        if (error) {
+            log.error({ error: error.message }, 'Error listing profiles');
+            return { error: 'Erro ao listar usuários' };
+        }
+
+        // Map profiles to standard UserData format
+        // Note: Profiles might miss some auth metadata (like last_sign_in), but for the list view it's often enough.
+        // If we strictly need last_sign_in, we'd need to fetch auth users, but that doesn't support search well.
+        // For now, we return profile data which is faster.
+        const users: UserData[] = profiles.map(p => ({
+            id: p.id,
+            email: p.email || '',
+            created_at: new Date().toISOString(), // 'updated_at' missing in DB schema, fallback to now
+            last_sign_in_at: undefined, // details page can fetch this
+            user_metadata: {
+                name: p.full_name || '',
+                role: p.role || 'member',
+                avatar_url: p.avatar_url || ''
+            },
+            app_metadata: {}
+        }));
+
+        return {
+            data: {
+                users,
+                total: count || 0,
+                page,
+                perPage,
+                totalPages: Math.ceil((count || 0) / perPage)
+            }
+        };
+
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Exception in getPaginatedUsers');
+        return { error: 'Erro ao carregar usuários' };
+    }
+}
+
+// Update user name action
+export async function updateUserName(userId: string, newName: string) {
+    try {
+        await requireAdmin();
+        const adminSupabase = getAdminClient();
+        const supabase = await createClient(); // For logging
+
+        // Validate input
+        if (!newName || newName.trim().length < 2) {
+            return { error: 'O nome deve ter pelo menos 2 caracteres' };
+        }
+
+        // 1. Update Profile (DB)
+        const { error: profileError } = await adminSupabase
+            .from('profiles')
+            .update({ full_name: newName })
+            .eq('id', userId);
+
+        if (profileError) {
+            log.error({ errorMessage: profileError.message }, 'Error updating profile name');
+            return { error: 'Erro ao atualizar perfil' };
+        }
+
+        // 2. Update Auth Metadata (Supabase Auth)
+        const { error: authError } = await adminSupabase.auth.admin.updateUserById(userId, {
+            user_metadata: { name: newName }
+        });
+
+        if (authError) {
+            log.error({ errorMessage: authError.message }, 'Error updating auth metadata');
+            return { error: 'Erro ao atualizar conta de usuário' };
+        }
+
+        // 3. Log Action
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+            await adminSupabase.from('access_logs').insert({
+                user_id: currentUser.id,
+                action: 'update_user_profile',
+                details: {
+                    target_user_id: userId,
+                    new_name: newName
+                }
+            });
+        }
+
+        revalidatePath(`/users/${userId}/manage`);
+        revalidatePath('/users');
+        return { success: true };
+
+    } catch (error: any) {
+        log.error({ error: error.message }, 'Exception in updateUserName');
+        return { error: error.message || 'Erro ao atualizar nome' };
     }
 }

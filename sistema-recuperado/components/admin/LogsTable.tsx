@@ -133,7 +133,14 @@ export function LogsTable({
 
     // Empty state
     if (logs.length === 0) {
-        return <EmptyState className={className} />;
+        return (
+            <div className={cn('overflow-hidden rounded-xl border border-white/10 bg-[var(--bg-surface)]', className)}>
+                <EmptyState
+                    title="Nenhum registro encontrado"
+                    description="Não foram encontrados logs de acesso para os filtros selecionados. Tente ajustar o período, usuário ou tipo de ação."
+                />
+            </div>
+        );
     }
 
     const headerClass = cn(

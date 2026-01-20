@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { FileText, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
 import FilterPanel, { FilterValues } from '@/components/admin/FilterPanel';
@@ -81,6 +81,7 @@ export default function ReportsPage() {
         total: 0,
         filtered: 0,
         errors: 0,
+        loginFailures: 0,
     });
 
     // Fetch users for the dropdown
@@ -89,7 +90,8 @@ export default function ReportsPage() {
             const { data, error: usersError } = await supabase
                 .from('profiles' as any)
                 .select('id, full_name, email')
-                .order('full_name');
+                .order('full_name')
+                .limit(100);
 
             if (usersError) throw usersError;
 
@@ -162,16 +164,23 @@ export default function ReportsPage() {
                 .from('access_logs' as any)
                 .select('*', { count: 'exact', head: true });
 
-            // Error count
+            // Error count - General errors
             const { count: errorCount } = await supabase
                 .from('access_logs' as any)
                 .select('*', { count: 'exact', head: true })
-                .or('action.ilike.%erro%,action.ilike.%error%,action.ilike.%negado%,action.ilike.%denied%');
+                .or('action.ilike.%erro%,action.ilike.%error%,action.ilike.%negado%,action.ilike.%denied%,action.ilike.%limited%');
+
+            // Login Failures specific count
+            const { count: loginFailuresCount } = await supabase
+                .from('access_logs' as any)
+                .select('*', { count: 'exact', head: true })
+                .or('action.eq.login_error,action.eq.login_rate_limited');
 
             setStats({
                 total: totalCount || 0,
                 filtered: totalCount || 0,
                 errors: errorCount || 0,
+                loginFailures: loginFailuresCount || 0
             });
         } catch (err) {
             console.error('Erro ao buscar estatísticas:', err);
@@ -279,7 +288,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <StatsCard
                     title="Total de Registros"
                     value={stats.total.toLocaleString('pt-BR')}
@@ -297,6 +306,12 @@ export default function ReportsPage() {
                     value={`${errorRate}%`}
                     icon={AlertTriangle}
                     color={Number(errorRate) > 5 ? 'error' : 'success'}
+                />
+                <StatsCard
+                    title="Falhas de Login"
+                    value={stats.loginFailures}
+                    icon={Activity}
+                    color={stats.loginFailures > 0 ? 'error' : 'success'}
                 />
             </div>
 

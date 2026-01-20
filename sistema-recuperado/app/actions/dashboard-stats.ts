@@ -7,149 +7,108 @@ export async function getDashboardStats() {
   const supabase = await createClient();
 
   try {
-    // 1. Total Students (enrollments count)
-    // Using count on enrollment table
-    const { count: totalStudents, error: studentsError } = await supabase
-      .from('enrollments')
-      .select('*', { count: 'exact', head: true });
-
-    if (studentsError) console.error('Error fetching students count:', JSON.stringify(studentsError, null, 2));
-
-    // 2. Total Lessons (contents count)
-    const { count: totalLessons, error: lessonsError } = await supabase
-      .from('contents')
-      .select('*', { count: 'exact', head: true });
-
-    if (lessonsError) console.error('Error fetching lessons count:', JSON.stringify(lessonsError, null, 2));
-
-    // 3. Accesses Today (access_logs count for today)
+    // Run independent counts in parallel for performance
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
 
-    const { count: accessesToday, error: accessesError } = await supabase
-      .from('access_logs')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayISO);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    if (accessesError) console.error('Error fetching today accesses:', JSON.stringify(accessesError, null, 2));
+    const [
+      studentsResult,
+      lessonsResult,
+      accessesResult,
+      commentsResult,
+      latestCommentsResult,
+      activeLogsResult
+    ] = await Promise.all([
+      // 1. Total Students
+      supabase.from('enrollments').select('*', { count: 'estimated', head: true }),
+      // 2. Total Lessons
+      supabase.from('contents').select('*', { count: 'estimated', head: true }),
+      // 3. Accesses Today - Keep exact for today as it's a smaller range usually, or estimated if huge
+      supabase.from('access_logs').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
+      // 4. Comments Today
+      supabase.from('comments').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
+      // 5. Latest Comments
+      supabase
+        .from('comments')
+        .select('id, text, created_at, user_id, content_id, contents(title)')
+        .order('created_at', { ascending: false })
+        .limit(5),
+      // 6. Active Logs Sample (Limit to prevent timeout - DB should handle aggregation in future optimization)
+      supabase
+        .from('access_logs')
+        .select('user_id')
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .limit(1000) // Optimization: Limit to latest 1000 interactions to avoid fetching millions of rows
+    ]);
 
-    // 4. Enrollments by Month (Last 6 months) for Line Chart
-    // Fallback to 'created_at' often used if 'enrolled_at' is missing
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Process Basic Counts
+    const totalStudents = studentsResult.count || 0;
+    const totalLessons = lessonsResult.count || 0;
+    const accessesToday = accessesResult.count || 0;
+    const commentsToday = commentsResult.count || 0;
 
-    // Tentativa de buscar com created_at (mais comum) já que enrolled_at falhou
-    const { data: enrollmentsData, error: enrollmentsDataError } = await supabase
-      .from('enrollments')
-      .select('created_at')
-      .gte('created_at', sixMonthsAgo.toISOString());
+    // Process Latest Comments
+    let latestCommentsWithProfiles: any[] = [];
+    const latestCommentsData = latestCommentsResult.data;
 
-    if (enrollmentsDataError) {
-      console.error('Error fetching enrollments data (trying created_at):', JSON.stringify(enrollmentsDataError, null, 2));
-    }
+    if (latestCommentsData && latestCommentsData.length > 0) {
+      const commentUserIds = Array.from(new Set(latestCommentsData.map(c => c.user_id).filter(Boolean)));
+      const { data: commentProfiles } = await supabase.from('profiles').select('id, full_name, email').in('id', commentUserIds);
 
-    const monthlyGrowth = processMonthlyGrowth(enrollmentsData || []);
-
-    // 5. Popular Lessons (Based on access_logs count)
-    // Manually fetch logs and then contents to avoid Foreign Key issues
-    const { data: popularLogs, error: popularError } = await supabase
-      .from('access_logs')
-      .select('content_id')
-      .not('content_id', 'is', null)
-      .limit(500); // Sample size
-
-    if (popularError) console.error('Error fetching popular logs:', JSON.stringify(popularError, null, 2));
-
-    let popularLessons: { name: string; accesses: number }[] = [];
-
-    interface AccessLog {
-      content_id: string;
-      [key: string]: any;
-    }
-
-    if (popularLogs && popularLogs.length > 0) {
-      const contentCounts: Record<string, number> = {};
-      const contentIds = new Set<string>();
-
-      popularLogs.forEach((log: AccessLog) => {
-        if (log.content_id) {
-          contentCounts[log.content_id] = (contentCounts[log.content_id] || 0) + 1;
-          contentIds.add(log.content_id);
-        }
-      });
-
-      // Fetch titles for these content IDs
-      const { data: contentsData, error: contentsError } = await supabase
-        .from('contents')
-        .select('id, title')
-        .in('id', Array.from(contentIds));
-
-      if (contentsError) console.error('Error fetching content titles:', JSON.stringify(contentsError, null, 2));
-
-      if (contentsData) {
-        popularLessons = Object.entries(contentCounts)
-          .map(([id, count]) => {
-            const content = contentsData.find(c => c.id === id);
-            return {
-              name: content?.title || 'Aula Removida',
-              accesses: count
-            };
-          })
-          .sort((a, b) => b.accesses - a.accesses)
-          .slice(0, 5);
-      }
-    }
-
-    // 6. Recent Activity
-    // Fetch logs first
-    const { data: recentLogs, error: activityError } = await supabase
-      .from('access_logs')
-      .select('id, action, created_at, details, user_id')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (activityError) console.error('Error fetching recent activity:', JSON.stringify(activityError, null, 2));
-
-    interface ActivityItem {
-      id: string;
-      action: string;
-      created_at: string;
-      details?: any;
-      user_id?: string;
-      profile: {
-        email: string;
-        full_name?: string | null;
-      };
-    }
-
-    let recentActivityWithProfiles: ActivityItem[] = [];
-
-    if (recentLogs && recentLogs.length > 0) {
-      // Fetch profiles manually
-      const userIds = Array.from(new Set(recentLogs.map(l => l.user_id).filter(Boolean)));
-
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, full_name, email')
-        .in('id', userIds);
-
-      recentActivityWithProfiles = recentLogs.map(log => {
-        const profile = profilesData?.find(p => p.id === log.user_id);
+      latestCommentsWithProfiles = latestCommentsData.map(comment => {
+        const profile = commentProfiles?.find(p => p.id === comment.user_id);
         return {
-          ...log,
-          profile: profile || { email: 'Usuário Desconhecido' }
+          id: comment.id,
+          text: comment.text,
+          created_at: comment.created_at,
+          user_name: profile?.full_name || profile?.email || 'Usuário',
+          user_avatar: null,
+          lesson_title: (comment.contents as any)?.title || 'Aula desconhecida'
         };
       });
     }
 
+    // Process Top Students from Sample
+    let topStudents: any[] = [];
+    const activeLogs = activeLogsResult.data;
+
+    if (activeLogs && activeLogs.length > 0) {
+      const studentCounts: Record<string, number> = {};
+      activeLogs.forEach(log => {
+        if (log.user_id) studentCounts[log.user_id] = (studentCounts[log.user_id] || 0) + 1;
+      });
+
+      const topUserIds = Object.keys(studentCounts)
+        .sort((a, b) => studentCounts[b] - studentCounts[a])
+        .slice(0, 5);
+
+      if (topUserIds.length > 0) {
+        const { data: profiles } = await supabase.from('profiles').select('id, full_name, email').in('id', topUserIds);
+
+        topStudents = topUserIds.map(id => {
+          const profile = profiles?.find(p => p.id === id);
+          return {
+            id,
+            name: profile?.full_name || 'Usuário',
+            email: profile?.email || '',
+            access_count: studentCounts[id]
+          };
+        });
+      }
+    }
+
     return {
-      totalStudents: totalStudents || 0,
-      totalLessons: totalLessons || 0,
-      accessesToday: accessesToday || 0,
-      monthlyGrowth: monthlyGrowth,
-      popularLessons: popularLessons,
-      recentActivity: recentActivityWithProfiles
+      totalStudents,
+      totalLessons,
+      accessesToday,
+      commentsToday,
+      latestComments: latestCommentsWithProfiles,
+      topStudents,
+      recentActivity: []
     };
 
   } catch (error) {
@@ -158,8 +117,9 @@ export async function getDashboardStats() {
       totalStudents: 0,
       totalLessons: 0,
       accessesToday: 0,
-      monthlyGrowth: [],
-      popularLessons: [],
+      commentsToday: 0,
+      latestComments: [],
+      topStudents: [],
       recentActivity: []
     };
   }

@@ -555,6 +555,120 @@ export interface Database {
           updated_at?: string
         }
         Relationships: []
+      },
+      ratings: {
+        Row: {
+          id: string
+          content_id: string
+          user_id: string
+          stars: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          content_id: string
+          user_id: string
+          stars: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          content_id?: string
+          user_id?: string
+          stars?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_content_id_fkey"
+            columns: ["content_id"]
+            referencedRelation: "contents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      feedback: {
+        Row: {
+          id: string
+          rating_id: string
+          text: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          rating_id: string
+          text: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          rating_id?: string
+          text?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_rating_id_fkey"
+            columns: ["rating_id"]
+            referencedRelation: "ratings"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      meetings: {
+        Row: {
+          id: string
+          student_id: string
+          admin_id: string | null
+          title: string
+          description: string | null
+          link: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          admin_id?: string | null
+          title: string
+          description?: string | null
+          link?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          admin_id?: string | null
+          title?: string
+          description?: string | null
+          link?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_student_id_fkey"
+            columns: ["student_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_admin_id_fkey"
+            columns: ["admin_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { SimplePermissionManager } from '@/components/admin/SimplePermissionManager';
+import { EditUserProfile } from '@/components/admin/EditUserProfile';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Mail, Calendar, Shield, UserX, UserCheck } from 'lucide-react';
 import Link from 'next/link';
@@ -14,7 +15,7 @@ export default async function UserManagePage({ params }: Props) {
 
   // Get user details
   const { data: user, error: userError } = await adminSupabase.auth.admin.getUserById(userId);
-  
+
   if (userError || !user.user) {
     notFound();
   }
@@ -55,7 +56,21 @@ export default async function UserManagePage({ params }: Props) {
     .limit(10);
 
   const userData = user.user;
-  const isDisabled = user.user.banned_until && new Date(user.user.banned_until) > new Date();
+  const isDisabled = (user.user as any).banned_until && new Date((user.user as any).banned_until) > new Date();
+
+  // Log page view (non-blocking)
+  const supabase = await createClient();
+  const { data: { user: currentAdmin } } = await supabase.auth.getUser();
+  if (currentAdmin) {
+    void adminSupabase.from('access_logs').insert({
+      user_id: currentAdmin.id,
+      action: 'view_user_profile',
+      details: {
+        viewed_user_id: userId,
+        viewed_user_email: userData.email
+      }
+    });
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -81,9 +96,9 @@ export default async function UserManagePage({ params }: Props) {
                 {/* User Info */}
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {userData.user_metadata?.name || 'Sem nome'}
-                    </h1>
+                    <EditUserProfile userId={userId} initialName={userData.user_metadata?.name || userData.email || ''} />
+                  </div>
+                  <div className="flex items-center gap-3 mb-2">
                     {userData.user_metadata?.role === 'admin' && (
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">
                         <Shield className="w-4 h-4 mr-1" />
@@ -134,11 +149,11 @@ export default async function UserManagePage({ params }: Props) {
         {enrollments && enrollments.length > 0 && (
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Matrículas Ativas</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
               {enrollments.map((enrollment: any) => (
                 <div
                   key={enrollment.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+                  className="min-w-[300px] max-w-[300px] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shrink-0"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     {enrollment.portals?.image_url ? (
@@ -161,7 +176,7 @@ export default async function UserManagePage({ params }: Props) {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     Matriculado em {new Date(enrollment.enrolled_at).toLocaleDateString('pt-BR')}
                     {enrollment.expires_at && (
@@ -229,13 +244,29 @@ function getActionLabel(action: string): string {
     'login': 'Login realizado',
     'logout': 'Logout realizado',
     'view_content': 'Conteúdo visualizado',
+    'view_user_profile': 'Perfil visualizado',
     'complete_lesson': 'Aula concluída',
     'start_lesson': 'Aula iniciada',
     'comment_created': 'Comentário criado',
     'chat_message': 'Mensagem enviada',
     'enrollment_created': 'Matrícula criada',
     'enrollment_updated': 'Matrícula atualizada',
+    'create_user': 'Usuário criado',
+    'reset_password': 'Senha redefinida',
+    'activate_user': 'Usuário ativado',
+    'deactivate_user': 'Usuário desativado',
+    'bulk_enroll': 'Matrícula em massa',
+    'update_permissions': 'Permissões atualizadas',
+    'remove_enrollment': 'Matrícula removida',
+    'access_denied': 'Acesso negado',
+    'error': 'Erro do sistema',
+    'create_portal': 'Portal criado',
+    'update_portal': 'Portal atualizado',
+    'create_module': 'Módulo criado',
+    'delete_module': 'Módulo excluído',
+    'create_content': 'Aula criada',
+    'delete_content': 'Aula excluída',
   };
-  
+
   return labels[action] || action;
 }

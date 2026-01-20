@@ -98,7 +98,7 @@ export default function PortalDetailPage() {
                                 }`}
                         >
                             <Users className={`w-4 h-4 ${activeTab === 'students' ? 'text-[#FF2D78]' : ''}`} />
-                            Alunos
+                            Franqueados
                         </button>
                     </div>
                 </div>
@@ -122,7 +122,7 @@ export default function PortalDetailPage() {
                                 <div className="mb-6">
                                     <h2 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                                         <Users className="w-5 h-5 text-[#FF2D78]" />
-                                        Gestão de Alunos
+                                        Gestão de Franqueados
                                     </h2>
                                     <p className="text-gray-500 dark:text-zinc-400 text-sm mt-1">
                                         Gerencie quem tem acesso a este portal.

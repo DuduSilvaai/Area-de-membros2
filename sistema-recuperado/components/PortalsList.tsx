@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Search, Plus, Users, Globe, Loader2, X, Cloud, Trash2 } from 'lucide-react';
-import { Input } from '@/components/UIComponents';
 import { Button } from '@/components/UIComponents';
 import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
@@ -141,14 +140,6 @@ export default function PortalsList() {
 
   const fetchPortals = async () => {
     console.log('🔍 fetchPortals iniciado');
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      toast.error('Erro de configuração: Variáveis de ambiente ausentes');
-      setIsLoading(false);
-      return;
-    }
 
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Timeout: Supabase demorou muito')), 10000)
@@ -187,11 +178,6 @@ export default function PortalsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    fetchPortals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const onSubmit = async (data: PortalFormValues) => {
     try {
       const result = await createPortal({
@@ -206,8 +192,8 @@ export default function PortalsList() {
       setShowCreateModal(false);
 
       // Redirect to the new portal's settings page
-      if (result.portal?.id) {
-        router.push(`/portals/${result.portal.id}/settings`);
+      if (result.data?.portal?.id) {
+        router.push(`/portals/${result.data.portal.id}/settings`);
       } else {
         await fetchPortals();
         router.refresh();
@@ -228,6 +214,7 @@ export default function PortalsList() {
       if (error) throw error;
       toast.success('Portal excluído com sucesso.');
       setPortals(prev => prev.filter(p => p.id !== portalToDelete.id));
+      router.refresh();
     } catch (err: unknown) {
       console.error("Error deleting portal:", err);
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -252,15 +239,25 @@ export default function PortalsList() {
         </div>
 
         {/* Search */}
-        <div style={{ maxWidth: '400px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-            <Search style={{ width: '20px', height: '20px', color: 'var(--text-secondary)', position: 'absolute', left: '12px' }} />
-            <Input
+        {/* Search */}
+        <div style={{ maxWidth: '400px', width: '100%', position: 'relative' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search style={{ position: 'absolute', left: '12px', width: '20px', height: '20px', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+            <input
               type="text"
               placeholder="Buscar portais..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ paddingLeft: '36px' }}
+              style={{
+                width: '100%',
+                padding: '10px 16px 10px 40px',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                fontSize: '14px',
+                outline: 'none',
+              }}
             />
           </div>
         </div>

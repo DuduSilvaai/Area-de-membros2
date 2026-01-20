@@ -69,7 +69,7 @@ export function ConversationSidebar({
                     </svg>
                     <input
                         type="text"
-                        placeholder="Buscar aluno..."
+                        placeholder="Buscar franqueado..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-zinc-800 border-transparent focus:bg-white dark:focus:bg-zinc-800 border focus:border-pink-500 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all text-sm"
@@ -104,7 +104,7 @@ export function ConversationSidebar({
                         <p className="text-gray-500 dark:text-zinc-500 text-sm leading-relaxed max-w-[200px]">
                             {searchQuery
                                 ? 'Tente buscar por outro nome.'
-                                : 'Os alunos aparecerão aqui quando enviarem mensagens.'}
+                                : 'Os franqueados aparecerão aqui quando enviarem mensagens.'}
                         </p>
                     </div>
                 ) : (
@@ -186,18 +186,18 @@ function ConversationItem({
             <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                     <span className={`font-medium truncate transition-colors ${hasUnread
-                            ? 'text-gray-900 dark:text-white font-bold'
-                            : 'text-gray-900 dark:text-zinc-300'
+                        ? 'text-gray-900 dark:text-white font-bold'
+                        : 'text-gray-900 dark:text-zinc-300'
                         }`}>
-                        {conversation.student?.full_name || 'Aluno'}
+                        {conversation.student?.full_name || 'Franqueado'}
                     </span>
                     <span className="text-xs text-gray-400 dark:text-zinc-500 flex-shrink-0 ml-2">
                         {timeAgo}
                     </span>
                 </div>
                 <p className={`text-sm truncate transition-colors ${hasUnread
-                        ? 'text-gray-800 dark:text-zinc-300 font-medium'
-                        : 'text-gray-500 dark:text-zinc-500 group-hover:text-gray-700 dark:group-hover:text-zinc-400'
+                    ? 'text-gray-800 dark:text-zinc-300 font-medium'
+                    : 'text-gray-500 dark:text-zinc-500 group-hover:text-gray-700 dark:group-hover:text-zinc-400'
                     }`}>
                     {conversation.last_message_preview || 'Iniciar conversa'}
                 </p>

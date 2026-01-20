@@ -11,7 +11,7 @@ interface DeleteConfirmationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => Promise<void>;
-    type: 'portal' | 'module' | 'lesson';
+    type: 'portal' | 'module' | 'lesson' | 'user';
     itemTitle: string;
 }
 
@@ -77,6 +77,19 @@ export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, type, item
                         </p>
                     </div>
                 );
+            case 'user':
+                return (
+                    <div className="space-y-3 mt-4">
+                        <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-xl space-y-1">
+                            <p className="font-semibold text-red-700 dark:text-red-400">
+                                Atenção: Ação Permanente
+                            </p>
+                            <p className="text-red-600/90 dark:text-red-400/90 text-sm">
+                                O usuário <span className="font-bold">"{itemTitle}"</span> será removido do sistema, incluindo todo seu histórico, matrículas e comentários.
+                            </p>
+                        </div>
+                    </div>
+                );
             default:
                 return <p className="mt-4 text-zinc-600 dark:text-zinc-400">Tem certeza que deseja excluir este item?</p>;
         }
@@ -93,7 +106,7 @@ export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, type, item
                             </div>
                             <div className="space-y-1 text-left">
                                 <DialogTitle className="text-xl font-semibold text-zinc-900 dark:text-white">
-                                    Excluir {type === 'portal' ? 'Portal' : type === 'module' ? 'Módulo' : 'Aula'}
+                                    Excluir {type === 'portal' ? 'Portal' : type === 'module' ? 'Módulo' : type === 'user' ? 'Usuário' : 'Aula'}
                                 </DialogTitle>
                                 <DialogDescription className="text-sm text-zinc-500 dark:text-zinc-400">
                                     Esta é uma ação destrutiva.

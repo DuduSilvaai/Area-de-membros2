@@ -104,8 +104,8 @@ export default function PortalSettingsPage() {
                     toast.error(result.error);
                     return;
                 }
-                if (result.portal) {
-                    const portal = result.portal as Portal;
+                if (result.data?.portal) {
+                    const portal = result.data.portal as Portal;
                     setName(portal.name || '');
                     setDescription(portal.description || '');
 
@@ -157,6 +157,7 @@ export default function PortalSettingsPage() {
                 toast.error(result.error);
             } else {
                 toast.success('Configurações salvas com sucesso!');
+                router.refresh();
             }
         } catch (error) {
             toast.error('Erro ao salvar configurações');

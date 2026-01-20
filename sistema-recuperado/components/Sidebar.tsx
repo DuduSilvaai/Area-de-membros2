@@ -9,13 +9,13 @@ import {
   LayoutDashboard,
   Users,
   BarChart3,
-  Settings,
   LogOut,
   Globe,
   Sun,
   Moon,
   MessageCircle,
-  MessageSquareText
+  MessageSquareText,
+  Star
 } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -24,8 +24,8 @@ const MENU_ITEMS = [
   { name: 'Usuários', href: '/users', icon: Users },
   { name: 'Chat & Mentoria', href: '/chat', icon: MessageCircle },
   { name: 'Comentários', href: '/comments', icon: MessageSquareText },
+  { name: 'Avaliações', href: '/evaluations', icon: Star },
   { name: 'Relatórios', href: '/reports', icon: BarChart3 },
-  { name: 'Configurações', href: '/settings', icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -38,8 +38,11 @@ export default function Sidebar() {
 
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-pink-600 to-pink-700 tracking-tighter uppercase m-0">
-          MOZART
+        <h1
+          className="text-3xl text-transparent bg-clip-text bg-gradient-to-br from-pink-600 to-pink-700 dark:from-pink-400 dark:to-pink-600 m-0 pb-1"
+          style={{ fontFamily: '"Great Vibes", cursive' }}
+        >
+          Love for Sweet
         </h1>
       </div>
 

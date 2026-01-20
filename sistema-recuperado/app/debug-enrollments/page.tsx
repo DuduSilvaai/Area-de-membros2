@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
 export default function DebugEnrollments() {
@@ -54,7 +54,7 @@ export default function DebugEnrollments() {
         try {
             // Force fresh data by adding timestamp
             const timestamp = new Date().getTime();
-            
+
             const { data: enrollmentData, error: enrollmentError } = await supabase
                 .from('enrollments')
                 .select('*')
@@ -98,7 +98,7 @@ export default function DebugEnrollments() {
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                             Active Enrollments ({enrollments.filter(e => e.is_active).length})
                         </h2>
-                        
+
                         {loading ? (
                             <div className="text-gray-500">Loading...</div>
                         ) : (
@@ -117,7 +117,7 @@ export default function DebugEnrollments() {
                                         </div>
                                     </div>
                                 ))}
-                                
+
                                 {enrollments.filter(e => e.is_active).length === 0 && (
                                     <div className="text-gray-500 text-center py-4">
                                         No active enrollments found
@@ -132,19 +132,18 @@ export default function DebugEnrollments() {
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                             All Portals ({portals.length})
                         </h2>
-                        
+
                         <div className="space-y-3">
                             {portals.map((portal) => {
-                                const hasEnrollment = enrollments.some(e => 
+                                const hasEnrollment = enrollments.some(e =>
                                     e.portal_id === portal.id && e.is_active
                                 );
-                                
+
                                 return (
-                                    <div key={portal.id} className={`border rounded p-3 ${
-                                        hasEnrollment 
-                                            ? 'border-green-300 bg-green-50 dark:bg-green-900/20' 
+                                    <div key={portal.id} className={`border rounded p-3 ${hasEnrollment
+                                            ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
                                             : 'border-gray-200 dark:border-gray-700'
-                                    }`}>
+                                        }`}>
                                         <div className="text-sm">
                                             <div><strong>Name:</strong> {portal.name}</div>
                                             <div><strong>ID:</strong> {portal.id}</div>
@@ -163,7 +162,7 @@ export default function DebugEnrollments() {
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                         Raw Data (JSON)
                     </h2>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <h3 className="font-medium mb-2">Enrollments:</h3>
@@ -171,7 +170,7 @@ export default function DebugEnrollments() {
                                 {JSON.stringify(enrollments, null, 2)}
                             </pre>
                         </div>
-                        
+
                         <div>
                             <h3 className="font-medium mb-2">Portals:</h3>
                             <pre className="text-xs bg-gray-100 dark:bg-gray-700 p-3 rounded overflow-auto max-h-64">

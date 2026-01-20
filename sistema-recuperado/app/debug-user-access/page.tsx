@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 export default function DebugUserAccess() {
     const [userEmail, setUserEmail] = useState('pereiragaminho@games.com');
@@ -21,9 +21,9 @@ export default function DebugUserAccess() {
         try {
             // Step 1: Find user by email
             results.steps.push({ step: 1, action: 'Finding user by email...' });
-            
+
             const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
-            
+
             if (usersError) {
                 results.error = `Error listing users: ${usersError.message}`;
                 setDebugData(results);
@@ -32,7 +32,7 @@ export default function DebugUserAccess() {
             }
 
             const targetUser = users?.find(u => u.email === userEmail);
-            
+
             if (!targetUser) {
                 results.error = `User with email ${userEmail} not found`;
                 setDebugData(results);
@@ -49,63 +49,63 @@ export default function DebugUserAccess() {
 
             // Step 2: Get all enrollments for this user
             results.steps.push({ step: 2, action: 'Fetching all enrollments...' });
-            
+
             const { data: allEnrollments, error: enrollError } = await supabase
                 .from('enrollments')
                 .select('*')
                 .eq('user_id', targetUser.id);
 
             results.allEnrollments = allEnrollments || [];
-            results.steps.push({ 
-                step: 2, 
-                result: `Found ${allEnrollments?.length || 0} total enrollments` 
+            results.steps.push({
+                step: 2,
+                result: `Found ${allEnrollments?.length || 0} total enrollments`
             });
 
             // Step 3: Get active enrollments only
             const activeEnrollments = allEnrollments?.filter(e => e.is_active) || [];
             results.activeEnrollments = activeEnrollments;
-            results.steps.push({ 
-                step: 3, 
-                result: `Found ${activeEnrollments.length} active enrollments` 
+            results.steps.push({
+                step: 3,
+                result: `Found ${activeEnrollments.length} active enrollments`
             });
 
             // Step 4: Get all portals
             results.steps.push({ step: 4, action: 'Fetching all portals...' });
-            
+
             const { data: allPortals, error: portalsError } = await supabase
                 .from('portals')
                 .select('*');
 
             results.allPortals = allPortals || [];
-            results.steps.push({ 
-                step: 4, 
-                result: `Found ${allPortals?.length || 0} total portals` 
+            results.steps.push({
+                step: 4,
+                result: `Found ${allPortals?.length || 0} total portals`
             });
 
             // Step 5: Get active portals only
             const activePortals = allPortals?.filter(p => p.is_active) || [];
             results.activePortals = activePortals;
-            results.steps.push({ 
-                step: 5, 
-                result: `Found ${activePortals.length} active portals` 
+            results.steps.push({
+                step: 5,
+                result: `Found ${activePortals.length} active portals`
             });
 
             // Step 6: Match enrollments with portals
             results.steps.push({ step: 6, action: 'Matching enrollments with portals...' });
-            
+
             const enrolledPortalIds = activeEnrollments.map(e => e.portal_id);
             const enrolledPortals = activePortals.filter(p => enrolledPortalIds.includes(p.id));
-            
+
             results.enrolledPortals = enrolledPortals;
             results.enrolledPortalIds = enrolledPortalIds;
-            results.steps.push({ 
-                step: 6, 
-                result: `User should see ${enrolledPortals.length} portals` 
+            results.steps.push({
+                step: 6,
+                result: `User should see ${enrolledPortals.length} portals`
             });
 
             // Step 7: Simulate members page query
             results.steps.push({ step: 7, action: 'Simulating members page query...' });
-            
+
             if (activeEnrollments.length > 0) {
                 const { data: memberPortals, error: memberError } = await supabase
                     .from('portals')
@@ -119,9 +119,9 @@ export default function DebugUserAccess() {
                     error: memberError,
                     query: `portals where id in (${enrolledPortalIds.join(', ')}) and is_active = true`
                 };
-                results.steps.push({ 
-                    step: 7, 
-                    result: memberError 
+                results.steps.push({
+                    step: 7,
+                    result: memberError
                         ? `Members page query failed: ${memberError.message}`
                         : `Members page query returned ${memberPortals?.length || 0} portals`
                 });
@@ -131,17 +131,17 @@ export default function DebugUserAccess() {
                     error: null,
                     query: 'No active enrollments, so no query needed'
                 };
-                results.steps.push({ 
-                    step: 7, 
+                results.steps.push({
+                    step: 7,
                     result: 'No active enrollments, members page would show no portals'
                 });
             }
 
             // Step 8: Check for issues
             results.steps.push({ step: 8, action: 'Analyzing potential issues...' });
-            
+
             const issues: string[] = [];
-            
+
             // Check if enrolled portals are active
             activeEnrollments.forEach(enrollment => {
                 const portal = allPortals?.find(p => p.id === enrollment.portal_id);
@@ -157,7 +157,7 @@ export default function DebugUserAccess() {
                 acc[id] = (acc[id] || 0) + 1;
                 return acc;
             }, {});
-            
+
             Object.entries(portalCounts).forEach(([portalId, count]) => {
                 if ((count as number) > 1) {
                     issues.push(`Multiple active enrollments for portal ${portalId} (${count} enrollments)`);
@@ -165,9 +165,9 @@ export default function DebugUserAccess() {
             });
 
             results.issues = issues;
-            results.steps.push({ 
-                step: 8, 
-                result: issues.length > 0 
+            results.steps.push({
+                step: 8,
+                result: issues.length > 0
                     ? `Found ${issues.length} potential issues`
                     : 'No issues detected'
             });

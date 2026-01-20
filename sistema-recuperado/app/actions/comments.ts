@@ -2,42 +2,17 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin } from '@/lib/auth-guard';
+import { log } from '@/lib/logger';
 
-import fs from 'fs';
-import path from 'path';
-
-// Force load env if missing (Manual fallback)
-const getServiceKey = () => {
-    if (process.env.SUPABASE_SERVICE_ROLE_KEY) return process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    try {
-        const envPath = path.resolve(process.cwd(), '.env.local');
-        if (fs.existsSync(envPath)) {
-            const fileContent = fs.readFileSync(envPath, 'utf8');
-            const match = fileContent.match(/SUPABASE_SERVICE_ROLE_KEY=(.*)/);
-            if (match && match[1]) {
-                const key = match[1].trim().replace(/^["']|["']$/g, '');
-                console.log('[Manual Env] Successfully loaded Service Key from file');
-                return key;
-            }
-        }
-    } catch (error) {
-        console.error('[Manual Env] Failed to read .env.local:', error);
-    }
-    return '';
-};
-
+// Get Supabase configuration from environment only (no filesystem fallback)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = getServiceKey();
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Strict check for environment variables
-const envCheck = (() => {
-    if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('CRITICAL: Missing Supabase Environment Variables for Admin Client');
-        return false;
-    }
-    return true;
-})();
+if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('CRITICAL: Missing Supabase Environment Variables for Admin Client');
+}
 
 const supabaseAdmin = createClient(
     supabaseUrl || '',
@@ -87,43 +62,127 @@ async function recursiveDelete(commentId: string) {
 }
 
 export async function deleteComment(commentId: string) {
+    // Verify caller is an admin
+    try {
+        await requireAdmin();
+    } catch (error: any) {
+        return { success: false, error: 'Não autorizado: Apenas administradores podem excluir comentários' };
+    }
+
+    // Validate commentId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(commentId)) {
+        return { success: false, error: 'ID de comentário inválido' };
+    }
+
     // Fail Fast if env is missing
     if (!supabaseUrl || !supabaseServiceKey) {
         return {
             success: false,
-            error: 'Erro Crítico: Chave de API Service Role ausente. Reinicie o servidor.'
+            error: 'Erro Crítico: Configuração do servidor incompleta.'
         };
     }
 
-    const keyPrefix = supabaseServiceKey.substring(0, 5) + '...';
-    console.log(`[Delete Action] Initialized with Key: ${keyPrefix}`);
-
     try {
-        console.log(`[Delete Action] Attempting delete for ID: ${commentId}`);
+        log.info({ commentId }, 'Admin attempting to delete comment');
         await recursiveDelete(commentId);
 
-        // EXTRA VERIFICATION STEP
-        const { data: check, error: checkError } = await supabaseAdmin
+        // Verification step
+        const { data: check } = await supabaseAdmin
             .from('comments')
             .select('id')
             .eq('id', commentId)
             .single();
 
         if (check) {
-            console.error(`[Delete Action] ZOMBIE RECORD: ID ${commentId} still exists after delete!`);
-            return { success: false, error: 'Erro Desconhecido: O comentário foi "excluído" mas continua no banco de dados. Verifique constraints ou triggers.' };
-        } else {
-            console.log(`[Delete Action] Verification Passed: ID ${commentId} is gone.`);
+            log.error({ commentId }, 'Comment still exists after delete attempt');
+            return { success: false, error: 'Erro ao excluir comentário. Tente novamente.' };
         }
 
-        // Revalidate multiple paths to be safe
+        log.info({ commentId }, 'Comment deleted successfully');
+
+        // Revalidate paths
         revalidatePath('/members/[portalId]/lesson/[lessonId]');
         revalidatePath('/comments');
         revalidatePath('/');
 
         return { success: true };
     } catch (error: any) {
-        console.error('[Delete Action] Failed:', error);
+        log.error({ commentId, errorMessage: error.message }, 'Failed to delete comment');
         return { success: false, error: error.message || 'Failed to delete comment tree' };
+    }
+}
+
+// Edit a comment (preserves original in comment_edits)
+export async function editComment(commentId: string, newText: string) {
+    // Validate commentId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(commentId)) {
+        return { success: false, error: 'ID de comentário inválido' };
+    }
+
+    if (!newText || newText.trim().length === 0) {
+        return { success: false, error: 'O texto do comentário não pode estar vazio' };
+    }
+
+    // Fail Fast if env is missing
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return {
+            success: false,
+            error: 'Erro Crítico: Configuração do servidor incompleta.'
+        };
+    }
+
+    try {
+        // 1. Get the current comment to save original text
+        const { data: currentComment, error: fetchError } = await supabaseAdmin
+            .from('comments')
+            .select('text, user_id')
+            .eq('id', commentId)
+            .single();
+
+        if (fetchError || !currentComment) {
+            return { success: false, error: 'Comentário não encontrado' };
+        }
+
+        // 2. Save original text to comment_edits
+        const { error: editHistoryError } = await supabaseAdmin
+            .from('comment_edits')
+            .insert({
+                comment_id: commentId,
+                original_text: currentComment.text,
+                edited_by: currentComment.user_id
+            });
+
+        if (editHistoryError) {
+            log.error({ commentId, error: editHistoryError.message }, 'Failed to save edit history');
+            // Continue anyway - editing should still work
+        }
+
+        // 3. Update the comment with new text
+        const { error: updateError } = await supabaseAdmin
+            .from('comments')
+            .update({
+                text: newText.trim(),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', commentId);
+
+        if (updateError) {
+            log.error({ commentId, error: updateError.message }, 'Failed to update comment');
+            return { success: false, error: 'Erro ao atualizar comentário' };
+        }
+
+        log.info({ commentId }, 'Comment edited successfully');
+
+        // Revalidate paths
+        revalidatePath('/members/[portalId]/lesson/[lessonId]');
+        revalidatePath('/comments');
+        revalidatePath('/');
+
+        return { success: true };
+    } catch (error: any) {
+        log.error({ commentId, errorMessage: error.message }, 'Failed to edit comment');
+        return { success: false, error: error.message || 'Erro ao editar comentário' };
     }
 }

@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { MemberNotification } from '@/types/members';
 
-const BRAND_LOGO = "https://cdn-icons-png.flaticon.com/512/2964/2964063.png";
+import { supabase } from '@/lib/supabase/client';
 
 const StudentNavbar: React.FC = () => {
   const router = useRouter();
@@ -20,13 +20,75 @@ const StudentNavbar: React.FC = () => {
 
   const navRef = useRef<HTMLDivElement>(null);
 
-  const [notifications, setNotifications] = useState<MemberNotification[]>([
-    { id: 1, title: 'Nova aula disponível', message: 'O módulo avançado está liberado.', time: '2m atrás', isUnread: true, type: 'success' },
-    { id: 2, title: 'Resposta do instrutor', message: 'O instrutor respondeu sua dúvida.', time: '1h atrás', isUnread: true, type: 'info' },
-    { id: 3, title: 'Manutenção', message: 'Manutenção programada para esta noite.', time: '5h atrás', isUnread: false, type: 'alert' },
-  ]);
+  // Notifications state
+  const [notifications, setNotifications] = useState<MemberNotification[]>([]);
+
+  // Calculate Relative Time Helper
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return `${diffInSeconds}s atrás`;
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m atrás`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h atrás`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d atrás`;
+  };
+
+  // Fetch Notifications
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchNotifications = async () => {
+      try {
+        // 1. Fetch all system notifications
+        const { data: allNotifs, error: notifError } = await supabase
+          .from('notifications' as any)
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (notifError) throw notifError;
+
+        // 2. Fetch read receipts for this user
+        const { data: readReceipts, error: readError } = await supabase
+          .from('notification_reads' as any)
+          .select('notification_id')
+          .eq('user_id', user.id);
+
+        if (readError) throw readError;
+
+        const readIds = new Set((readReceipts as any[])?.map((nr: any) => nr.notification_id) || []);
+
+        // 3. Merge data
+        const formattedNotifications: MemberNotification[] = ((allNotifs as any[]) || []).map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          time: getRelativeTime(n.created_at),
+          isUnread: !readIds.has(n.id),
+          type: n.type as 'success' | 'info' | 'alert'
+        }));
+
+        setNotifications(formattedNotifications);
+
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    fetchNotifications();
+
+    // Optional: Realtime subscription could go here
+
+  }, [user]);
 
   const unreadCount = notifications.filter(n => n.isUnread).length;
+
+  // Load read status from localStorage
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,8 +111,36 @@ const StudentNavbar: React.FC = () => {
     };
   }, []);
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isUnread: false })));
+  const markAllAsRead = async () => {
+    if (!user) return;
+
+    // Optimistic UI update
+    const updatedNotifications = notifications.map(n => ({ ...n, isUnread: false }));
+    setNotifications(updatedNotifications);
+
+    // Filter notifications that were actually unread to minimize DB calls (optional optimization)
+    // but upserting all visible IDs is safer to ensure consistency
+    const unreadNotificationIds = notifications.filter(n => n.isUnread).map(n => n.id);
+
+    if (unreadNotificationIds.length === 0) return;
+
+    try {
+      const updates = unreadNotificationIds.map(notifId => ({
+        user_id: user.id,
+        notification_id: notifId,
+        read_at: new Date().toISOString()
+      }));
+
+      const { error } = await supabase
+        .from('notification_reads' as any)
+        .upsert(updates, { onConflict: 'user_id,notification_id' });
+
+      if (error) throw error;
+
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+      // Revert optimistic update if necessary? For now, we assume success or simple console error.
+    }
   };
 
   const handleNotificationClick = () => {
@@ -68,27 +158,25 @@ const StudentNavbar: React.FC = () => {
     router.push('/login');
   };
 
-  const userName = user?.email?.split('@')[0] || 'Aluno';
+  const userName = user?.email?.split('@')[0] || 'Franqueado';
   const userAvatar = `https://api.dicebear.com/7.x/initials/svg?seed=${userName}`;
 
   return (
     <nav
       ref={navRef}
-      className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out px-4 md:px-12 py-4 ${isScrolled
-        ? 'bg-white/70 dark:bg-black/40 backdrop-blur-xl shadow-lg border-b border-white/20 dark:border-white/5'
+      className={`fixed top-0 w-full z-50 transition-all duration-500 ease-in-out px-4 md:px-12 py-2 ${isScrolled
+        ? 'bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl shadow-lg border-b border-gray-200 dark:border-white/5'
         : 'bg-transparent'
         }`}
     >
       <div className="flex items-center justify-between">
         {/* Logo */}
         <Link href="/members" className="flex items-center gap-3 group cursor-pointer">
-          <img
-            src={BRAND_LOGO}
-            alt="Mozart Logo"
-            className={`w-8 h-8 object-contain transition-all duration-300 ${theme === 'dark' ? 'filter brightness-0 invert' : 'filter brightness-0 opacity-80'}`}
-          />
-          <span className="text-gray-900 dark:text-white font-serif font-bold text-xl tracking-wide hidden sm:block opacity-90 group-hover:opacity-100 transition-opacity">
-            Mozart<span className="font-sans font-light text-mozart-pink">Academy</span>
+          <span
+            className="text-3xl md:text-5xl text-[#FF0080] drop-shadow-[0_0_8px_rgba(255,0,128,0.5)] transition-all duration-300 hover:drop-shadow-[0_0_15px_rgba(255,0,128,0.8)] pb-2"
+            style={{ fontFamily: '"Great Vibes", cursive' }}
+          >
+            Love for Sweet
           </span>
         </Link>
 
@@ -98,7 +186,7 @@ const StudentNavbar: React.FC = () => {
           {/* Home Link */}
           <Link
             href="/members"
-            className="group p-2.5 rounded-full text-gray-500 dark:text-gray-400 hover:text-white hover:bg-[#FF0080] dark:hover:bg-[#FF0080] bg-white/50 dark:bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] hover:border-[#FF0080]"
+            className="group p-2.5 rounded-full text-gray-500 dark:text-gray-300 hover:text-white hover:bg-[#FF0080] bg-gray-100 dark:bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] hover:border-[#FF0080]"
           >
             <Home size={20} className="group-hover:text-white transition-colors" />
           </Link>
@@ -106,7 +194,7 @@ const StudentNavbar: React.FC = () => {
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="group p-2.5 rounded-full text-gray-500 dark:text-gray-400 hover:text-white hover:bg-[#FF0080] dark:hover:bg-[#FF0080] bg-white/50 dark:bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] hover:border-[#FF0080]"
+            className="group p-2.5 rounded-full text-gray-500 dark:text-gray-300 hover:text-white hover:bg-[#FF0080] bg-gray-100 dark:bg-white/5 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] hover:border-[#FF0080]"
             aria-label="Toggle Theme"
           >
             {theme === 'dark' ? (
@@ -123,7 +211,7 @@ const StudentNavbar: React.FC = () => {
               className={`relative group p-2.5 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 border shadow-sm
                 ${isNotificationsOpen
                   ? 'bg-[#FF0080] text-white border-[#FF0080] shadow-[0_0_15px_rgba(255,0,128,0.4)]'
-                  : 'bg-white/50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-[#FF0080] hover:text-white hover:border-[#FF0080] hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] border-gray-200 dark:border-white/10'
+                  : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-300 hover:bg-[#FF0080] hover:text-white hover:border-[#FF0080] hover:shadow-[0_0_15px_rgba(255,0,128,0.4)] border-gray-200 dark:border-white/10'
                 }
               `}
             >
@@ -208,7 +296,7 @@ const StudentNavbar: React.FC = () => {
               <div className="absolute right-0 mt-4 w-56 bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 overflow-hidden ring-1 ring-black/5 origin-top-right">
                 <div className="px-5 py-3 border-b border-gray-100/10 dark:border-white/5 bg-white/10 dark:bg-white/5">
                   <p className="text-sm text-gray-900 dark:text-white font-medium">{userName}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Conta de Aluno</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Conta de Franqueado</p>
                 </div>
                 <div className="p-1">
                   <Link
