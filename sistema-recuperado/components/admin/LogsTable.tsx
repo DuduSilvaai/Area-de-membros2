@@ -135,7 +135,10 @@ export function LogsTable({
     if (logs.length === 0) {
         return (
             <div className={cn('overflow-hidden rounded-xl border border-white/10 bg-[var(--bg-surface)]', className)}>
-                <EmptyState />
+                <EmptyState
+                    title="Nenhum registro encontrado"
+                    description="Não foram encontrados logs de acesso para os filtros selecionados. Tente ajustar o período, usuário ou tipo de ação."
+                />
             </div>
         );
     }

@@ -112,3 +112,77 @@ export async function deleteComment(commentId: string) {
         return { success: false, error: error.message || 'Failed to delete comment tree' };
     }
 }
+
+// Edit a comment (preserves original in comment_edits)
+export async function editComment(commentId: string, newText: string) {
+    // Validate commentId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(commentId)) {
+        return { success: false, error: 'ID de comentário inválido' };
+    }
+
+    if (!newText || newText.trim().length === 0) {
+        return { success: false, error: 'O texto do comentário não pode estar vazio' };
+    }
+
+    // Fail Fast if env is missing
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return {
+            success: false,
+            error: 'Erro Crítico: Configuração do servidor incompleta.'
+        };
+    }
+
+    try {
+        // 1. Get the current comment to save original text
+        const { data: currentComment, error: fetchError } = await supabaseAdmin
+            .from('comments')
+            .select('text, user_id')
+            .eq('id', commentId)
+            .single();
+
+        if (fetchError || !currentComment) {
+            return { success: false, error: 'Comentário não encontrado' };
+        }
+
+        // 2. Save original text to comment_edits
+        const { error: editHistoryError } = await supabaseAdmin
+            .from('comment_edits')
+            .insert({
+                comment_id: commentId,
+                original_text: currentComment.text,
+                edited_by: currentComment.user_id
+            });
+
+        if (editHistoryError) {
+            log.error({ commentId, error: editHistoryError.message }, 'Failed to save edit history');
+            // Continue anyway - editing should still work
+        }
+
+        // 3. Update the comment with new text
+        const { error: updateError } = await supabaseAdmin
+            .from('comments')
+            .update({
+                text: newText.trim(),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', commentId);
+
+        if (updateError) {
+            log.error({ commentId, error: updateError.message }, 'Failed to update comment');
+            return { success: false, error: 'Erro ao atualizar comentário' };
+        }
+
+        log.info({ commentId }, 'Comment edited successfully');
+
+        // Revalidate paths
+        revalidatePath('/members/[portalId]/lesson/[lessonId]');
+        revalidatePath('/comments');
+        revalidatePath('/');
+
+        return { success: true };
+    } catch (error: any) {
+        log.error({ commentId, errorMessage: error.message }, 'Failed to edit comment');
+        return { success: false, error: error.message || 'Erro ao editar comentário' };
+    }
+}

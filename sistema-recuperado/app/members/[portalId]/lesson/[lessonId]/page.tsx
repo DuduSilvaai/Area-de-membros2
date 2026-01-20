@@ -10,6 +10,8 @@ import LessonComments from '@/components/members/LessonComments';
 import { CheckCircle, Download, ChevronLeft, ChevronRight, Menu, X, FileText, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import StarRating from '@/components/members/StarRating';
+import FeedbackModal from '@/components/members/FeedbackModal';
 
 // Helper for Realtime Security
 const checkAccess = (
@@ -45,6 +47,15 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
     const [nextLessonId, setNextLessonId] = useState<string | null>(null);
     const [prevLessonId, setPrevLessonId] = useState<string | null>(null);
+
+    // Rating & Feedback State
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [currentRatingId, setCurrentRatingId] = useState<string | null>(null);
+
+    const handleRatingComplete = (ratingId: string) => {
+        setCurrentRatingId(ratingId);
+        setShowFeedbackModal(true);
+    };
 
     const [initialTime, setInitialTime] = useState(0);
 
@@ -589,6 +600,20 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
 
                         {/* Comments Section */}
                         <div className="border-t border-gray-200 dark:border-white/5 pt-8">
+                            {/* Rating Integration */}
+                            <div className="mb-10 bg-white dark:bg-[#141417] rounded-xl border border-gray-200 dark:border-white/5 shadow-sm">
+                                <StarRating
+                                    contentId={lessonId}
+                                    onRatingComplete={handleRatingComplete}
+                                />
+                            </div>
+
+                            <FeedbackModal
+                                isOpen={showFeedbackModal}
+                                ratingId={currentRatingId || ''}
+                                onClose={() => setShowFeedbackModal(false)}
+                            />
+
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Comentários e Dúvidas</h3>
                             <LessonComments lessonId={lessonId} />
                         </div>

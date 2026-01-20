@@ -5,12 +5,19 @@ import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
-import { MessageSquare, ArrowRight, Video, User } from 'lucide-react';
+import { MessageSquare, ArrowRight, Video, User, ChevronDown, ChevronUp, History } from 'lucide-react';
+
+interface CommentEdit {
+    id: string;
+    original_text: string;
+    edited_at: string;
+}
 
 interface CommentItem {
     id: string;
     text: string;
     created_at: string;
+    updated_at?: string;
     user_id: string;
     content_id: string;
     profile?: {
@@ -29,11 +36,13 @@ interface CommentItem {
             };
         };
     };
+    edits?: CommentEdit[];
 }
 
 export default function AdminCommentsPage() {
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
     const supabase = createClient();
 
     useEffect(() => {
@@ -57,6 +66,7 @@ export default function AdminCommentsPage() {
                 // 2. Collect IDs
                 const userIds = Array.from(new Set(commentsData.map(c => c.user_id)));
                 const contentIds = Array.from(new Set(commentsData.map(c => c.content_id).filter((id): id is string => !!id)));
+                const commentIds = commentsData.map(c => c.id);
 
                 // 3. Fetch Profiles
                 const { data: profilesData } = await supabase
@@ -66,10 +76,7 @@ export default function AdminCommentsPage() {
 
                 const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
 
-                // 4. Fetch Content Hierarchy (Content -> Module -> Portal)
-                // Since we can't deep select easily without consistent FKs or if schema is tricky,
-                // let's try a best-effort deep select, or fetch stages.
-                // Assuming Relationships exist for: content -> module -> portal
+                // 4. Fetch Content Hierarchy
                 const { data: contentsData, error: contentError } = await supabase
                     .from('contents')
                     .select(`
@@ -92,7 +99,25 @@ export default function AdminCommentsPage() {
 
                 const contentMap = new Map(contentsData?.map(c => [c.id, c]));
 
-                // 5. Merge
+                // 5. Fetch Edit History
+                const { data: editsData } = await (supabase
+                    .from('comment_edits' as any)
+                    .select('id, comment_id, original_text, edited_at')
+                    .in('comment_id', commentIds)
+                    .order('edited_at', { ascending: false })) as { data: any[] | null; error: any };
+
+                const editsMap = new Map<string, CommentEdit[]>();
+                editsData?.forEach((edit: any) => {
+                    const existing = editsMap.get(edit.comment_id) || [];
+                    existing.push({
+                        id: edit.id,
+                        original_text: edit.original_text,
+                        edited_at: edit.edited_at
+                    });
+                    editsMap.set(edit.comment_id, existing);
+                });
+
+                // 6. Merge
                 const merged = commentsData.map(c => {
                     const profile = profilesMap.get(c.user_id);
                     const content = c.content_id ? contentMap.get(c.content_id) : undefined;
@@ -101,6 +126,7 @@ export default function AdminCommentsPage() {
                         id: c.id,
                         text: c.text,
                         created_at: c.created_at,
+                        updated_at: c.updated_at,
                         user_id: c.user_id,
                         content_id: c.content_id || '',
                         profile: profile,
@@ -114,7 +140,8 @@ export default function AdminCommentsPage() {
                                     name: content.modules.portals.name
                                 } : undefined
                             } : undefined
-                        } : undefined
+                        } : undefined,
+                        edits: editsMap.get(c.id) || []
                     };
                 });
 
@@ -129,6 +156,18 @@ export default function AdminCommentsPage() {
 
         fetchData();
     }, []);
+
+    const toggleExpand = (commentId: string) => {
+        setExpandedComments(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(commentId)) {
+                newSet.delete(commentId);
+            } else {
+                newSet.add(commentId);
+            }
+            return newSet;
+        });
+    };
 
     const UserAvatar = ({ url, name }: { url?: string | null, name?: string | null }) => {
         const initials = name ? name.substring(0, 2).toUpperCase() : 'U';
@@ -157,7 +196,6 @@ export default function AdminCommentsPage() {
         } catch (error) {
             console.error('Error deleting comment:', error);
             alert('Erro ao excluir comentário. Tente novamente.');
-            // Reload to restore state if needed, or re-fetch
             window.location.reload();
         }
     };
@@ -191,6 +229,8 @@ export default function AdminCommentsPage() {
                         const portalId = comment.lesson?.module?.portal_id;
                         const lessonId = comment.content_id;
                         const lessonLink = portalId && lessonId ? `/members/${portalId}/lesson/${lessonId}` : '#';
+                        const isEdited = comment.updated_at && comment.updated_at !== comment.created_at;
+                        const isExpanded = expandedComments.has(comment.id);
 
                         return (
                             <div key={comment.id} className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
@@ -209,12 +249,46 @@ export default function AdminCommentsPage() {
                                             </span>
                                             <span className="text-xs text-gray-400">
                                                 • {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
+                                                {isEdited && (
+                                                    <span className="ml-1 text-orange-500 font-medium">(editado)</span>
+                                                )}
                                             </span>
                                         </div>
 
                                         <p className="text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-wrap leading-relaxed">
                                             "{comment.text}"
                                         </p>
+
+                                        {/* Edit History */}
+                                        {isEdited && comment.edits && comment.edits.length > 0 && (
+                                            <div className="mb-4">
+                                                <button
+                                                    onClick={() => toggleExpand(comment.id)}
+                                                    className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors"
+                                                >
+                                                    <History className="w-4 h-4" />
+                                                    Ver histórico de edições ({comment.edits.length})
+                                                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                                </button>
+
+                                                {isExpanded && (
+                                                    <div className="mt-3 pl-4 border-l-2 border-orange-200 dark:border-orange-800 space-y-3">
+                                                        {comment.edits.map((edit, index) => (
+                                                            <div key={edit.id} className="text-sm">
+                                                                <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                                                                    <span className="font-medium">Versão {comment.edits!.length - index}</span>
+                                                                    <span>•</span>
+                                                                    <span>{formatDistanceToNow(new Date(edit.edited_at), { addSuffix: true, locale: ptBR })}</span>
+                                                                </div>
+                                                                <p className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-2 rounded italic">
+                                                                    "{edit.original_text}"
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700/50">
                                             <Video className="w-4 h-4 text-pink-500 shrink-0" />
@@ -243,7 +317,6 @@ export default function AdminCommentsPage() {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                console.log('Delete button clicked', comment.id);
                                                 handleDelete(comment.id);
                                             }}
                                             className="relative z-10 cursor-pointer group flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-lg font-medium text-sm hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors w-full justify-center"

@@ -6,6 +6,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { ConversationWithStudent, MessageWithSender, MessageContent, MessageType } from '@/types/chat';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { MessageInput } from '@/components/admin/chat/MessageInput';
+import { MeetingsList } from '@/components/meetings/MeetingsList';
 import { supabase } from '@/lib/supabase/client';
 import { CornerDownRight } from 'lucide-react';
 
@@ -32,6 +33,7 @@ export function ChatArea({
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [activeTab, setActiveTab] = useState<'chat' | 'meetings'>('chat');
 
     // Get current user ID
     useEffect(() => {
@@ -105,122 +107,141 @@ export function ChatArea({
                 </div>
 
                 {/* Actions */}
-                <button
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-gray-500 dark:text-zinc-400 hover:text-[#1A1A1E] dark:hover:text-white"
-                    title="Mais opções"
-                >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                </button>
+                <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-800/50 p-1 rounded-lg">
+                    <button
+                        onClick={() => setActiveTab('chat')}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'chat'
+                            ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-300'
+                            }`}
+                    >
+                        Chat
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('meetings')}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'meetings'
+                            ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm'
+                            : 'text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-300'
+                            }`}
+                    >
+                        Reuniões
+                    </button>
+                </div>
             </div>
 
-            {/* Messages */}
-            <div
-                ref={messagesContainerRef}
-                onScroll={handleScroll}
-                className="flex-1 overflow-y-auto p-4 space-y-1"
-                style={{ overscrollBehavior: 'contain' }}
-            >
-                {/* Loading more indicator */}
-                {isLoadingMore && (
-                    <div className="flex justify-center py-4">
-                        <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
-                    </div>
-                )}
+            {/* Content (Chat or Meetings) */}
+            {activeTab === 'meetings' ? (
+                <MeetingsList studentId={conversation.student_id} isAdmin={true} />
+            ) : (
+                <>
+                    {/* Messages */}
+                    <div
+                        ref={messagesContainerRef}
+                        onScroll={handleScroll}
+                        className="flex-1 overflow-y-auto p-4 space-y-1"
+                        style={{ overscrollBehavior: 'contain' }}
+                    >
+                        {/* Loading more indicator */}
+                        {isLoadingMore && (
+                            <div className="flex justify-center py-4">
+                                <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        )}
 
-                {/* Load more button */}
-                {hasMore && !isLoadingMore && !loading && (
-                    <div className="flex justify-center py-2">
-                        <button
-                            onClick={onLoadMore}
-                            className="text-sm text-zinc-500 hover:text-pink-400 transition-colors"
-                        >
-                            Carregar mensagens anteriores
-                        </button>
-                    </div>
-                )}
+                        {/* Load more button */}
+                        {hasMore && !isLoadingMore && !loading && (
+                            <div className="flex justify-center py-2">
+                                <button
+                                    onClick={onLoadMore}
+                                    className="text-sm text-zinc-500 hover:text-pink-400 transition-colors"
+                                >
+                                    Carregar mensagens anteriores
+                                </button>
+                            </div>
+                        )}
 
-                {/* Initial loading */}
-                {loading && messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full">
-                        <div className="w-10 h-10 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-4" />
-                        <p className="text-zinc-500 text-sm">Carregando mensagens...</p>
-                    </div>
-                )}
+                        {/* Initial loading */}
+                        {loading && messages.length === 0 && (
+                            <div className="flex flex-col items-center justify-center h-full">
+                                <div className="w-10 h-10 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-4" />
+                                <p className="text-zinc-500 text-sm">Carregando mensagens...</p>
+                            </div>
+                        )}
 
-                {/* Messages list */}
-                {messages.map((message, index) => {
-                    const role = (message.content as any)?.meta?.role;
-                    // For Admin View, 'admin' role is Own.
-                    // Fallback to sender_id check.
-                    const isOwn = role
-                        ? role === 'admin'
-                        : message.sender_id === currentUserId;
+                        {/* Messages list */}
+                        {messages.map((message, index) => {
+                            const role = (message.content as any)?.meta?.role;
+                            // For Admin View, 'admin' role is Own.
+                            // Fallback to sender_id check.
+                            const isOwn = role
+                                ? role === 'admin'
+                                : message.sender_id === currentUserId;
 
-                    const showSender = !isOwn && (
-                        index === 0 ||
-                        messages[index - 1]?.sender_id !== message.sender_id
-                    );
+                            const showSender = !isOwn && (
+                                index === 0 ||
+                                messages[index - 1]?.sender_id !== message.sender_id
+                            );
 
-                    let senderName = message.sender?.full_name || 'Usuário';
+                            let senderName = message.sender?.full_name || 'Usuário';
 
-                    if (role === 'admin') {
-                        senderName = 'Equipe de Suporte';
-                    } else if (message.sender_id === conversation.student_id) {
-                        senderName = conversation.student?.full_name || message.sender?.full_name || 'Aluno';
-                    }
+                            if (role === 'admin') {
+                                senderName = 'Equipe de Suporte';
+                            } else if (message.sender_id === conversation.student_id) {
+                                senderName = conversation.student?.full_name || message.sender?.full_name || 'Aluno';
+                            }
 
-                    return (
-                        <div key={message.id}>
-                            {/* Context Header */}
-                            {(message as any).context && (message as any).context.source === 'lesson' && (
-                                <div className="flex justify-center mb-2">
-                                    <div className="bg-gray-100 dark:bg-zinc-800 rounded-lg px-3 py-1.5 text-xs text-gray-500 dark:text-zinc-400 flex items-center gap-2">
-                                        <CornerDownRight className="w-3 h-3" />
-                                        <span>
-                                            Enviado de: <strong>{(message as any).context.moduleTitle}</strong> {'>'} {(message as any).context.lessonTitle}
-                                        </span>
-                                    </div>
+                            return (
+                                <div key={message.id}>
+                                    {/* Context Header */}
+                                    {(message as any).context && (message as any).context.source === 'lesson' && (
+                                        <div className="flex justify-center mb-2">
+                                            <div className="bg-gray-100 dark:bg-zinc-800 rounded-lg px-3 py-1.5 text-xs text-gray-500 dark:text-zinc-400 flex items-center gap-2">
+                                                <CornerDownRight className="w-3 h-3" />
+                                                <span>
+                                                    Enviado de: <strong>{(message as any).context.moduleTitle}</strong> {'>'} {(message as any).context.lessonTitle}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <MessageBubble
+                                        key={message.id}
+                                        message={message}
+                                        isOwn={isOwn}
+                                        showSender={showSender}
+                                        senderName={senderName}
+                                    />
                                 </div>
-                            )}
+                            );
+                        })}
 
-                            <MessageBubble
-                                key={message.id}
-                                message={message}
-                                isOwn={isOwn}
-                                showSender={showSender}
-                                senderName={senderName}
-                            />
-                        </div>
-                    );
-                })}
+                        {/* Empty state */}
+                        {!loading && messages.length === 0 && (
+                            <div className="flex flex-col items-center justify-center h-full text-center">
+                                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-4 transition-colors">
+                                    <svg className="w-8 h-8 text-gray-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                    </svg>
+                                </div>
+                                <p className="text-gray-500 dark:text-zinc-500 transition-colors">
+                                    Nenhuma mensagem ainda.<br />
+                                    Inicie a conversa!
+                                </p>
+                            </div>
+                        )}
 
-                {/* Empty state */}
-                {!loading && messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-4 transition-colors">
-                            <svg className="w-8 h-8 text-gray-400 dark:text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                        </div>
-                        <p className="text-gray-500 dark:text-zinc-500 transition-colors">
-                            Nenhuma mensagem ainda.<br />
-                            Inicie a conversa!
-                        </p>
+                        {/* Scroll anchor */}
+                        <div ref={messagesEndRef} />
                     </div>
-                )}
 
-                {/* Scroll anchor */}
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input Area */}
-            <MessageInput
-                onSendMessage={onSendMessage}
-                isSending={isSending}
-                conversationId={conversation.id}
-            />
+                    {/* Input Area */}
+                    <MessageInput
+                        onSendMessage={onSendMessage}
+                        isSending={isSending}
+                        conversationId={conversation.id}
+                    />
+                </>
+            )}
         </div>
     );
 }

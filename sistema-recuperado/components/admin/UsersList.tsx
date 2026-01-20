@@ -77,7 +77,8 @@ export default function UsersList({ initialData }: UsersListProps) {
                 throw new Error(res.error); // Stop modal spinner
             } else {
                 toast.success('Usuário excluído com sucesso');
-                fetchUsers(data?.page || 1, searchTerm);
+                await fetchUsers(data?.page || 1, searchTerm);
+                router.refresh();
             }
         } catch (error) {
             throw error;

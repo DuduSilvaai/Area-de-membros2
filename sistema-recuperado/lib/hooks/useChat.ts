@@ -343,7 +343,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
             channelRef.current.unsubscribe();
         }
 
-        channelRef.current = supabase
+        const channel = supabase
             .channel(`messages:${convId}`)
             .on(
                 'postgres_changes',
@@ -386,7 +386,17 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                     });
                 }
             )
-            .subscribe();
+            .subscribe((status, err) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log(`[Chat] Successfully subscribed to messages for conversation: ${convId}`);
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error(`[Chat] Channel error for conversation ${convId}:`, err);
+                } else if (status === 'TIMED_OUT') {
+                    console.warn(`[Chat] Subscription timed out for conversation: ${convId}`);
+                }
+            });
+
+        channelRef.current = channel;
 
     }, [playNotificationSound]);
 

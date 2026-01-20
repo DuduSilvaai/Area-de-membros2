@@ -157,6 +157,7 @@ export default function PortalSettingsPage() {
                 toast.error(result.error);
             } else {
                 toast.success('Configurações salvas com sucesso!');
+                router.refresh();
             }
         } catch (error) {
             toast.error('Erro ao salvar configurações');

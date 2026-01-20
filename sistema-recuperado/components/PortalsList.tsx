@@ -178,11 +178,6 @@ export default function PortalsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    fetchPortals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const onSubmit = async (data: PortalFormValues) => {
     try {
       const result = await createPortal({
@@ -219,6 +214,7 @@ export default function PortalsList() {
       if (error) throw error;
       toast.success('Portal excluído com sucesso.');
       setPortals(prev => prev.filter(p => p.id !== portalToDelete.id));
+      router.refresh();
     } catch (err: unknown) {
       console.error("Error deleting portal:", err);
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';

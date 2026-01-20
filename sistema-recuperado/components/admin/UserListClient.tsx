@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Search,
     Filter,
@@ -58,6 +59,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
         accessAll: true,
         selectedModules: [] as string[]
     });
+    const router = useRouter();
 
     const users: UserWithEnrollments[] = useMemo(() => {
         return (authUsers || []).map(user => ({
@@ -111,6 +113,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                 toast.success('Usuário criado com sucesso!');
                 setIsCreateModalOpen(false);
                 setNewUser({ name: '', email: '', password: '', role: 'member' });
+                router.refresh();
             }
         } catch (error) {
             toast.error('Erro inesperado ao criar usuário');
@@ -129,6 +132,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                 toast.error(`Erro: ${result.error}`);
             } else {
                 toast.success('Senha redefinida com sucesso!');
+                router.refresh();
             }
         } catch (error) {
             toast.error('Erro inesperado ao redefinir senha');
@@ -145,6 +149,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                 toast.error(`Erro: ${result.error}`);
             } else {
                 toast.success(`Usuário ${action === 'ativar' ? 'ativado' : 'desativado'} com sucesso!`);
+                router.refresh();
             }
         } catch (error) {
             toast.error(`Erro inesperado ao ${action} usuário`);
@@ -173,6 +178,7 @@ export function UserListClient({ users: authUsers, enrollments, portals }: Props
                 setIsBulkEnrollModalOpen(false);
                 setSelectedUsers(new Set());
                 setBulkEnrollData({ portalId: '', accessAll: true, selectedModules: [] });
+                router.refresh();
             }
         } catch (error) {
             toast.error('Erro inesperado na matrícula em lote');

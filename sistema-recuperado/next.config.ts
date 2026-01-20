@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
   },
   // Disable source maps in development to avoid console errors
   productionBrowserSourceMaps: false,
+  // Increase body size limit for Server Actions (file uploads)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '500mb',
+    },
+  },
   async headers() {
     return [
       {

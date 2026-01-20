@@ -11,11 +11,14 @@ import {
     CornerDownRight,
     ThumbsUp,
     MoreVertical,
-    Trash2
+    Trash2,
+    Edit2,
+    Check,
+    X
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { deleteComment } from '@/app/actions/comments';
+import { deleteComment, editComment } from '@/app/actions/comments';
 import { toast } from 'sonner';
 
 interface Comment {
@@ -47,6 +50,8 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyText, setReplyText] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editText, setEditText] = useState('');
 
     // Load comments
     useEffect(() => {
@@ -249,14 +254,56 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
 
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
+    // Only admins can delete comments
     const checkDeletePermission = (comment: Comment) => {
         if (!user) return false;
-        // Allow if user is author OR user is admin (checking metadata role)
-        return user.id === comment.user_id || user.user_metadata?.role === 'admin';
+        return user.user_metadata?.role === 'admin';
+    };
+
+    // Users can edit their own comments
+    const checkEditPermission = (comment: Comment) => {
+        if (!user) return false;
+        return user.id === comment.user_id;
     };
 
     const confirmDelete = (commentId: string) => {
         setDeleteId(commentId);
+    };
+
+    const startEditing = (comment: Comment) => {
+        setEditingId(comment.id);
+        setEditText(comment.text);
+    };
+
+    const cancelEditing = () => {
+        setEditingId(null);
+        setEditText('');
+    };
+
+    const handleEdit = async () => {
+        if (!editingId || !editText.trim()) return;
+
+        setSubmitting(true);
+        try {
+            const result = await editComment(editingId, editText.trim());
+            if (result.success) {
+                // Update comment locally
+                setComments(prev => prev.map(c =>
+                    c.id === editingId
+                        ? { ...c, text: editText.trim(), updated_at: new Date().toISOString() }
+                        : c
+                ));
+                toast.success('Comentário editado.');
+                cancelEditing();
+            } else {
+                toast.error(result.error || 'Erro ao editar comentário');
+            }
+        } catch (error) {
+            console.error('Error editing comment:', error);
+            toast.error('Erro ao editar comentário.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const handleDelete = async () => {
@@ -266,20 +313,10 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
             // Optimistic update
             setComments(prev => prev.filter(c => c.id !== deleteId));
 
-            if (user?.user_metadata?.role === 'admin') {
-                const result = await deleteComment(deleteId);
-                if (!result.success) {
-                    toast.error(`Falha ao excluir: ${result.error}`);
-                    // Revert optimistic if needed, but simple reload is easier for edge case
-                } else {
-                    toast.success('Comentário excluído.');
-                }
+            const result = await deleteComment(deleteId);
+            if (!result.success) {
+                toast.error(`Falha ao excluir: ${result.error}`);
             } else {
-                const { error } = await supabase
-                    .from('comments')
-                    .delete()
-                    .eq('id', deleteId);
-                if (error) throw error;
                 toast.success('Comentário excluído.');
             }
         } catch (error) {
@@ -433,12 +470,46 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                         </span>
                                         <span className="text-xs text-gray-500">
                                             • {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
+                                            {comment.updated_at && comment.updated_at !== comment.created_at && (
+                                                <span className="ml-1 text-gray-400">(editado)</span>
+                                            )}
                                         </span>
                                     </div>
 
-                                    <p className="text-sm leading-relaxed mb-3 text-gray-600 dark:text-gray-300">
-                                        {comment.text}
-                                    </p>
+                                    {editingId === comment.id ? (
+                                        <div className="mb-3">
+                                            <Textarea
+                                                value={editText}
+                                                onChange={(e) => setEditText(e.target.value)}
+                                                className="min-h-[80px] text-sm bg-white dark:bg-[#141417] text-gray-900 dark:text-white border-gray-200 dark:border-white/10 mb-2"
+                                                autoFocus
+                                            />
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={handleEdit}
+                                                    disabled={submitting || !editText.trim()}
+                                                    className="bg-green-600 hover:bg-green-700 text-white gap-1"
+                                                >
+                                                    <Check className="w-3 h-3" />
+                                                    Salvar
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={cancelEditing}
+                                                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 gap-1"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                    Cancelar
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm leading-relaxed mb-3 text-gray-600 dark:text-gray-300">
+                                            {comment.text}
+                                        </p>
+                                    )}
 
                                     <div className="flex items-center gap-4 text-xs font-medium">
                                         <button
@@ -456,6 +527,16 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                             <MessageSquare className="w-3.5 h-3.5" />
                                             Responder
                                         </button>
+
+                                        {checkEditPermission(comment) && editingId !== comment.id && (
+                                            <button
+                                                onClick={() => startEditing(comment)}
+                                                className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"
+                                            >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                                Editar
+                                            </button>
+                                        )}
 
                                         {checkDeletePermission(comment) && (
                                             <button
@@ -518,11 +599,33 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                                             </span>
                                                             <span className="text-[10px] text-gray-500">
                                                                 • {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: ptBR })}
+                                                                {reply.updated_at && reply.updated_at !== reply.created_at && (
+                                                                    <span className="ml-1 text-gray-400">(editado)</span>
+                                                                )}
                                                             </span>
                                                         </div>
-                                                        <p className="text-sm mb-2 text-gray-600 dark:text-gray-300">
-                                                            {reply.text}
-                                                        </p>
+                                                        {editingId === reply.id ? (
+                                                            <div className="mb-2">
+                                                                <Textarea
+                                                                    value={editText}
+                                                                    onChange={(e) => setEditText(e.target.value)}
+                                                                    className="min-h-[60px] text-sm bg-white dark:bg-[#141417] text-gray-900 dark:text-white border-gray-200 dark:border-white/10 mb-2"
+                                                                    autoFocus
+                                                                />
+                                                                <div className="flex gap-2">
+                                                                    <Button size="sm" onClick={handleEdit} disabled={submitting || !editText.trim()} className="bg-green-600 hover:bg-green-700 text-white gap-1">
+                                                                        <Check className="w-3 h-3" /> Salvar
+                                                                    </Button>
+                                                                    <Button size="sm" variant="ghost" onClick={cancelEditing} className="text-gray-500 gap-1">
+                                                                        <X className="w-3 h-3" /> Cancelar
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-sm mb-2 text-gray-600 dark:text-gray-300">
+                                                                {reply.text}
+                                                            </p>
+                                                        )}
                                                         <div className="flex items-center gap-4 text-xs">
                                                             <button
                                                                 onClick={() => handleLike(reply.id, !!reply.user_liked)}
@@ -531,6 +634,15 @@ export default function LessonComments({ lessonId }: LessonCommentsProps) {
                                                                 <ThumbsUp className={`w-3 h-3 ${reply.user_liked ? 'fill-current' : ''}`} />
                                                                 {reply.likes_count || 0}
                                                             </button>
+
+                                                            {checkEditPermission(reply) && editingId !== reply.id && (
+                                                                <button
+                                                                    onClick={() => startEditing(reply)}
+                                                                    className="text-gray-500 hover:text-blue-500 transition-colors"
+                                                                >
+                                                                    <Edit2 className="w-3 h-3" />
+                                                                </button>
+                                                            )}
 
                                                             {checkDeletePermission(reply) && (
                                                                 <button

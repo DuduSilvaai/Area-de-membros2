@@ -24,6 +24,7 @@ export default function RootLayout({
             <Toaster richColors position="top-right" />
           </AuthProvider>
         </ThemeProvider>
+        <div id="modal-root" />
       </body>
     </html>
   );

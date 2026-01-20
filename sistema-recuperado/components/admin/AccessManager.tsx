@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Search, Save, CheckCircle2, Circle, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
     const [modifiedUsers, setModifiedUsers] = useState<Set<string>>(new Set());
 
     const supabase = createClient();
+    const router = useRouter();
 
     useEffect(() => {
         fetchData();
@@ -277,6 +279,7 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
             toast.success('Acessos atualizados com sucesso!');
             setModifiedUsers(new Set());
             await fetchData(); // Refresh to sync IDs etc
+            router.refresh(); // Invalidate Next.js cache
 
         } catch (error: any) {
             console.error('Save error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
