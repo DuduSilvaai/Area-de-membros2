@@ -107,6 +107,9 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
 
                 video_url: formData.video_url,
 
+                // DEBUG: Log the video URL being saved
+                ...(console.log('[LessonDrawer] video_url sendo salva:', formData.video_url), {}),
+
                 // Map logical fields to physical columns
                 duration_seconds: formData.duration,
                 content_type: formData.content_type || 'video',
@@ -220,6 +223,7 @@ export function LessonDrawer({ isOpen, onClose, lesson, onSave, portalId }: Less
 
     const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const url = e.target.value;
+        console.log('[LessonDrawer] URL digitada/colada:', url);
         setFormData(prev => ({
             ...prev,
             video_url: url,

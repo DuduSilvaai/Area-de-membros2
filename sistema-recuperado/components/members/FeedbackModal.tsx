@@ -56,61 +56,63 @@ export default function FeedbackModal({ isOpen, ratingId, onClose }: FeedbackMod
             onClick={handleSkip}
         >
             <div
-                className="relative w-full max-w-md bg-white dark:bg-[#1a1a1d] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300"
+                className="relative w-full max-w-2xl bg-white dark:bg-[#1a1a1d] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 animate-in zoom-in-95 fade-in duration-300 overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Close Button */}
                 <button
                     onClick={handleSkip}
-                    className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10"
+                    className="absolute top-4 right-4 z-10 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10"
                     aria-label="Fechar"
                 >
                     <X className="w-5 h-5" />
                 </button>
 
-                {/* Header */}
-                <div className="pt-6 px-6 text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-pink-500/20">
-                        <Star className="w-8 h-8 text-white fill-white" />
+                <div className="flex flex-col md:flex-row">
+                    {/* Header / Left Side */}
+                    <div className="p-8 md:w-5/12 bg-gray-50/50 dark:bg-white/5 border-b md:border-b-0 md:border-r border-gray-100 dark:border-white/5 flex flex-col items-center justify-center text-center">
+                        <div className="w-20 h-20 mb-6 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-pink-500/20 ring-4 ring-white dark:ring-[#1a1a1d]">
+                            <Star className="w-10 h-10 text-white fill-white" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                            Obrigado pela avaliação!
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-[200px] mx-auto">
+                            Quer compartilhar mais detalhes? É opcional, mas nos ajuda muito!
+                        </p>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-                        Obrigado pela avaliação!
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Quer compartilhar mais detalhes? (opcional)
-                    </p>
-                </div>
 
-                {/* Body */}
-                <div className="p-6">
-                    <Textarea
-                        value={feedbackText}
-                        onChange={(e) => setFeedbackText(e.target.value)}
-                        placeholder="Conte-nos o que você achou da aula, sugestões de melhoria, ou qualquer feedback..."
-                        className="min-h-[120px] resize-none bg-gray-50 dark:bg-[#141417] border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:ring-pink-500"
-                        disabled={isSubmitting}
-                    />
-
-                    {/* Actions */}
-                    <div className="flex gap-3 mt-4">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={handleSkip}
+                    {/* Body / Right Side */}
+                    <div className="p-6 md:p-8 md:w-7/12 flex flex-col justify-center">
+                        <Textarea
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            placeholder="Conte-nos o que você achou da aula, sugestões de melhoria, ou qualquer feedback..."
+                            className="min-h-[140px] resize-none bg-gray-50 dark:bg-[#141417] border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-visible:ring-pink-500 mb-6"
                             disabled={isSubmitting}
-                            className="flex-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                        >
-                            Pular
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={handleSubmit}
-                            disabled={isSubmitting || !feedbackText.trim()}
-                            className="flex-1 gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg shadow-pink-500/20"
-                        >
-                            <Send className="w-4 h-4" />
-                            {isSubmitting ? 'Enviando...' : 'Enviar Feedback'}
-                        </Button>
+                        />
+
+                        {/* Actions */}
+                        <div className="flex gap-3">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={handleSkip}
+                                disabled={isSubmitting}
+                                className="flex-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                            >
+                                Pular
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={isSubmitting || !feedbackText.trim()}
+                                className="flex-1 gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg shadow-pink-500/20"
+                            >
+                                <Send className="w-4 h-4" />
+                                {isSubmitting ? 'Enviando...' : 'Enviar'}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
