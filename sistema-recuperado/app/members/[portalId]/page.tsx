@@ -370,14 +370,15 @@ export default function PortalLobbyPage() {
 
                     {/* Horizontal Scroll Container */}
                     <div className="flex gap-6 overflow-x-auto pb-12 pt-2 scrollbar-hide snap-x">
-                        {modules.map((module) => {
+                        {modules.map((module, index) => {
                             const progress = calculateModuleProgress(module);
                             const lessonCount = module.contents.length;
 
                             return (
                                 <div
                                     key={module.id}
-                                    className="group relative flex-shrink-0 w-[300px] md:w-[380px] snap-start cursor-pointer transition-all duration-300 hover:-translate-y-2"
+                                    className="group relative flex-shrink-0 w-[300px] md:w-[380px] snap-start cursor-pointer transition-all duration-500 hover:-translate-y-3 animate-fade-in-up opacity-0"
+                                    style={{ animationDelay: `${(index || 0) * 100}ms`, animationFillMode: 'forwards' }}
                                     onClick={() => {
                                         if (module.contents.length > 0) {
                                             router.push(`/members/${portalId}/lesson/${module.contents[0].id}`)
@@ -387,13 +388,13 @@ export default function PortalLobbyPage() {
                                     }}
                                 >
                                     {/* Card Image / Default Gradient */}
-                                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shadow-lg group-hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] group-hover:border-[#FF0080]/30 transition-all">
+                                    <div className="relative aspect-video rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 shadow-lg group-hover:shadow-[0_20px_60px_-15px_rgba(255,0,128,0.3)] group-hover:border-[#FF0080]/50 transition-all duration-500 h-[225px]">
                                         <div
                                             className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
                                             style={{
                                                 backgroundImage: module.image_url
                                                     ? `url(${module.image_url})`
-                                                    : `url(${portal.image_url || ''})` // Fallback to portal cover or default gradient below
+                                                    : `url(${portal.image_url || ''})`
                                             }}
                                         >
                                             {!module.image_url && !portal.image_url && (
@@ -402,17 +403,20 @@ export default function PortalLobbyPage() {
                                         </div>
 
                                         {/* Overlay */}
-                                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-500"></div>
+
+                                        {/* Shine Effect */}
+                                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 z-10"></div>
 
                                         {/* Play Icon Overlay */}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform scale-90 group-hover:scale-100">
-                                            <div className="w-16 h-16 rounded-full bg-[#FF0080]/90 backdrop-blur-md flex items-center justify-center shadow-xl border border-white/20">
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform scale-50 group-hover:scale-100 delay-75">
+                                            <div className="w-16 h-16 rounded-full bg-[#FF0080]/90 backdrop-blur-md flex items-center justify-center shadow-[0_0_30px_rgba(255,0,128,0.5)] border border-white/30 hover:scale-110 transition-transform">
                                                 <Play fill="white" className="text-white ml-1" size={32} />
                                             </div>
                                         </div>
 
                                         {/* Progress Bar at Bottom */}
-                                        <div className="absolute bottom-0 left-0 w-full h-1.5 bg-white/10">
+                                        <div className="absolute bottom-0 left-0 w-full h-1.5 bg-white/10 z-20">
                                             <div
                                                 className="h-full bg-[#FF0080] shadow-[0_0_10px_#FF0080]"
                                                 style={{ width: `${progress}%` }}
@@ -421,7 +425,7 @@ export default function PortalLobbyPage() {
                                     </div>
 
                                     {/* Card Meta */}
-                                    <div className="mt-5 px-2">
+                                    <div className="mt-5 px-2 group-hover:translate-x-1 transition-transform duration-300">
                                         <div className="flex items-center gap-3 mb-2">
                                             <span className="text-[10px] font-bold uppercase tracking-widest bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white px-2 py-1 rounded border border-gray-200 dark:border-white/5 backdrop-blur-md">
                                                 Módulo {module.order_index}

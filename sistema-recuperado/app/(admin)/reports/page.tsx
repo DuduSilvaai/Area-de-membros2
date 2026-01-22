@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
 import { FileText, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
 import FilterPanel, { FilterValues } from '@/components/admin/FilterPanel';
 import LogsTable, { LogEntry } from '@/components/admin/LogsTable';
-import ExportButton from '@/components/admin/ExportButton';
-import { exportLogsToCSV, ExportableLog } from '@/lib/export';
+import ExportDropdown from '@/components/admin/ExportDropdown';
+import { exportLogsToCSV, exportLogsToPDF, ExportableLog } from '@/lib/export';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -216,8 +216,8 @@ export default function ReportsPage() {
         setCurrentPage(1);
     };
 
-    // Handle export
-    const handleExport = async () => {
+    // Helper to fetch data for export
+    const fetchExportData = async (): Promise<ExportableLog[]> => {
         // Fetch all logs with current filters (no pagination)
         let query = supabase
             .from('access_logs' as any)
@@ -244,8 +244,7 @@ export default function ReportsPage() {
             throw new Error('Erro ao exportar dados');
         }
 
-        // Transform to exportable format
-        const exportData: ExportableLog[] = (data || []).map((log: any) => ({
+        return (data || []).map((log: any) => ({
             id: log.id,
             created_at: log.created_at,
             user_id: log.user_id,
@@ -254,8 +253,18 @@ export default function ReportsPage() {
             user_name: log.profiles?.full_name || 'Desconhecido',
             user_email: log.profiles?.email || 'N/A',
         }));
+    };
 
-        exportLogsToCSV(exportData);
+    // Handle CSV Export
+    const handleExportCSV = async () => {
+        const data = await fetchExportData();
+        exportLogsToCSV(data);
+    };
+
+    // Handle PDF Export
+    const handleExportPDF = async () => {
+        const data = await fetchExportData();
+        exportLogsToPDF(data);
     };
 
     // Handle page change
@@ -284,7 +293,11 @@ export default function ReportsPage() {
                         Monitore e audite todas as atividades do sistema
                     </p>
                 </div>
-                <ExportButton onExport={handleExport} disabled={isLoading || logs.length === 0} />
+                <ExportDropdown
+                    onExportCSV={handleExportCSV}
+                    onExportPDF={handleExportPDF}
+                    disabled={isLoading || logs.length === 0}
+                />
             </div>
 
             {/* Stats Cards */}

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import Link from 'next/link';
-import { MessageSquare, ArrowRight, Video, User, ChevronDown, ChevronUp, History } from 'lucide-react';
+import { MessageSquare, ArrowRight, Video, User, ChevronDown, ChevronUp, History, Reply, Send, X, CornerDownRight } from 'lucide-react';
 
 interface CommentEdit {
     id: string;
@@ -43,6 +43,11 @@ export default function AdminCommentsPage() {
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+    // Reply State
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [replyText, setReplyText] = useState('');
+    const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+
     const supabase = createClient();
 
     useEffect(() => {
@@ -200,6 +205,35 @@ export default function AdminCommentsPage() {
         }
     };
 
+    const handleReply = async (commentId: string, contentId: string) => {
+        if (!replyText.trim()) return;
+
+        setIsSubmittingReply(true);
+        try {
+            const { replyToComment } = await import('@/app/actions/comments');
+            const result = await replyToComment(commentId, replyText, contentId);
+
+            if (result.success && result.comment) {
+                // Optimistic UI Update (append as a new comment or handle visually)
+                // Since this is a flat list sorted by date, adding it to the top is easiest for feedback,
+                // but technically it's a child. Ideally we'd re-fetch, but let's just toast and clear.
+                setReplyingTo(null);
+                setReplyText('');
+                alert('Resposta enviada com sucesso!'); // Or use a toast if available
+
+                // Re-fetch to show the new reply in context (simple approach)
+                window.location.reload();
+            } else {
+                alert(result.error || 'Erro ao enviar resposta');
+            }
+        } catch (error) {
+            console.error('Error replying:', error);
+            alert('Erro ao enviar resposta.');
+        } finally {
+            setIsSubmittingReply(false);
+        }
+    };
+
     return (
         <div className="max-w-5xl mx-auto">
             <header className="mb-8">
@@ -231,9 +265,15 @@ export default function AdminCommentsPage() {
                         const lessonLink = portalId && lessonId ? `/members/${portalId}/lesson/${lessonId}` : '#';
                         const isEdited = comment.updated_at && comment.updated_at !== comment.created_at;
                         const isExpanded = expandedComments.has(comment.id);
+                        const isReplying = replyingTo === comment.id;
+
+                        // Context Info
+                        const portalName = comment.lesson?.module?.portal?.name;
+                        const moduleTitle = comment.lesson?.module?.title;
+                        const lessonTitle = comment.lesson?.title;
 
                         return (
-                            <div key={comment.id} className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                            <div key={comment.id} className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow group">
                                 <div className="flex items-start gap-4">
                                     <UserAvatar
                                         url={comment.profile?.avatar_url}
@@ -259,7 +299,29 @@ export default function AdminCommentsPage() {
                                             "{comment.text}"
                                         </p>
 
-                                        {/* Edit History */}
+                                        {/* Context Badge */}
+                                        <div className="flex flex-wrap items-center gap-2 mb-4 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700/50 text-sm">
+                                            {portalName && (
+                                                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                                                    <span className="font-semibold text-gray-800 dark:text-gray-200">Portal:</span>
+                                                    <span>{portalName}</span>
+                                                    <ChevronDown className="-rotate-90 text-gray-300 mx-1" size={14} />
+                                                </div>
+                                            )}
+                                            {moduleTitle && (
+                                                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                                                    <span className="font-semibold text-gray-800 dark:text-gray-200">Módulo:</span>
+                                                    <span>{moduleTitle}</span>
+                                                    <ChevronDown className="-rotate-90 text-gray-300 mx-1" size={14} />
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-1 text-pink-600 dark:text-pink-400 font-medium">
+                                                <Video size={14} />
+                                                <span>{lessonTitle || 'Aula removida'}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Edit History Toggle */}
                                         {isEdited && comment.edits && comment.edits.length > 0 && (
                                             <div className="mb-4">
                                                 <button
@@ -290,30 +352,73 @@ export default function AdminCommentsPage() {
                                             </div>
                                         )}
 
-                                        <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700/50">
-                                            <Video className="w-4 h-4 text-pink-500 shrink-0" />
-                                            <span className="truncate">
-                                                <span className="font-medium text-gray-700 dark:text-gray-300">Aula:</span> {comment.lesson?.title || 'Aula removida'}
-                                            </span>
-                                            {comment.lesson?.module?.portal?.name && (
-                                                <span className="hidden sm:inline border-l border-gray-300 dark:border-gray-600 pl-2 ml-1 truncate">
-                                                    {comment.lesson.module.portal.name}
-                                                </span>
-                                            )}
-                                        </div>
+                                        {/* Reply Form */}
+                                        {isReplying && (
+                                            <div className="mt-4 pl-4 border-l-2 border-pink-200 dark:border-pink-900/30 animate-in slide-in-from-top-2 fade-in duration-200">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex-1">
+                                                        <textarea
+                                                            value={replyText}
+                                                            onChange={(e) => setReplyText(e.target.value)}
+                                                            placeholder="Escreva sua resposta..."
+                                                            className="w-full min-h-[100px] p-3 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition-all resize-none"
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex justify-end gap-2 mt-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setReplyingTo(null);
+                                                                    setReplyText('');
+                                                                }}
+                                                                className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                                            >
+                                                                Cancelar
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleReply(comment.id, comment.content_id)}
+                                                                disabled={!replyText.trim() || isSubmittingReply}
+                                                                className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-white bg-pink-600 hover:bg-pink-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                            >
+                                                                {isSubmittingReply ? (
+                                                                    <span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+                                                                ) : (
+                                                                    <Send size={14} />
+                                                                )}
+                                                                Enviar Resposta
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
+                                    {/* Action Buttons */}
                                     <div className="shrink-0 flex flex-col items-end gap-2">
                                         {lessonLink !== '#' && (
                                             <Link
                                                 href={lessonLink}
                                                 target="_blank"
-                                                className="group flex items-center gap-2 px-4 py-2 bg-pink-50 dark:bg-pink-900/10 text-pink-600 dark:text-pink-400 rounded-lg font-medium text-sm hover:bg-pink-100 dark:hover:bg-pink-900/20 transition-colors"
+                                                className="group/link flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                                                title="Ver na aula"
                                             >
-                                                Ir para a aula
-                                                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                                <ArrowRight className="w-4 h-4 transition-transform group-hover/link:-rotate-45" />
                                             </Link>
                                         )}
+
+                                        {!isReplying && (
+                                            <button
+                                                onClick={() => {
+                                                    setReplyingTo(comment.id);
+                                                    setReplyText(`@${comment.profile?.full_name?.split(' ')[0] || 'Aluno'} `);
+                                                }}
+                                                className="flex items-center gap-2 px-4 py-2 bg-pink-50 dark:bg-pink-900/10 text-pink-600 dark:text-pink-400 rounded-lg font-medium text-sm hover:bg-pink-100 dark:hover:bg-pink-900/20 transition-colors w-full justify-center"
+                                            >
+                                                <Reply size={16} />
+                                                Responder
+                                            </button>
+                                        )}
+
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -321,6 +426,7 @@ export default function AdminCommentsPage() {
                                             }}
                                             className="relative z-10 cursor-pointer group flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-lg font-medium text-sm hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors w-full justify-center"
                                         >
+                                            <X size={16} />
                                             Excluir
                                         </button>
                                     </div>

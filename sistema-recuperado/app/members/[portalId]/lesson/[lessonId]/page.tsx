@@ -122,42 +122,6 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                 if (lessonError) throw lessonError;
                 setCurrentLesson(lessonData as unknown as LessonContent);
 
-                // --- URL SIGNING LOGIC ---
-                // If it's a Supabase Storage URL, generate a signed URL
-                if (lessonData.video_url && lessonData.video_url.includes('/storage/v1/object/public/')) {
-                    try {
-                        // Extract path: .../object/public/[bucket]/[path]
-                        const urlObj = new URL(lessonData.video_url);
-                        // Path parts after /object/public/
-                        // Example: /storage/v1/object/public/course-content/videos/file.mp4
-                        const activePath = urlObj.pathname.split('/object/public/')[1]; // "course-content/videos/file.mp4"
-
-                        if (activePath) {
-                            const [bucket, ...rest] = activePath.split('/');
-                            const filePath = rest.join('/');
-
-                            console.log(`Attempting to sign URL for bucket: ${bucket}, path: ${filePath}`);
-
-                            const { data: signedData, error: signedError } = await supabase
-                                .storage
-                                .from(bucket)
-                                .createSignedUrl(filePath, 60 * 60 * 2); // 2 hours
-
-                            if (signedError) {
-                                console.error('Error signing URL:', signedError);
-                            } else if (signedData) {
-                                console.log('Signed URL generated successfully');
-                                setSignedVideoUrl(signedData.signedUrl);
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Error parsing video URL for signing:', e);
-                    }
-                } else {
-                    setSignedVideoUrl(null); // Reset or null if not valid
-                }
-                // -------------------------
-
                 // 4. Fetch User Progress (Completion & Last Position)
                 const { data: progressData } = await supabase
                     .from('progress')
@@ -319,6 +283,88 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
             supabase.removeChannel(channel);
         };
     }, [user, portalId, lessonId, router, loading, modules]); // Dependencies
+
+    // 📡 REAL-TIME CONTENT UPDATES (Title, Video URL, Description)
+    useEffect(() => {
+        if (!lessonId) return;
+
+        console.log(`📡 [Content] Listening for updates on lesson: ${lessonId}`);
+
+        const channel = supabase
+            .channel(`lesson-content-${lessonId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'contents',
+                    filter: `id=eq.${lessonId}`
+                },
+                (payload) => {
+                    console.log("📡 [Content] Update received:", payload);
+                    if (payload.new) {
+                        // Optimistically update local state with new data
+                        setCurrentLesson(prev => prev ? { ...prev, ...(payload.new as any) } : null);
+
+                        // If video_url changed, we might need to handle signed URLs logic again
+                        // ideally the signed URL logic should be a separate effect depending on currentLesson.video_url
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [lessonId]);
+
+    // 🔐 HANDLE VIDEO URL SIGNING (Reactive)
+    useEffect(() => {
+        const handleSignedUrl = async () => {
+            if (!currentLesson?.video_url) {
+                setSignedVideoUrl(null);
+                return;
+            }
+
+            // If it's a Supabase Storage URL, generate a signed URL
+            if (currentLesson.video_url.includes('/storage/v1/object/public/')) {
+                try {
+                    // Extract path: .../object/public/[bucket]/[path]
+                    const urlObj = new URL(currentLesson.video_url);
+                    // Path parts after /object/public/
+                    const activePath = urlObj.pathname.split('/object/public/')[1];
+
+                    if (activePath) {
+                        const [bucket, ...rest] = activePath.split('/');
+                        const filePath = rest.join('/');
+
+                        // console.log(`Attempting to sign URL for bucket: ${bucket}, path: ${filePath}`);
+
+                        const { data: signedData, error: signedError } = await supabase
+                            .storage
+                            .from(bucket)
+                            .createSignedUrl(filePath, 60 * 60 * 2); // 2 hours
+
+                        if (signedError) {
+                            console.error('Error signing URL:', signedError);
+                            setSignedVideoUrl(null); // Fallback to original
+                        } else if (signedData) {
+                            // console.log('Signed URL generated successfully');
+                            setSignedVideoUrl(signedData.signedUrl);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing video URL for signing:', e);
+                    setSignedVideoUrl(null);
+                }
+            } else {
+                setSignedVideoUrl(null); // Reset if not a storage URL (e.g., YouTube)
+            }
+        };
+
+        handleSignedUrl();
+    }, [currentLesson?.video_url]);
+
 
     useEffect(() => {
         if (!loading && currentLesson) {

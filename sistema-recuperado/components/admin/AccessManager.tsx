@@ -56,7 +56,7 @@ export function AccessManager({ context, portalId, resourceId }: AccessManagerPr
             }
 
             // 2. Fetch Profiles to get names/emails
-            let profilesQuery = supabase.from('profiles').select('*');
+            let profilesQuery = supabase.from('profiles').select('*').neq('role', 'admin');
 
             // For module/content context: fetch profiles for enrolled users
             // For portal context: fetch ALL profiles (to allow enrolling new users)

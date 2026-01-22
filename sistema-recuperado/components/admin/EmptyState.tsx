@@ -34,7 +34,7 @@ export function EmptyState({
                 {title}
             </h3>
 
-            <p className="text-sm text-[var(--text-secondary)] max-w-lg mx-auto mb-6">
+            <p className="text-sm text-[var(--text-secondary)] max-w-2xl w-full mx-auto mb-6 px-4">
                 {description}
             </p>
 

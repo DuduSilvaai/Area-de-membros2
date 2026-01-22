@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { ConversationWithStudent } from '@/types/chat';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { NewChatModal } from './NewChatModal';
 
 interface ConversationSidebarProps {
     conversations: ConversationWithStudent[];
@@ -29,7 +30,7 @@ export function ConversationSidebar({
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(c =>
                 c.student?.full_name?.toLowerCase().includes(query) ||
-                c.student?.email?.toLowerCase().includes(query)
+                (c.student?.email && c.student.email.toLowerCase().includes(query))
             );
         }
 
@@ -40,7 +41,9 @@ export function ConversationSidebar({
             if (b.unread_count_admin > 0 && a.unread_count_admin === 0) return 1;
 
             // Then by last message date
-            return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+            const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+            const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+            return timeB - timeA;
         });
     }, [conversations, searchQuery]);
 
@@ -48,14 +51,19 @@ export function ConversationSidebar({
         <div className="w-80 h-full flex flex-col bg-white dark:bg-[#121216] flex-shrink-0 transition-colors duration-200 border-r border-gray-200 dark:border-gray-800">
             {/* Header */}
             <div className="p-4 border-b border-gray-200 dark:border-zinc-800/80">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center shadow-lg shadow-pink-500/20 text-white">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                    </div>
-                    Conversas
-                </h1>
+                <div className="flex items-center justify-between">
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3 transition-colors">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center shadow-lg shadow-pink-500/20 text-white">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                        </div>
+                        Conversas
+                    </h1>
+
+                    {/* New Chat Button */}
+                    <NewChatModal onConversationCreated={onSelect} />
+                </div>
 
                 {/* Search */}
                 <div className="mt-4 relative">
@@ -69,7 +77,7 @@ export function ConversationSidebar({
                     </svg>
                     <input
                         type="text"
-                        placeholder="Buscar franqueado..."
+                        placeholder="Buscar conversa..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-zinc-800 border-transparent focus:bg-white dark:focus:bg-zinc-800 border focus:border-pink-500 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-pink-500/20 transition-all text-sm"
@@ -104,7 +112,7 @@ export function ConversationSidebar({
                         <p className="text-gray-500 dark:text-zinc-500 text-sm leading-relaxed max-w-[200px]">
                             {searchQuery
                                 ? 'Tente buscar por outro nome.'
-                                : 'Os franqueados aparecerão aqui quando enviarem mensagens.'}
+                                : 'Os franqueados aparecerão aqui quando enviarem mensagens ou quando você iniciar uma conversa.'}
                         </p>
                     </div>
                 ) : (
@@ -136,10 +144,12 @@ function ConversationItem({
 }) {
     const hasUnread = conversation.unread_count_admin > 0;
 
-    const timeAgo = formatDistanceToNow(new Date(conversation.last_message_at), {
-        addSuffix: false,
-        locale: ptBR
-    });
+    const timeAgo = conversation.last_message_at
+        ? formatDistanceToNow(new Date(conversation.last_message_at), {
+            addSuffix: false,
+            locale: ptBR
+        })
+        : 'Novo';
 
     // Get initials for avatar fallback
     const initials = conversation.student?.full_name
@@ -199,7 +209,7 @@ function ConversationItem({
                     ? 'text-gray-800 dark:text-zinc-300 font-medium'
                     : 'text-gray-500 dark:text-zinc-500 group-hover:text-gray-700 dark:group-hover:text-zinc-400'
                     }`}>
-                    {conversation.last_message_preview || 'Iniciar conversa'}
+                    {conversation.last_message_preview || 'Nova conversa'}
                 </p>
             </div>
         </button>

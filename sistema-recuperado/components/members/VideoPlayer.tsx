@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactPlayer from 'react-player'; // Standard import since lazy is missing
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings, SkipForward } from 'lucide-react';
 
 interface VideoPlayerProps {
@@ -24,115 +25,121 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     url,
     autoPlay = false
 }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const playerRef = useRef<any>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
+    const [volume, setVolume] = useState(1);
     const [showControls, setShowControls] = useState(true);
     const [currentTime, setCurrentTime] = useState('0:00');
     const [duration, setDuration] = useState('0:00');
+    const [playbackRate, setPlaybackRate] = useState(1.0);
     const initialTimeSet = useRef(false);
 
     const defaultPoster = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop';
 
     // Handle both url and videoUrl props
-    const actualVideoUrl = videoUrl || url;
+    // Handle both url and videoUrl props with trimming to ensure correct detection
+    const actualVideoUrl = (videoUrl || url || '').trim();
 
     const formatTime = (seconds: number): string => {
+        if (!seconds && seconds !== 0) return '0:00';
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        const updateProgress = () => {
-            if (!video.duration) return;
-            const prog = (video.currentTime / video.duration) * 100;
-            setProgress(prog);
-            setCurrentTime(formatTime(video.currentTime));
-            onProgress?.(video.currentTime);
-        };
-
-        const handleLoadedMetadata = () => {
-            setDuration(formatTime(video.duration));
-
-            // Set initial time if provided and valid
-            if (!initialTimeSet.current && initialTime > 0 && initialTime < video.duration) {
-                video.currentTime = initialTime;
-                initialTimeSet.current = true;
+    // Handle ready state to set initial time
+    const handleReady = () => {
+        if (!initialTimeSet.current) {
+            if (initialTime > 0 && playerRef.current) {
+                playerRef.current.seekTo(initialTime);
             }
-
+            // Safe auto-play trigger
             if (autoPlay) {
-                video.play().catch(() => {
-                    // Autoplay blocked, user needs to interact
-                    setIsPlaying(false);
-                });
                 setIsPlaying(true);
             }
-        };
+            initialTimeSet.current = true;
+        }
 
-        const handleEnded = () => {
-            setIsPlaying(false);
-            onEnded?.();
-        };
-
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
-
-        video.addEventListener('timeupdate', updateProgress);
-        video.addEventListener('loadedmetadata', handleLoadedMetadata);
-        video.addEventListener('ended', handleEnded);
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
-
-        return () => {
-            video.removeEventListener('timeupdate', updateProgress);
-            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-            video.removeEventListener('ended', handleEnded);
-            video.removeEventListener('play', handlePlay);
-            video.removeEventListener('pause', handlePause);
-        };
-    }, [onEnded, autoPlay]);
-
-    const togglePlay = () => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        if (isPlaying) {
-            video.pause();
-        } else {
-            video.play();
+        // Manual duration fetch to avoid onDuration prop error
+        if (playerRef.current) {
+            const d = playerRef.current.getDuration();
+            if (d) setDuration(formatTime(d));
         }
     };
 
+    // 🛡️ Global Error Suppression for clean UX
+    useEffect(() => {
+        const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+            const reason = event.reason;
+            // Detect "The play() request was interrupted..." errors
+            if (
+                reason?.name === 'AbortError' ||
+                reason?.message?.includes('interrupted') ||
+                reason?.message?.includes('call to pause')
+            ) {
+                event.preventDefault(); // Stop the error from crashing app / showing overlay
+                // console.warn('Supressed video playback abort error:', reason);
+            }
+        };
+
+        window.addEventListener('unhandledrejection', handleUnhandledRejection);
+        return () => window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    }, []);
+
+    const handleProgress = (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
+        setProgress(state.played * 100);
+        setCurrentTime(formatTime(state.playedSeconds));
+        onProgress?.(state.playedSeconds);
+
+        // Ensure duration is set if it wasn't caught by onDuration
+        if (playerRef.current && duration === '0:00') {
+            const d = playerRef.current.getDuration();
+            if (d) setDuration(formatTime(d));
+        }
+    };
+
+    const handleDuration = (durationSecs: number) => {
+        setDuration(formatTime(durationSecs));
+    };
+
+    const togglePlay = () => {
+        setIsPlaying(!isPlaying);
+    };
+
     const toggleMute = () => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.muted = !isMuted;
         setIsMuted(!isMuted);
     };
 
     const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        const video = videoRef.current;
-        if (!video) return;
+        if (!playerRef.current) return;
 
         const rect = e.currentTarget.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const width = rect.width;
-        const newProgress = (clickX / width) * 100;
-        video.currentTime = (newProgress / 100) * video.duration;
-        setProgress(newProgress);
+        const newProgress = clickX / width; // 0 to 1
+
+        playerRef.current.seekTo(newProgress);
+        setProgress(newProgress * 100);
     };
 
     const handleFullscreen = () => {
-        const video = videoRef.current;
-        if (!video) return;
-        if (video.requestFullscreen) {
-            video.requestFullscreen();
+        if (containerRef.current) {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                containerRef.current.requestFullscreen();
+            }
         }
+    };
+
+    const handleSpeedChange = () => {
+        const speeds = [1.0, 1.25, 1.5, 2.0];
+        const currentIndex = speeds.indexOf(playbackRate);
+        const nextIndex = (currentIndex + 1) % speeds.length;
+        setPlaybackRate(speeds[nextIndex]);
     };
 
     // If no video URL is provided, show placeholder
@@ -144,68 +151,66 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         );
     }
 
-    // Helper to determine if URL is an embed
-    const getEmbedUrl = (url: string) => {
-        if (!url) return '';
-
-        // Handle YouTube
-        // Supports: youtube.com/watch?v=, youtube.com/embed/, youtu.be/, youtube.com/v/
-        const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-
-        if (ytMatch && ytMatch[1]) {
-            // Use youtube-nocookie.com for better privacy and fewer restrictions
-            // Add origin to prevent some embedding blocks
-            const origin = typeof window !== 'undefined' ? window.location.origin : '';
-            return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=${autoPlay ? 1 : 0}&modestbranding=1&rel=0&origin=${origin}`;
-        }
-
-        // Handle Vimeo
-        const vimeoMatch = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
-        if (vimeoMatch && vimeoMatch[1]) {
-            return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=${autoPlay ? 1 : 0}`;
-        }
-
-        return null;
-    };
-
-    const embedUrl = getEmbedUrl(actualVideoUrl);
-
-    if (embedUrl) {
-        return (
-            <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-2xl">
-                <iframe
-                    src={embedUrl}
-                    className="w-full h-full"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    loading="lazy"
-                    title="Video Player"
-                />
-            </div>
-        );
-    }
+    const ReactPlayerAny = ReactPlayer as any;
 
     return (
         <div
+            ref={containerRef}
             className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-2xl group"
             onMouseEnter={() => setShowControls(true)}
             onMouseLeave={() => setShowControls(isPlaying ? false : true)}
         >
-            {/* Video Element */}
-            <video
-                ref={videoRef}
-                className="w-full h-full object-contain bg-black"
-                src={actualVideoUrl}
-                poster={poster || defaultPoster}
-                onClick={togglePlay}
-                playsInline
+            {/* React Player Instance */}
+            <ReactPlayerAny
+                key={actualVideoUrl}
+                ref={playerRef}
+                url={actualVideoUrl}
+                width="100%"
+                height="100%"
+                playing={isPlaying}
+                volume={volume}
+                muted={isMuted}
+                playbackRate={playbackRate}
+                onReady={handleReady}
+                onProgress={handleProgress}
+                onError={(e: any) => {
+                    // Suppress harmless AbortError from rapid play/pause toggles
+                    if (e?.name === 'AbortError' || e?.message?.includes('interrupted') || e?.message?.includes('removed')) return;
+                    console.error('Video Player Error:', e);
+                }}
+
+                onEnded={() => {
+                    setIsPlaying(false);
+                    onEnded?.();
+                }}
+                // Config for YouTube to minimize UI and issues
+                config={{
+                    youtube: {
+                        playerVars: {
+                            showinfo: 0,
+                            controls: 0,
+                            modestbranding: 1,
+                            rel: 0,
+                            origin: typeof window !== 'undefined' ? window.location.origin : undefined
+                        }
+                    },
+                    vimeo: {
+                        playerOptions: { controls: false }
+                    },
+                    file: {
+                        attributes: {
+                            poster: poster || defaultPoster,
+                            controlsList: 'nodownload'
+                        }
+                    }
+                }}
+                style={{ position: 'absolute', top: 0, left: 0 }}
             />
 
-            {/* Play Button Overlay (when paused) */}
+            {/* Play Button Overlay (when paused or buffering) */}
             {!isPlaying && (
                 <div
-                    className="absolute inset-0 flex items-center justify-center cursor-pointer bg-black/30"
+                    className="absolute inset-0 flex items-center justify-center cursor-pointer bg-black/10 z-10"
                     onClick={togglePlay}
                 >
                     <div className="w-24 h-24 bg-mozart-pink/90 rounded-full flex items-center justify-center pl-2 hover:scale-110 transition-transform shadow-[0_0_40px_rgba(255,0,128,0.5)] backdrop-blur-sm border-4 border-white/10">
@@ -214,8 +219,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </div>
             )}
 
+            {/* Click area to pause/play when playing (invisible layer) */}
+            {isPlaying && (
+                <div
+                    className="absolute inset-0 z-0"
+                    onClick={togglePlay}
+                />
+            )}
+
             {/* Custom Controls Overlay */}
-            <div className={`absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/95 via-black/60 to-transparent px-8 py-6 transition-opacity duration-300 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/95 via-black/60 to-transparent px-8 py-6 transition-opacity duration-300 z-20 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
                 {/* Progress Bar */}
                 <div
                     className="w-full h-1 bg-white/20 rounded-full mb-5 cursor-pointer hover:h-1.5 transition-all group/progress"
@@ -241,8 +254,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     </div>
 
                     <div className="flex items-center gap-5">
-                        <button className="text-gray-300 hover:text-white text-sm font-semibold flex items-center gap-1 bg-white/10 px-3 py-1 rounded hover:bg-white/20 transition-all">
-                            <SkipForward size={14} /> 1.5x
+                        <button
+                            onClick={handleSpeedChange}
+                            className="text-gray-300 hover:text-white text-sm font-semibold flex items-center gap-1 bg-white/10 px-3 py-1 rounded hover:bg-white/20 transition-all w-[70px] justify-center"
+                        >
+                            <SkipForward size={14} /> {playbackRate}x
                         </button>
                         <button className="text-gray-300 hover:text-white transition-transform hover:rotate-45">
                             <Settings size={22} />
