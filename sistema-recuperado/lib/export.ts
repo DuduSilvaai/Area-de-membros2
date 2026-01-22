@@ -2,6 +2,9 @@
  * CSV Export Utilities for Audit Logs
  */
 
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 export interface ExportableLog {
     id: string;
     created_at: string;
@@ -71,14 +74,6 @@ export function formatLogsForExport(logs: ExportableLog[]): string {
 /**
  * Generate filename with current date
  */
-export function generateExportFilename(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `audit-logs-${year}-${month}-${day}.csv`;
-}
-
 /**
  * Download CSV file
  */
@@ -100,11 +95,59 @@ export function downloadCSV(csvContent: string, filename: string): void {
     URL.revokeObjectURL(link.href);
 }
 
-/**
- * Main export function - formats and downloads logs as CSV
- */
 export function exportLogsToCSV(logs: ExportableLog[]): void {
     const csvContent = formatLogsForExport(logs);
-    const filename = generateExportFilename();
+    const filename = generateExportFilename('csv');
     downloadCSV(csvContent, filename);
+}
+
+
+/**
+ * Generate filename with current date and extension
+ */
+export function generateExportFilename(extension: 'csv' | 'pdf'): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `audit-logs-${year}-${month}-${day}.${extension}`;
+}
+
+/**
+ * Export logs to PDF using jsPDF
+ */
+export function exportLogsToPDF(logs: ExportableLog[]): void {
+    const doc = new jsPDF();
+    const filename = generateExportFilename('pdf');
+
+    // Add Title
+    doc.setFontSize(18);
+    doc.text('Relatório de Logs de Acesso', 14, 22);
+
+    // Add Metadata
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 30);
+    doc.text(`Total de registros: ${logs.length}`, 14, 35);
+
+    // Prepare table data
+    const tableHead = [['Data/Hora', 'Usuário', 'Email', 'Ação']];
+    const tableBody = logs.map(log => [
+        formatDateForExport(log.created_at),
+        log.user_name || 'Desconhecido',
+        log.user_email || 'N/A',
+        log.action
+    ]);
+
+    // Generate Table
+    autoTable(doc, {
+        head: tableHead,
+        body: tableBody,
+        startY: 40,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [255, 45, 120] }, // Mozart Pink
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        theme: 'grid'
+    });
+
+    doc.save(filename);
 }

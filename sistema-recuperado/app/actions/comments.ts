@@ -186,3 +186,64 @@ export async function editComment(commentId: string, newText: string) {
         return { success: false, error: error.message || 'Erro ao editar comentário' };
     }
 }
+
+export async function replyToComment(parentCommentId: string, text: string, contentId: string) {
+    // Validate inputs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(parentCommentId) || !uuidRegex.test(contentId)) {
+        return { success: false, error: 'IDs inválidos' };
+    }
+
+    if (!text || text.trim().length === 0) {
+        return { success: false, error: 'O texto da resposta não pode estar vazio' };
+    }
+
+    // Fail Fast if env is missing
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return {
+            success: false,
+            error: 'Erro Crítico: Configuração do servidor incompleta.'
+        };
+    }
+
+    try {
+        // Verify admin
+        await requireAdmin();
+
+        // Get current admin user ID
+        const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser();
+        if (userError || !user) {
+            return { success: false, error: 'Usuário não autenticado' };
+        }
+
+        // Insert reply
+        const { data: newComment, error: insertError } = await supabaseAdmin
+            .from('comments')
+            .insert({
+                content_id: contentId,
+                user_id: user.id,
+                text: text.trim(),
+                parent_id: parentCommentId,
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (insertError) {
+            log.error({ parentCommentId, error: insertError.message }, 'Failed to insert reply');
+            return { success: false, error: 'Erro ao enviar resposta' };
+        }
+
+        log.info({ parentCommentId, replyId: newComment.id }, 'Reply sent successfully');
+
+        // Revalidate paths
+        revalidatePath('/members/[portalId]/lesson/[lessonId]');
+        revalidatePath('/comments');
+        revalidatePath('/');
+
+        return { success: true, comment: newComment };
+    } catch (error: any) {
+        log.error({ parentCommentId, errorMessage: error.message }, 'Failed to send reply');
+        return { success: false, error: error.message || 'Erro ao enviar resposta' };
+    }
+}

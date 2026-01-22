@@ -15,6 +15,8 @@ export async function getDashboardStats() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    const ADMIN_EMAIL = 'loveforsweet.franchising@gmail.com';
+
     const [
       studentsResult,
       lessonsResult,
@@ -23,8 +25,8 @@ export async function getDashboardStats() {
       latestCommentsResult,
       activeLogsResult
     ] = await Promise.all([
-      // 1. Total Students
-      supabase.from('enrollments').select('*', { count: 'estimated', head: true }),
+      // 1. Total Students (Franchisees) - Count Profiles excluding Admin
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).neq('email', ADMIN_EMAIL),
       // 2. Total Lessons
       supabase.from('contents').select('*', { count: 'estimated', head: true }),
       // 3. Accesses Today - Keep exact for today as it's a smaller range usually, or estimated if huge
@@ -84,20 +86,23 @@ export async function getDashboardStats() {
 
       const topUserIds = Object.keys(studentCounts)
         .sort((a, b) => studentCounts[b] - studentCounts[a])
-        .slice(0, 5);
+        .slice(0, 10); // Fetch more initially to allow filtering
 
       if (topUserIds.length > 0) {
         const { data: profiles } = await supabase.from('profiles').select('id, full_name, email').in('id', topUserIds);
 
-        topStudents = topUserIds.map(id => {
-          const profile = profiles?.find(p => p.id === id);
-          return {
-            id,
-            name: profile?.full_name || 'Usuário',
-            email: profile?.email || '',
-            access_count: studentCounts[id]
-          };
-        });
+        topStudents = topUserIds
+          .map(id => {
+            const profile = profiles?.find(p => p.id === id);
+            return {
+              id,
+              name: profile?.full_name || 'Usuário',
+              email: profile?.email || '',
+              access_count: studentCounts[id]
+            };
+          })
+          .filter(s => s.email && s.email !== ADMIN_EMAIL) // Filter out Admin
+          .slice(0, 5); // Take top 5 after filtering
       }
     }
 

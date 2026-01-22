@@ -64,12 +64,13 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Next.js
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' *.youtube.com *.vimeo.com", // Required for Next.js and Video Players
               "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
               "font-src 'self' fonts.gstatic.com",
-              "img-src 'self' data: blob: *.supabase.co",
+              "img-src 'self' data: blob: *.supabase.co *.youtube.com *.vimeo.com images.unsplash.com",
               "media-src 'self' blob: *.supabase.co",
               "connect-src 'self' *.supabase.co wss://*.supabase.co",
+              "frame-src 'self' *.youtube.com *.youtube-nocookie.com *.vimeo.com player.vimeo.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

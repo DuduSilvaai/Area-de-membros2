@@ -20,7 +20,7 @@ export const Button = ({ className, variant = 'primary', isLoading, children, ..
     secondary: 'bg-background-canvas text-text-primary hover:bg-border dark:bg-background-canvas dark:text-text-primary dark:hover:bg-border',
     danger: 'bg-status-error text-text-on-primary hover:bg-status-error/80',
     ghost: 'bg-transparent hover:bg-background-canvas text-text-secondary dark:text-text-secondary dark:hover:bg-background-canvas',
-    outline: 'bg-background-surface border border-border text-text-primary hover:bg-background-canvas dark:bg-background-surface dark:border-border dark:text-text-primary dark:hover:bg-background-canvas',
+    outline: 'bg-transparent border border-zinc-200 text-zinc-900 hover:bg-zinc-100 dark:bg-transparent dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800',
   };
 
   return (

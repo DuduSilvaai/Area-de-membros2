@@ -193,7 +193,7 @@ export default function PortalsList() {
 
       // Redirect to the new portal's settings page
       if (result.data?.portal?.id) {
-        router.push(`/portals/${result.data.portal.id}/settings`);
+        router.push(`/portals/${result.data.portal.id}`);
       } else {
         await fetchPortals();
         router.refresh();
@@ -215,10 +215,18 @@ export default function PortalsList() {
       toast.success('Portal excluído com sucesso.');
       setPortals(prev => prev.filter(p => p.id !== portalToDelete.id));
       router.refresh();
-    } catch (err: unknown) {
-      console.error("Error deleting portal:", err);
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-      toast.error('Erro ao excluir portal: ' + errorMessage);
+    } catch (err: any) {
+      console.error("Error deleting portal (Detailed):", JSON.stringify(err, null, 2));
+      console.error("Error object:", err);
+
+      let errorMessage = 'Erro desconhecido';
+      if (err instanceof Error) errorMessage = err.message;
+      else if (err?.message) errorMessage = err.message;
+      else if (err?.error_description) errorMessage = err.error_description;
+      else if (err?.details) errorMessage = err.details;
+      else if (err?.hint) errorMessage = err.hint;
+
+      toast.error(`Erro ao excluir portal: ${errorMessage}`);
     }
   };
 

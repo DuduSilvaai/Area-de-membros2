@@ -12,27 +12,6 @@ const ACTION_TYPES = [
     // Authentication
     { value: 'login', label: 'Login' },
     { value: 'logout', label: 'Logout' },
-    // User Management
-    { value: 'create_user', label: 'Criação de Usuário' },
-    { value: 'delete_user', label: 'Exclusão de Usuário' },
-    { value: 'update_user', label: 'Atualização de Usuário' },
-    { value: 'activate_user', label: 'Ativação de Usuário' },
-    { value: 'deactivate_user', label: 'Desativação de Usuário' },
-    { value: 'reset_password', label: 'Reset de Senha' },
-    // Portal Management
-    { value: 'create_portal', label: 'Criação de Portal' },
-    { value: 'update_portal', label: 'Atualização de Portal' },
-    // Content Management
-    { value: 'create_module', label: 'Criação de Módulo' },
-    { value: 'delete_module', label: 'Exclusão de Módulo' },
-    { value: 'create_content', label: 'Criação de Conteúdo' },
-    { value: 'delete_content', label: 'Exclusão de Conteúdo' },
-    // Enrollment
-    { value: 'update_permissions', label: 'Atualização de Permissões' },
-    { value: 'remove_enrollment', label: 'Remoção de Matrícula' },
-    { value: 'bulk_enroll', label: 'Matrícula em Massa' },
-    // Views
-    { value: 'view_user', label: 'Visualização de Usuário' },
     // Errors
     { value: 'error', label: 'Erro' },
 ];
