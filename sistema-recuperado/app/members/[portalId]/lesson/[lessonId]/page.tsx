@@ -326,6 +326,8 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                 return;
             }
 
+            console.log('[LessonPage] video_url:', currentLesson.video_url);
+
             // If it's a Supabase Storage URL, generate a signed URL
             if (currentLesson.video_url.includes('/storage/v1/object/public/')) {
                 try {

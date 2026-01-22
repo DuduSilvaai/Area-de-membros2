@@ -43,6 +43,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // Handle both url and videoUrl props with trimming to ensure correct detection
     const actualVideoUrl = (videoUrl || url || '').trim();
 
+    // Debug log para identificar o que está sendo passado
+    console.log('[VideoPlayer] URL recebida:', actualVideoUrl);
+
+    // Detectar tipo de vídeo
+    const isYouTubeUrl = actualVideoUrl.includes('youtube.com') || actualVideoUrl.includes('youtu.be');
+    const isVimeoUrl = actualVideoUrl.includes('vimeo.com');
+    console.log('[VideoPlayer] Tipo:', isYouTubeUrl ? 'YouTube' : isVimeoUrl ? 'Vimeo' : 'Outro');
+
     const formatTime = (seconds: number): string => {
         if (!seconds && seconds !== 0) return '0:00';
         const mins = Math.floor(seconds / 60);
@@ -176,7 +184,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 onError={(e: any) => {
                     // Suppress harmless AbortError from rapid play/pause toggles
                     if (e?.name === 'AbortError' || e?.message?.includes('interrupted') || e?.message?.includes('removed')) return;
-                    console.error('Video Player Error:', e);
+                    console.error('[VideoPlayer] Erro ao carregar vídeo:', e);
+                    console.error('[VideoPlayer] URL que falhou:', actualVideoUrl);
                 }}
 
                 onEnded={() => {
@@ -191,6 +200,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                             controls: 0,
                             modestbranding: 1,
                             rel: 0,
+                            enablejsapi: 1,
                             origin: typeof window !== 'undefined' ? window.location.origin : undefined
                         }
                     },
