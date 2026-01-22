@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import ReactPlayer from 'react-player'; // Standard import since lazy is missing
+import dynamic from 'next/dynamic';
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings, SkipForward } from 'lucide-react';
+
+// Use dynamic import for ReactPlayer to avoid SSR issues
+const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
 
 interface VideoPlayerProps {
     // New props
@@ -35,13 +38,34 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const [currentTime, setCurrentTime] = useState('0:00');
     const [duration, setDuration] = useState('0:00');
     const [playbackRate, setPlaybackRate] = useState(1.0);
+    const [isMounted, setIsMounted] = useState(false); // Fix hydration/SSR issues
     const initialTimeSet = useRef(false);
 
     const defaultPoster = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop';
 
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     // Handle both url and videoUrl props
-    // Handle both url and videoUrl props with trimming to ensure correct detection
-    const actualVideoUrl = (videoUrl || url || '').trim();
+    // Helper to clean YouTube URLs
+    const cleanVideoUrl = (inputUrl: string) => {
+        if (!inputUrl) return '';
+        try {
+            // Remove 'si' tracking parameter from YouTube URLs
+            if (inputUrl.includes('youtu.be') || inputUrl.includes('youtube.com')) {
+                const urlObj = new URL(inputUrl);
+                urlObj.searchParams.delete('si');
+                return urlObj.toString();
+            }
+            return inputUrl;
+        } catch (e) {
+            return inputUrl;
+        }
+    };
+
+    // Handle both url and videoUrl props with trimming and cleaning
+    const actualVideoUrl = cleanVideoUrl((videoUrl || url || '').trim());
 
     // Debug log para identificar o que está sendo passado
     console.log('[VideoPlayer] URL recebida:', actualVideoUrl);
@@ -159,6 +183,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         );
     }
 
+    // Prevent hydration mismatch and ensure window is available
+    if (!isMounted) {
+        return <div className="w-full aspect-video bg-black rounded-xl animate-pulse" />;
+    }
+
     const ReactPlayerAny = ReactPlayer as any;
 
     return (
@@ -168,6 +197,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             onMouseEnter={() => setShowControls(true)}
             onMouseLeave={() => setShowControls(isPlaying ? false : true)}
         >
+
+
             {/* React Player Instance */}
             <ReactPlayerAny
                 key={actualVideoUrl}
@@ -179,11 +210,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 volume={volume}
                 muted={isMuted}
                 playbackRate={playbackRate}
+                light={false} // Desativando light mode para forçar o iframe
                 onReady={handleReady}
                 onProgress={handleProgress}
                 onError={(e: any) => {
-                    // Suppress harmless AbortError from rapid play/pause toggles
-                    if (e?.name === 'AbortError' || e?.message?.includes('interrupted') || e?.message?.includes('removed')) return;
+                    // Suppress harmless AbortError from rapid play/pause toggles or Chrome autoplay policy
+                    if (
+                        e?.name === 'AbortError' ||
+                        e?.message?.includes('interrupted') ||
+                        e?.message?.includes('removed') ||
+                        e?.message?.includes('The play() request was interrupted')
+                    ) return;
+
                     console.error('[VideoPlayer] Erro ao carregar vídeo:', e);
                     console.error('[VideoPlayer] URL que falhou:', actualVideoUrl);
                 }}
@@ -192,7 +230,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     setIsPlaying(false);
                     onEnded?.();
                 }}
-                // Config for YouTube to minimize UI and issues
                 config={{
                     youtube: {
                         playerVars: {
@@ -200,7 +237,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                             controls: 0,
                             modestbranding: 1,
                             rel: 0,
-                            enablejsapi: 1,
                             origin: typeof window !== 'undefined' ? window.location.origin : undefined
                         }
                     },
@@ -217,11 +253,27 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 style={{ position: 'absolute', top: 0, left: 0 }}
             />
 
+            {/* FALLBACK/DEBUG: Iframe Nativo do YouTube se for YouTube */}
+            {actualVideoUrl && (actualVideoUrl.includes('youtu.be') || actualVideoUrl.includes('youtube.com')) && (
+                <iframe
+                    src={`https://www.youtube.com/embed/${actualVideoUrl.includes('v=') ? actualVideoUrl.split('v=')[1].split('&')[0] : actualVideoUrl.split('/').pop()?.split('?')[0]}`}
+                    title="YouTube video player"
+                    className="absolute top-0 left-0 w-full h-full z-40"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ pointerEvents: 'auto' }} // Garantir que recebe cliques
+                />
+            )}
+
             {/* Play Button Overlay (when paused or buffering) */}
+            {/* Play Button Overlay */}
             {!isPlaying && (
                 <div
-                    className="absolute inset-0 flex items-center justify-center cursor-pointer bg-black/10 z-10"
-                    onClick={togglePlay}
+                    className="absolute inset-0 flex items-center justify-center cursor-pointer z-10"
+                    onClick={() => {
+                        setIsPlaying(true);
+                    }}
                 >
                     <div className="w-24 h-24 bg-mozart-pink/90 rounded-full flex items-center justify-center pl-2 hover:scale-110 transition-transform shadow-[0_0_40px_rgba(255,0,128,0.5)] backdrop-blur-sm border-4 border-white/10">
                         <Play size={48} fill="white" className="text-white" />
