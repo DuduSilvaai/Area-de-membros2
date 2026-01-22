@@ -120,6 +120,13 @@ export default function LessonPage({ params }: { params: Promise<{ portalId: str
                     .single();
 
                 if (lessonError) throw lessonError;
+
+                console.log('[LessonPage] FETCHED Lesson Data:', {
+                    id: lessonData.id,
+                    title: lessonData.title,
+                    video_url: lessonData.video_url
+                });
+
                 setCurrentLesson(lessonData as unknown as LessonContent);
 
                 // 4. Fetch User Progress (Completion & Last Position)
