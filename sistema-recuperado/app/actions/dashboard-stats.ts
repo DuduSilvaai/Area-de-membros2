@@ -44,7 +44,8 @@ export async function getDashboardStats() {
         .from('access_logs')
         .select('user_id')
         .gte('created_at', thirtyDaysAgo.toISOString())
-        .limit(1000) // Optimization: Limit to latest 1000 interactions to avoid fetching millions of rows
+        .order('created_at', { ascending: false })
+        .limit(200) // Optimization: Reduced limit to prevent timeouts
     ]);
 
     // Process Basic Counts

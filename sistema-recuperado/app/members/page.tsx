@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Loader2, LogOut } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 import CinematicHeader from '@/components/cinematic/CinematicHeader';
 import CinematicPortalCard from '@/components/cinematic/PortalCard';
 import BackgroundEffects from '@/components/cinematic/BackgroundEffects';
@@ -20,6 +21,7 @@ interface Portal {
 
 export default function MobilePortalSelection() {
   const router = useRouter();
+  const { signOut } = useAuth();
   const [portals, setPortals] = useState<Portal[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,6 +75,19 @@ export default function MobilePortalSelection() {
     <div className="h-screen w-full relative bg-gray-50 dark:bg-black text-gray-900 dark:text-white font-sans selection:bg-brand-pink/30 selection:text-brand-pink overflow-hidden">
 
       <BackgroundEffects />
+
+      {/* Logout Button */}
+      <div className="absolute top-4 right-4 z-50">
+        <button
+          onClick={() => signOut()}
+          className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/5 hover:border-brand-pink/30 transition-all group"
+        >
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover:text-brand-pink dark:group-hover:text-white transition-colors">
+            Sair
+          </span>
+          <LogOut className="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-brand-pink dark:group-hover:text-white transition-colors" />
+        </button>
+      </div>
 
       <main className="relative z-10 w-full h-full flex flex-col justify-start items-center overflow-hidden pt-2 md:pt-4">
         <CinematicHeader />
