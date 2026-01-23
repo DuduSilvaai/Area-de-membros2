@@ -11,13 +11,12 @@ import { MeetingsList } from '@/components/meetings/MeetingsList';
 interface ChatDrawerProps {
     isOpen: boolean;
     onClose: () => void;
-    portalId?: string;
     lessonId?: string;
     lessonTitle?: string;
     moduleTitle?: string;
 }
 
-export function ChatDrawer({ isOpen, onClose, portalId, lessonId, lessonTitle, moduleTitle }: ChatDrawerProps) {
+export function ChatDrawer({ isOpen, onClose, lessonId, lessonTitle, moduleTitle }: ChatDrawerProps) {
     const [text, setText] = useState('');
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -88,7 +87,7 @@ export function ChatDrawer({ isOpen, onClose, portalId, lessonId, lessonTitle, m
 
         const init = async () => {
             // Get or create conversation
-            const id = await createConversation(portalId);
+            const id = await createConversation();
             if (id) {
                 setConversationId(id);
                 await fetchMessages(id);
@@ -102,7 +101,7 @@ export function ChatDrawer({ isOpen, onClose, portalId, lessonId, lessonTitle, m
         return () => {
             unsubscribe();
         };
-    }, [isOpen, portalId, createConversation, fetchMessages, subscribeToMessages, markAsRead, unsubscribe]);
+    }, [isOpen, createConversation, fetchMessages, subscribeToMessages, markAsRead, unsubscribe]);
 
     // Polling fallback - refresh messages periodically while drawer is open
     // This ensures messages sync even if realtime subscription fails

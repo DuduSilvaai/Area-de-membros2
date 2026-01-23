@@ -16,7 +16,7 @@ function SubmitButton() {
       disabled={pending}
       className="w-full h-14 rounded-full font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-pink-500/20"
       style={{
-        backgroundColor: 'var(--primary-main)',
+        backgroundColor: '#FF2D78', // Fixed Brand Pink instead of var(--primary-main)
       }}
     >
       {pending ? (
@@ -61,13 +61,13 @@ export default function LoginPage() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden px-4"
-      style={{ backgroundColor: 'var(--bg-default)' }}
+      style={{ backgroundColor: '#09090b' }} // Fixed Dark Background (Zinc 950)
     >
       {/* Decorative Background Elements */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5 pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, var(--primary-main) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, #FF2D78 0%, transparent 70%)', // Fixed Pink
           filter: 'blur(80px)'
         }}
       />
@@ -89,7 +89,7 @@ export default function LoginPage() {
         </h1>
         <p
           className="mt-3 text-sm font-medium tracking-[0.2em] uppercase opacity-70"
-          style={{ color: 'var(--text-secondary)' }}
+          style={{ color: '#A1A1AA' }} // Fixed Zinc 400
         >
           Área Premium para Franqueados
         </p>
@@ -99,8 +99,8 @@ export default function LoginPage() {
       <div
         className="w-full max-w-[480px] relative z-10 transition-all duration-300 backdrop-blur-sm"
         style={{
-          backgroundColor: 'rgba(24, 24, 27, 0.8)', // Semi-transparent dark
-          borderRadius: 'var(--radius-xl)',
+          backgroundColor: 'rgba(24, 24, 27, 0.8)', // Zinc 900 / 0.8 opacity
+          borderRadius: '24px', // Fixed radius equivalent (xl/2xl approx)
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1)',
           border: '1px solid rgba(255, 255, 255, 0.05)',
         }}
@@ -109,7 +109,7 @@ export default function LoginPage() {
           <div className="mb-10">
             <h2
               className="text-2xl font-semibold mb-3"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: '#FFFFFF' }} // Fixed White
             >
               Acessar conta
             </h2>
@@ -123,8 +123,8 @@ export default function LoginPage() {
               className="mb-8 p-4 rounded-lg flex items-start gap-3"
               style={{ backgroundColor: 'rgba(255, 45, 120, 0.1)' }}
             >
-              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--status-error)' }} />
-              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{error}</p>
+              <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#ef4444' }} />
+              <p className="text-sm font-medium" style={{ color: '#FFFFFF' }}>{error}</p>
             </div>
           )}
 
@@ -133,7 +133,7 @@ export default function LoginPage() {
               <label
                 htmlFor="email"
                 className="block text-sm font-medium mb-3"
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#A1A1AA' }} // Fixed Zinc 400
               >
                 Email
               </label>
@@ -144,7 +144,7 @@ export default function LoginPage() {
                 required
                 className="w-full h-14 px-4 rounded-lg outline-none transition-all duration-200 text-base placeholder-gray-500 focus:ring-2 focus:ring-[#FF2D78]/50 focus:border-[#FF2D78]"
                 style={{
-                  backgroundColor: '#09090b', // Zinc 950 - Darker
+                  backgroundColor: '#09090b', // Zinc 950
                   border: '1px solid #27272a', // Zinc 800
                   color: '#FFFFFF',
                 }}
@@ -157,14 +157,14 @@ export default function LoginPage() {
                 <label
                   htmlFor="password"
                   className="block text-sm font-medium"
-                  style={{ color: 'var(--text-secondary)' }}
+                  style={{ color: '#A1A1AA' }} // Fixed Zinc 400
                 >
                   Senha
                 </label>
                 <Link
                   href="/forgot-password"
                   className="text-sm font-medium transition-colors hover:text-[#FF2D78]"
-                  style={{ color: '#A1A1AA' }} // Zinc 400
+                  style={{ color: '#A1A1AA' }} // Fixed Zinc 400
                 >
                   Esqueceu a senha?
                 </Link>
@@ -176,8 +176,8 @@ export default function LoginPage() {
                 required
                 className="w-full h-14 px-4 rounded-lg outline-none transition-all duration-200 text-base placeholder-gray-500 focus:ring-2 focus:ring-[#FF2D78]/50 focus:border-[#FF2D78]"
                 style={{
-                  backgroundColor: '#09090b', // Zinc 950 - Darker
-                  border: '1px solid #27272a', // Zinc 800
+                  backgroundColor: '#09090b',
+                  border: '1px solid #27272a',
                   color: '#FFFFFF',
                 }}
                 placeholder="••••••••"
@@ -191,7 +191,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="mt-16 text-center relative z-10">
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        <p className="text-sm" style={{ color: '#71717a' }}> {/* Zinc 500 */}
           © 2026 Love For Sweet Platform. Todos os direitos reservados.
         </p>
       </footer>

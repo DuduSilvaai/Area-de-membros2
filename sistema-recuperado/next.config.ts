@@ -67,14 +67,25 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' *.youtube.com *.vimeo.com", // Required for Next.js and Video Players
               "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
               "font-src 'self' fonts.gstatic.com",
-              "img-src 'self' data: blob: *.supabase.co *.youtube.com *.vimeo.com images.unsplash.com api.dicebear.com",
+              "img-src 'self' data: blob: *.supabase.co *.youtube.com *.vimeo.com images.unsplash.com api.dicebear.com ui-avatars.com i.ytimg.com",
               "media-src 'self' blob: *.supabase.co",
               "connect-src 'self' *.supabase.co wss://*.supabase.co",
               "frame-src 'self' *.youtube.com *.youtube-nocookie.com *.vimeo.com player.vimeo.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
+              "upgrade-insecure-requests",
             ].join("; "),
+          },
+          // Cross-Origin-Opener-Policy
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          // Cross-Origin-Resource-Policy
+          {
+            key: "Cross-Origin-Resource-Policy",
+            value: "same-origin",
           },
         ],
       },

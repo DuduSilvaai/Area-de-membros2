@@ -1,8 +1,10 @@
+import { Suspense } from 'react';
 import { createAdminClient } from '@/lib/supabase/server';
 import { AdminChatClient } from './AdminChatClient';
 import { ConversationWithStudent } from '@/types/chat';
+import { Loader2 } from 'lucide-react';
 
-export default async function AdminChatPage() {
+async function ChatContent() {
     const adminSupabase = await createAdminClient();
 
     // 1. Fetch conversations
@@ -45,4 +47,23 @@ export default async function AdminChatPage() {
     });
 
     return <AdminChatClient initialConversations={transformedConversations} />;
+}
+
+export default function AdminChatPage() {
+    return (
+        <div className="h-[calc(100vh-6rem)]">
+            <Suspense
+                fallback={
+                    <div className="flex items-center justify-center h-full">
+                        <div className="flex flex-col items-center gap-4">
+                            <Loader2 className="h-10 w-10 animate-spin text-pink-600" />
+                            <p className="text-gray-500 animate-pulse">Carregando conversas...</p>
+                        </div>
+                    </div>
+                }
+            >
+                <ChatContent />
+            </Suspense>
+        </div>
+    );
 }

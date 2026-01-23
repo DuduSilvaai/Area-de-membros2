@@ -5,13 +5,12 @@ import { supabase } from '@/lib/supabase/client';
 import { ChatDrawer } from '@/components/members/ChatDrawer';
 
 interface ChatWidgetProps {
-    portalId?: string;
     lessonId?: string;
     lessonTitle?: string;
     moduleTitle?: string;
 }
 
-export function ChatWidget({ portalId, lessonId, lessonTitle, moduleTitle }: ChatWidgetProps) {
+export function ChatWidget({ lessonId, lessonTitle, moduleTitle }: ChatWidgetProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [hasNewMessage, setHasNewMessage] = useState(false);
@@ -123,7 +122,6 @@ export function ChatWidget({ portalId, lessonId, lessonTitle, moduleTitle }: Cha
             <ChatDrawer
                 isOpen={isOpen}
                 onClose={() => setIsOpen(false)}
-                portalId={portalId}
                 lessonId={lessonId}
                 lessonTitle={lessonTitle}
                 moduleTitle={moduleTitle}
