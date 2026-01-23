@@ -45,7 +45,7 @@ export async function getOrCreateConversation(studentId: string) {
         await requireAdmin();
         const adminSupabase = createAdminClient();
 
-        // 1. Check for existing conversation (general chat, portal_id is null)
+        // 1. Check for existing conversation
         const { data: existing, error: fetchError } = await adminSupabase
             .from('conversations')
             .select(`
@@ -53,7 +53,6 @@ export async function getOrCreateConversation(studentId: string) {
                 student:profiles!conversations_student_id_profiles_fkey(id, full_name, avatar_url)
             `)
             .eq('student_id', studentId)
-            .is('portal_id', null)
             .maybeSingle();
 
         if (fetchError) {
@@ -76,7 +75,6 @@ export async function getOrCreateConversation(studentId: string) {
             .from('conversations')
             .insert({
                 student_id: studentId,
-                portal_id: null, // General chat
                 unread_count_admin: 0,
                 unread_count_student: 0
             })

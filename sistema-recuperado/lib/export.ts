@@ -2,8 +2,6 @@
  * CSV Export Utilities for Audit Logs
  */
 
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 export interface ExportableLog {
     id: string;
@@ -113,10 +111,14 @@ export function generateExportFilename(extension: 'csv' | 'pdf'): string {
     return `audit-logs-${year}-${month}-${day}.${extension}`;
 }
 
+
 /**
  * Export logs to PDF using jsPDF
  */
-export function exportLogsToPDF(logs: ExportableLog[]): void {
+export async function exportLogsToPDF(logs: ExportableLog[]): Promise<void> {
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
+
     const doc = new jsPDF();
     const filename = generateExportFilename('pdf');
 
@@ -151,3 +153,4 @@ export function exportLogsToPDF(logs: ExportableLog[]): void {
 
     doc.save(filename);
 }
+

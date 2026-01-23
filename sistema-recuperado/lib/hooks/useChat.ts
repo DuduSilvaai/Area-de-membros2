@@ -34,7 +34,7 @@ interface UseChatReturn {
     // Actions
     sendMessage: (content: MessageContent, type: MessageType, context?: Json, attachments?: Json[]) => Promise<void>;
     markAsRead: (conversationId: string) => Promise<void>;
-    createConversation: (portalId?: string) => Promise<string | null>;
+    createConversation: () => Promise<string | null>;
 
     // State
     isSending: boolean;
@@ -296,22 +296,17 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     }, [isAdmin]);
 
     // Create a new conversation (for students)
-    const createConversation = useCallback(async (portalId?: string): Promise<string | null> => {
+    const createConversation = useCallback(async (): Promise<string | null> => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return null;
 
             // Check if conversation already exists
-            let query = supabase
+            const { data: existing } = await supabase
                 .from('conversations')
                 .select('id')
-                .eq('student_id', user.id);
-
-            if (portalId) {
-                query = query.eq('portal_id', portalId);
-            }
-
-            const { data: existing } = await query.maybeSingle();
+                .eq('student_id', user.id)
+                .maybeSingle();
 
             if (existing) {
                 return existing.id;
@@ -322,7 +317,8 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
                 .from('conversations')
                 .insert({
                     student_id: user.id,
-                    portal_id: portalId || null
+                    unread_count_admin: 0,
+                    unread_count_student: 0
                 })
                 .select('id')
                 .single();

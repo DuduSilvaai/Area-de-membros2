@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -15,7 +15,8 @@ import {
   Moon,
   MessageCircle,
   MessageSquareText,
-  Star
+  Star,
+  Loader2
 } from 'lucide-react';
 
 const MENU_ITEMS = [
@@ -30,8 +31,23 @@ const MENU_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { signOut } = useAuth();
+
+  // Local state for immediate loading feedback without blocking navigation
+  const [clickedHref, setClickedHref] = React.useState<string | null>(null);
+
+  const handleNavigation = (href: string) => {
+    if (pathname === href) return;
+    setClickedHref(href);
+    router.push(href);
+  };
+
+  // Reset loading state when navigation completes (pathname changes)
+  React.useEffect(() => {
+    setClickedHref(null);
+  }, [pathname]);
 
   return (
     <div className="fixed left-3 top-3 h-[calc(100vh-24px)] w-[260px] flex flex-col bg-white dark:bg-gray-800 backdrop-blur-md border-r border-gray-200 dark:border-gray-700 rounded-xl shadow-xl transition-all duration-300 z-50">
@@ -49,25 +65,35 @@ export default function Sidebar() {
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto py-5 px-3 flex flex-col gap-2">
         {MENU_ITEMS.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          const isLoading = clickedHref === item.href;
+
           return (
-            <Link
+            <button
               key={item.href}
-              href={item.href}
+              onClick={() => handleNavigation(item.href)}
+              onMouseEnter={() => router.prefetch(item.href)}
+              disabled={isLoading}
               className={`
-                flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200
+                flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-medium transition-all duration-200 w-full text-left
                 ${isActive
                   ? 'bg-gradient-to-br from-pink-600 to-pink-700 text-white shadow-lg font-semibold'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                  : isLoading
+                    ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                 }
               `}
             >
-              <item.icon
-                size={20}
-                className={`shrink-0 ${isActive ? 'text-white' : 'currentColor'}`}
-              />
+              {isLoading ? (
+                <Loader2 size={20} className="shrink-0 animate-spin" />
+              ) : (
+                <item.icon
+                  size={20}
+                  className={`shrink-0 ${isActive ? 'text-white' : ''}`}
+                />
+              )}
               <span>{item.name}</span>
-            </Link>
+            </button>
           );
         })}
       </nav>
@@ -101,3 +127,4 @@ export default function Sidebar() {
     </div>
   );
 }
+

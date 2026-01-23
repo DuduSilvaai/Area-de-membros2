@@ -30,7 +30,10 @@ export function MessageBubble({ message, isOwn, showSender = false, senderName }
     const [previewUrl, setPreviewUrl] = useState('');
 
     const content = message.content as any;
-    const timestamp = format(new Date(message.created_at), 'HH:mm');
+    const messageDate = new Date(message.created_at);
+    const timestamp = isToday(messageDate)
+        ? format(messageDate, 'HH:mm')
+        : format(messageDate, "dd/MM 'às' HH:mm", { locale: ptBR });
 
     const openPreview = (url: string) => {
         setPreviewUrl(url);

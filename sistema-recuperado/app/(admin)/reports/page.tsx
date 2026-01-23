@@ -264,7 +264,7 @@ export default function ReportsPage() {
     // Handle PDF Export
     const handleExportPDF = async () => {
         const data = await fetchExportData();
-        exportLogsToPDF(data);
+        await exportLogsToPDF(data);
     };
 
     // Handle page change

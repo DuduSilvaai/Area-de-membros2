@@ -31,9 +31,14 @@ export async function middleware(request: NextRequest) {
         }
     );
 
+    // Use getSession() instead of getUser() for faster middleware
+    // getSession() reads from cookies locally, while getUser() makes a network request
+    // Security note: Client-side AdminGuard still validates with getUser() for sensitive operations
     const {
-        data: { user },
-    } = await supabase.auth.getUser();
+        data: { session },
+    } = await supabase.auth.getSession();
+
+    const user = session?.user ?? null;
 
     // 1. Define Public Paths (No Auth Required)
     const publicPaths = [
@@ -119,9 +124,10 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
-         * - public (public folder)
-         * - extensions: svg, png, jpg, jpeg, gif, webp, css, js
+         * - api (API routes - handled separately)
+         * - public assets by extension
          */
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js)$).*)",
+        "/((?!_next/static|_next/image|_next/data|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)",
     ],
 };
+
