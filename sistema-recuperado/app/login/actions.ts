@@ -5,6 +5,7 @@ import { checkLoginRateLimit } from '@/lib/rate-limit';
 import { loginSchema } from '@/lib/validation/schemas';
 import { log } from '@/lib/logger';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
 export async function loginAction(formData: FormData) {
     const data = Object.fromEntries(formData);
@@ -87,5 +88,7 @@ export async function loginAction(formData: FormData) {
     const role = authData.user?.user_metadata?.role;
     const redirectPath = role === 'admin' ? '/dashboard' : '/members';
 
-    redirect(redirectPath);
+    revalidatePath('/', 'layout');
+
+    return { success: true, redirectUrl: redirectPath };
 }

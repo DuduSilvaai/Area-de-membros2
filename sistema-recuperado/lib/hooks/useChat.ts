@@ -78,7 +78,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
     // Initialize notification sound
     useEffect(() => {
-        audioRef.current = new Audio('/sounds/notification.mp3');
+        audioRef.current = new Audio('/notification.mp3');
         audioRef.current.volume = 0.5;
     }, []);
 

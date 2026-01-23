@@ -52,7 +52,7 @@ interface LastViewed {
 export default function PortalLobbyPage() {
     const params = useParams();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const portalId = params?.portalId as string;
 
     const [portal, setPortal] = useState<Portal | null>(null);
@@ -132,12 +132,24 @@ export default function PortalLobbyPage() {
 
                 if (modulesError) throw modulesError;
 
+                console.log('DEBUG: User ID:', user.id);
+                console.log('DEBUG: Portal ID:', portalId);
+                console.log('DEBUG: Enrollment Data:', enrollmentData);
+                console.log('DEBUG: Raw Permissions:', permissions);
+                console.log('DEBUG: All Modules:', modulesData);
+                console.log('DEBUG: Profile Role:', profile?.role);
+
                 // Security Filter: Filter modules based on permissions
                 const filteredModulesRaw = (modulesData || []).filter((m) => {
+                    // Admin seeing everything logic
+                    if (profile?.role === 'admin') return true;
+
                     if (permissions.access_all) return true;
                     // Check if module ID is in allowed_modules array
                     return permissions.allowed_modules?.includes(m.id);
                 });
+
+                console.log('DEBUG: Filtered Modules:', filteredModulesRaw);
 
                 // Process modules to verify content ordering and map types
                 const processedModules = filteredModulesRaw.map((m) => ({

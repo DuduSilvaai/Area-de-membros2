@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile({ id: session.user.id, role: role || 'member' });
 
         if (event === 'SIGNED_IN') {
-          await logAction('login', { email: session.user.email });
+          // await logAction('login', { email: session.user.email });
         }
       } else {
         setUser(null);

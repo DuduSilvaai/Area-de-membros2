@@ -43,20 +43,18 @@ export default function LoginPage() {
   const handleSubmit = async (formData: FormData) => {
     setError(null);
 
-    // Call server action
-    // If it redirects (success), this promise won't resolve in a way we handle here normally.
-    // If it returns an object, it's an error.
     try {
       const result = await loginAction(formData);
+
       if (result?.error) {
         setError(result.error);
+      } else if (result?.success && result?.redirectUrl) {
+        // Force a hard navigation to ensure fresh state and avoid "stuck" loading
+        window.location.href = result.redirectUrl;
       }
     } catch (e) {
-      // Redirects throw errors in Next.js Server Actions, so we let them pass
-      // But we catch others
-      // Actually standard 'redirect()' throws a specific error that Next handles.
-      // We shouldn't catch it generally unless we check digest.
-      // However, simplified approach:
+      console.error('Login error:', e);
+      setError('Ocorreu um erro inesperado. Tente novamente.');
     }
   };
 
