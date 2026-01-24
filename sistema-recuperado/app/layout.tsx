@@ -8,7 +8,7 @@ const playfair = Playfair_Display({ subsets: ["latin"], variable: '--font-playfa
 const greatVibes = Great_Vibes({ weight: "400", subsets: ["latin"], variable: '--font-great-vibes' });
 
 export const metadata: Metadata = {
-  title: "Sistema Mozart Recuperado",
+  title: "Área premium para franqueados",
   description: "Versão recuperada via engenharia reversa",
   icons: {
     icon: [

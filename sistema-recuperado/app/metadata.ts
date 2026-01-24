@@ -1,4 +1,4 @@
 export const metadata = {
-    title: "Sistema Mozart Recuperado",
+    title: "Área premium para franqueados",
     description: "Versão recuperada via engenharia reversa",
 };
